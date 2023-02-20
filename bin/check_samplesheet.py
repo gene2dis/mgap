@@ -120,6 +120,8 @@ class RowChecker:
         In addition to the validation, also rename all samples to have a suffix of _T{n}, where n is the
         number of times the same sample exist, but with different FASTQ files, e.g., multiple runs per experiment.
 
+        This last part was removed!
+
         """
         if len(self._seen) != len(self.modified):
             raise AssertionError("The pair of sample name and FASTQ must be unique.")
@@ -127,7 +129,7 @@ class RowChecker:
         for row in self.modified:
             sample = row[self._sample_col]
             seen[sample] += 1
-            row[self._sample_col] = f"{sample}_T{seen[sample]}"
+            row[self._sample_col] = f"{sample}"
 
 
 def read_head(handle, num_lines=10):

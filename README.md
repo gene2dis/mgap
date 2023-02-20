@@ -16,8 +16,11 @@ On release, automated continuous integration tests run the pipeline on a full-si
 
 <!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
 
-1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
-2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
+1. Read QC, clean, and filter reads. ([`FastP`](https://github.com/OpenGene/fastp))
+2. If requested, calculate coverage of genome ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduce coverage ([`Seqtk`](https://github.com/lh3/seqtk)
+3. Genome assembly ([`Unicycler`](https://github.com/rrwick/Unicycler))
+4. MLST analysis ([`MLST`]())
+5. Annotation ([`BAKTA`]())
 
 ## Quick Start
 
@@ -43,16 +46,17 @@ On release, automated continuous integration tests run the pipeline on a full-si
    <!-- TODO nf-core: Update the example "typical command" below used to run the pipeline -->
 
    ```bash
-   nextflow run gene2dis/mgap --input samplesheet.csv --outdir <OUTDIR> --genome GRCh37 -profile <docker/singularity/podman/shifter/charliecloud/conda/institute>
+   nextflow run gene2dis/mgap --input samplesheet.csv --outdir <OUTDIR> -profile <docker/singularity/podman/shifter/charliecloud/conda/institute>
    ```
 
 ## Credits
 
-gene2dis/mgap was originally written by Microbial Data Science Lab.
+gene2dis/mgap was originally written by the Microbial Data Science Lab, Center for Bioinformatics and Integrative Biology, Universidad Andres Bello. Its development was led by Juan A. Ugalde
 
 We thank the following people for their extensive assistance in the development of this pipeline:
 
-<!-- TODO nf-core: If applicable, make list of people who have also contributed -->
+- Juan A. Ugalde
+
 
 ## Contributions and Support
 
