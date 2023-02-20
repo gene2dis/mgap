@@ -108,8 +108,8 @@ workflow MGAP {
                                      meta, reads, coverage -> [meta, reads, params.max_coverage / coverage.text.trim().toFloat()]
                                }
                                .branch{
-                                reduce_coverage: it[2].toFloat() > 1
-                                keep_coverage: it[2].toFloat() < 1
+                                reduce_coverage: it[2].toFloat() < 1
+                                keep_coverage: it[2].toFloat() > 1
                                 }
                                 .set{coverage_status}
 
