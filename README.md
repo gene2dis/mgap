@@ -17,10 +17,11 @@ On release, automated continuous integration tests run the pipeline on a full-si
 <!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
 
 1. Read QC, clean, and filter reads. ([`FastP`](https://github.com/OpenGene/fastp))
-2. If requested, calculate coverage of genome ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduce coverage ([`Seqtk`](https://github.com/lh3/seqtk)
-3. Genome assembly ([`Unicycler`](https://github.com/rrwick/Unicycler))
-4. MLST analysis ([`MLST`]())
-5. Annotation ([`BAKTA`]())
+2. If requested, calculate coverage of genome ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduce coverage ([`Seqtk`](https://github.com/lh3/seqtk).
+3. If requested, check the reads with Kraken2 against a standard (small) database to evaluate possible contaminations ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
+4. Genome assembly ([`Unicycler`](https://github.com/rrwick/Unicycler))
+5. MLST analysis ([`MLST`]())
+6. Annotation ([`BAKTA`]())
 
 ## Quick Start
 
