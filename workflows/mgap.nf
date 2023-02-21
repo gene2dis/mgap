@@ -39,6 +39,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
 include { INPUT_CHECK } from '../subworkflows/local/input_check'
+include { MASH_SKETCH } from '../modules/local/mash/sketch/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -46,13 +47,11 @@ include { INPUT_CHECK } from '../subworkflows/local/input_check'
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// MODULE: Installed in local modules
-include { MASH_SKETCH } from '../modules/local/mash/sketch/main'
-
 //
 // MODULE: Installed directly from nf-core/modules
 //
 include { FASTP } from '../modules/nf-core/fastp/main'
+include { KRAKEN2_KRAKEN2 as KRAKEN2} from '../modules/nf-core/kraken2/kraken2/main'
 include { SEQTK_SAMPLE } from '../modules/nf-core/seqtk/sample/main'
 include { UNICYCLER } from '../modules/local/unicycler/main'
 include { MLST } from '../modules/nf-core/mlst/main'
@@ -92,6 +91,17 @@ workflow MGAP {
         [],
         []
     )
+
+    if (params.run_kraken2) {
+        ch_reads4kraken2 = FASTP.out.reads
+
+        KRAKEN2(
+            ch_reads4kraken2,
+            params.kraken2db,
+            false,
+            false
+        )
+    }
 
     // If selected, adjust coverage
 
