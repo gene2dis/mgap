@@ -52,6 +52,7 @@ include { MASH_SKETCH } from '../modules/local/mash/sketch/main'
 //
 include { FASTP } from '../modules/nf-core/fastp/main'
 include { KRAKEN2_KRAKEN2 as KRAKEN2} from '../modules/nf-core/kraken2/kraken2/main'
+include { BRACKEN_BRACKEN as BRACKEN} from '../modules/nf-core/bracken/bracken/main'
 include { SEQTK_SAMPLE } from '../modules/nf-core/seqtk/sample/main'
 include { UNICYCLER } from '../modules/local/unicycler/main'
 include { MLST } from '../modules/nf-core/mlst/main'
@@ -93,14 +94,21 @@ workflow MGAP {
     )
 
     if (params.run_kraken2) {
-        ch_reads4kraken2 = FASTP.out.reads
 
         KRAKEN2(
-            ch_reads4kraken2,
+            FASTP.out.reads,
             params.kraken2db,
             false,
             false
         )
+
+
+        BRACKEN(
+            KRAKEN2.out.report,
+            params.kraken2db
+        )
+
+
     }
 
     // If selected, adjust coverage
