@@ -40,6 +40,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 include { INPUT_CHECK } from '../subworkflows/local/input_check'
 include { MASH_SKETCH } from '../modules/local/mash/sketch/main'
+include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -160,6 +161,14 @@ workflow MGAP {
         params.bakta_db,
         [],
         []
+    )
+
+    // RUN AMRFINDERPLUS
+    AMRFINDERPLUS_RUN(
+        BAKTA.out.fna,
+        BAKTA.out.faa,
+        BAKTA.out.gff,
+        params.amrfinder_db
     )
 
 
