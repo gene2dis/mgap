@@ -40,6 +40,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 include { INPUT_CHECK } from '../subworkflows/local/input_check'
 include { MASH_SKETCH } from '../modules/local/mash/sketch/main'
+include { CHECKM2 } from '../modules/local/checkm2/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/main'
 
 /*
@@ -150,6 +151,12 @@ workflow MGAP {
         ch_reads_for_assembly
     )
 
+    // RUN Checkm2
+    CHECKM2(
+        UNICYCLER.out.scaffolds,
+        params.checkm2_db
+    )
+
     // RUN MLST
     MLST(
         UNICYCLER.out.scaffolds
@@ -170,6 +177,7 @@ workflow MGAP {
         BAKTA.out.gff,
         params.amrfinder_db
     )
+
 
 
     //

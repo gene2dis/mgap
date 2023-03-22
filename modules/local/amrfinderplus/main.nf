@@ -25,30 +25,20 @@ process AMRFINDERPLUS_RUN {
 
     script:
     def args = task.ext.args ?: ''
-    def is_compressed = fasta.getName().endsWith(".gz") ? true : false
     prefix = task.ext.prefix ?: "${meta.id}"
     organism_param = meta.containsKey("organism") ? "--organism ${meta.organism} --mutation_all ${prefix}-mutations.tsv" : ""
-    fasta_name = fasta.getName().replace(".gz", "")
-    fasta_param = "-n"
-    if (meta.containsKey("is_proteins")) {
-        if (meta.is_proteins) {
-            fasta_param = "-p"
-        }
-    }
+
     """
-    if [ "$is_compressed" == "true" ]; then
-        gzip -c -d $fasta > $fasta_name
-    fi
 
     amrfinder \\
         --plus \\
         -a bakta \\
         -n $fasta_nuc \\
         -p $fasta_prot \\
-        -g $fasta_gff3 \\
+        -g $gff3 \\
         $organism_param \\
         $args \\
-        -d amrfinderdb \\
+        -d $amrfinderdb \\
         --threads $task.cpus > ${prefix}.tsv
 
     VER=\$(amrfinder --version)
