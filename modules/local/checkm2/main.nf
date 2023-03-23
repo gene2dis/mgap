@@ -9,10 +9,10 @@ process CHECKM2 {
 
     input:
     tuple val(meta), path(fasta)
-    path checkm2db
+    path db
 
     output:
-    tuple val(meta), path("quality_report.tsv")          , emit: report
+    tuple val(meta), path("*.quality_report.tsv")          , emit: report
     path "versions.yml"                             , emit: versions
 
     when:
@@ -25,13 +25,16 @@ process CHECKM2 {
     """
     checkm2 predict \\
         --threads $task.cpus \\
-        --input $fasta
-        --database_path $checkm2db
-        --output-directory ./
+        --input $fasta \\
+        --database_path $db \\
+        --force \\
+        --output-directory temp
+
+    mv temp/quality_report.tsv ${prefix}.quality_report.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        checkm2: \$(echo \$(checkm2 --version 2>&1)')
+        checkm2: \$(echo \$(checkm2 --version 2>&1))
     END_VERSIONS
     """
 }
