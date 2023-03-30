@@ -11,6 +11,7 @@ process AMRFINDERPLUS_RUN {
     tuple val(meta), path(fasta_nuc)
     tuple val(meta), path(fasta_prot)
     tuple val(meta), path(gff3)
+    tuple val(meta), val(species)
     path amrfinderdb
 
     output:
@@ -26,9 +27,19 @@ process AMRFINDERPLUS_RUN {
     script:
     def args = task.ext.args ?: ''
     prefix = task.ext.prefix ?: "${meta.id}"
-    organism_param = meta.containsKey("organism") ? "--organism ${meta.organism} --mutation_all ${prefix}-mutations.tsv" : ""
+    //organism_param = meta.containsKey("organism") ? "--organism ${meta.organism} --mutation_all ${prefix}-mutations.tsv" : ""
 
+    if (species == null) {
+        organism_param = ""
+    }
+    else{
+        organism_param = "--organism ${species} --mutation_all ${prefix}-mutations.tsv"
+    }
+
+    // check_org=\$(awk '{print \$2}' "!{mlst_file}")
+    // nmatch=\$(echo \$check_org|awk '{print \$1}'|join -1 1 -2 1 - "!{species}"|awk '{print \$2}')
     """
+    
 
     amrfinder \\
         --plus \\

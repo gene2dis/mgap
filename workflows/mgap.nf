@@ -6,6 +6,48 @@
 
 def summary_params = NfcoreSchema.paramsSummaryMap(workflow, params)
 
+// Extract organism information based on the MLST result
+def extract_species_code(line) {
+    def columns = line.split("\t")
+    return columns[1]
+    }
+
+
+// Organism list
+//TODO missing neisserias, salmonella
+taxa_names = ["abaumannii": "Acinetobacter_baumannii",
+              "abaumannii_2": "Acinetobacter_baumannii",
+              "bcc": "Burkholderia_cepacia",
+              "bseudomallei": "Burhkholderia_pesudomallei",
+              "campylobacter" : "Campylobacter",
+              "campylobacter_nonjejuni" : "Campylobacter",
+              "campylobacter_nonjejuni_2" : "Campylobacter",
+              "campylobacter_nonjejuni_3" : "Campylobacter",
+              "campylobacter_nonjejuni_4" : "Campylobacter",
+              "campylobacter_nonjejuni_5" : "Campylobacter",
+              "campylobacter_nonjejuni_6" : "Campylobacter",
+              "campylobacter_nonjejuni_7" : "Campylobacter",
+              "campylobacter_nonjejuni_8" : "Campylobacter",
+              "campylobacter_nonjejuni_9" : "Campylobacter",
+              "cdifficile": "Clostridioides_difficile",
+              "efaecalis": "Enterococcus_faecalis",
+              "efaecium": "Enterococcus_faecium",
+              "ecoli": "Escherichia",
+              "ecoli_achtman_4": "Escherichia",
+              "ecoli_2": "Escherichia",
+              "koxytoca": "Klebsiella_oxytoca",
+              "klebsiella": "Klebsiella_pneumoniae",
+              "paeruginosa": "Pseudomonas_aeruginosa",
+              "senterica": "Salmonella",
+              "saureus": "Staphylococcus_aureus",
+              "spseudintermedius": "Staphylococcus_pseudintermedius",
+              "sagalactiae": "Streptococcus_agalactiae",
+              "spneumoniae": "Streptococcus_pneumoniae",
+              "spyogenes": "Streptococcus_pyogenes",
+              "vcholerae": "Vibrio_cholerae"
+            ]
+
+
 // Validate input parameters
 //WorkflowMgap.initialise(params, log)
 
@@ -170,15 +212,24 @@ workflow MGAP {
         []
     )
 
+    // Process MLST to get species name
+    MLST.out.tsv
+                .map{meta, tsv -> [meta, tsv
+                                            .splitCsv(header:false, sep:"\t")
+                                            .flatten()[1]
+                                    ]
+                }
+                .map{meta, taxa -> [meta, taxa_names[taxa]]}
+                .set{species_code_ch}
+
     // RUN AMRFINDERPLUS
     AMRFINDERPLUS_RUN(
         BAKTA.out.fna,
         BAKTA.out.faa,
         BAKTA.out.gff,
+        species_code_ch,
         params.amrfinder_db
     )
-
-
 
     //
     // MODULE: Run FastQC
