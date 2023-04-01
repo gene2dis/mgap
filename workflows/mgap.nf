@@ -84,7 +84,7 @@ include { INPUT_CHECK } from '../subworkflows/local/input_check'
 include { MASH_SKETCH } from '../modules/local/mash/sketch/main'
 include { CHECKM2 } from '../modules/local/checkm2/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/main'
-
+include { GENOMAD } from '../modules/local/genomad/main'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT NF-CORE MODULES/SUBWORKFLOWS
@@ -230,6 +230,13 @@ workflow MGAP {
         species_code_ch,
         params.amrfinder_db
     )
+
+    // RUN GENOMAD
+    GENOMAD(
+        BAKTA.out.fna,
+        params.genomad_db
+    )
+    
 
     //
     // MODULE: Run FastQC
