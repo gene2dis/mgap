@@ -36,7 +36,7 @@ taxa_names = ["abaumannii": "Acinetobacter_baumannii",
               "ecoli_achtman_4": "Escherichia",
               "ecoli_2": "Escherichia",
               "koxytoca": "Klebsiella_oxytoca",
-              "klebsiella": "Klebsiella_pneumoniae",
+              "kpneumoniae": "Klebsiella_pneumoniae",
               "paeruginosa": "Pseudomonas_aeruginosa",
               "senterica": "Salmonella",
               "saureus": "Staphylococcus_aureus",
@@ -85,6 +85,7 @@ include { MASH_SKETCH } from '../modules/local/mash/sketch/main'
 include { CHECKM2 } from '../modules/local/checkm2/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/main'
 include { GENOMAD } from '../modules/local/genomad/main'
+include { KLEBORATE } from '../modules/local/kleborate/main'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT NF-CORE MODULES/SUBWORKFLOWS
@@ -101,6 +102,7 @@ include { SEQTK_SAMPLE } from '../modules/nf-core/seqtk/sample/main'
 include { UNICYCLER } from '../modules/local/unicycler/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
+include { STAPHOPIASCCMEC } from '../modules/nf-core/staphopiasccmec/main'
 //include { FASTQC                      } from '../modules/nf-core/fastqc/main'
 //include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main'
@@ -236,8 +238,33 @@ workflow MGAP {
         BAKTA.out.fna,
         params.genomad_db
     )
-    
 
+    // Run taxa specific tools
+    species_code_ch
+                .join(BAKTA.out.fna)
+                .branch{
+                    klebsiella: it[1] == "Klebsiella_pneumoniae"
+                    saureus: it[1] == "Staphylococcus_aureus"
+                    other: true
+                }
+                .set{taxa_genome_process}
+
+    // THIS SHOULD GO INTO A SUBWORKFLOW LATER TO KEEP THINGS ORGANIZED
+
+    // Run Kleborate
+    KLEBORATE(
+        taxa_genome_process.klebsiella
+    )
+
+    STAPHOPIASCCMEC(
+        taxa_genome_process.saureus
+    )
+
+
+
+    // Run SCCMEC
+
+    
     //
     // MODULE: Run FastQC
     //
