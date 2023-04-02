@@ -22,6 +22,10 @@ On release, automated continuous integration tests run the pipeline on a full-si
 4. Genome assembly ([`Unicycler`](https://github.com/rrwick/Unicycler))
 5. MLST analysis ([`MLST`]())
 6. Annotation ([`BAKTA`]())
+7. Antibiotic resistance prediction using AMRFinderPlus. If the organism is on the list provided by AMRFinderPlus, also point mutations are evaluated.
+8. Prophage and plasmid search using Genomad
+9. For Klebsiella, evaluation of the genome using Kleborate
+10. For S. aureus, SCCmec classification
 
 ## Quick Start
 

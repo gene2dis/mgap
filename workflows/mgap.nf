@@ -224,12 +224,15 @@ workflow MGAP {
                 .map{meta, taxa -> [meta, taxa_names[taxa]]}
                 .set{species_code_ch}
 
-    // RUN AMRFINDERPLUS
+    // RUN AMRFINDERPLUS 
+    BAKTA.out.fna
+                .join(BAKTA.out.faa)
+                .join(BAKTA.out.gff)
+                .join(species_code_ch)
+                .set{amrfinder_ch}
+
     AMRFINDERPLUS_RUN(
-        BAKTA.out.fna,
-        BAKTA.out.faa,
-        BAKTA.out.gff,
-        species_code_ch,
+        amrfinder_ch,
         params.amrfinder_db
     )
 
@@ -259,10 +262,6 @@ workflow MGAP {
     STAPHOPIASCCMEC(
         taxa_genome_process.saureus
     )
-
-
-
-    // Run SCCMEC
 
     
     //

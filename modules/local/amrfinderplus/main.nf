@@ -8,10 +8,7 @@ process AMRFINDERPLUS_RUN {
         'quay.io/biocontainers/ncbi-amrfinderplus:3.11.4--h6e70893_0' }"
 
     input:
-    tuple val(meta), path(fasta_nuc)
-    tuple val(meta), path(fasta_prot)
-    tuple val(meta), path(gff3)
-    tuple val(meta), val(species)
+    tuple val(meta), path(fasta_nuc), path(fasta_prot), path(gff3), val(species)
     path amrfinderdb
 
     output:
