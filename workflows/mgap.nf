@@ -100,6 +100,7 @@ include { KRAKEN2_KRAKEN2 as KRAKEN2} from '../modules/nf-core/kraken2/kraken2/m
 include { BRACKEN_BRACKEN as BRACKEN} from '../modules/nf-core/bracken/bracken/main'
 include { SEQTK_SAMPLE } from '../modules/nf-core/seqtk/sample/main'
 include { UNICYCLER } from '../modules/local/unicycler/main'
+include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
 include { STAPHOPIASCCMEC } from '../modules/nf-core/staphopiasccmec/main'
@@ -193,6 +194,16 @@ workflow MGAP {
     // Run Assembly with Unicycler
     UNICYCLER(
         ch_reads_for_assembly
+    )
+
+    // Check assamblies with QUAST
+
+    QUAST(
+        UNICYCLER.out.scaffolds,
+        [],
+        [],
+        false,
+        false
     )
 
     // RUN Checkm2
