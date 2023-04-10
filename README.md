@@ -20,12 +20,12 @@ On release, automated continuous integration tests run the pipeline on a full-si
 2. If requested, calculate coverage of genome ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduce coverage ([`Seqtk`](https://github.com/lh3/seqtk).
 3. If requested, check the reads with Kraken2 against a standard (small) database to evaluate possible contaminations ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
 4. Genome assembly ([`Unicycler`](https://github.com/rrwick/Unicycler))
-5. MLST analysis ([`MLST`]())
-6. Annotation ([`BAKTA`]())
-7. Antibiotic resistance prediction using AMRFinderPlus. If the organism is on the list provided by AMRFinderPlus, also point mutations are evaluated.
-8. Prophage and plasmid search using Genomad
-9. For Klebsiella, evaluation of the genome using Kleborate
-10. For S. aureus, SCCmec classification
+5. MLST analysis ([`MLST`](https://github.com/tseemann/mlst))
+6. Annotation ([`BAKTA`](https://github.com/oschwengers/bakta))
+7. Antibiotic resistance prediction using AMRFinderPlus. If the organism is on the list provided by AMRFinderPlus, also point mutations are evaluated ([`AMRFinderPLus`](https://github.com/ncbi/amr))
+8. Prophage and plasmid search using [`Genomad`](https://github.com/apcamargo/genomad)
+9. For _Klebsiella_, evaluation of the genome using [`Kleborate`](https://github.com/klebgenomics/Kleborate)
+10. For _S. aureus_, SCCmec classification using [`staphophia-sccmec`](https://github.com/staphopia/staphopia-sccmec)
 
 ## Quick Start
 
@@ -33,26 +33,51 @@ On release, automated continuous integration tests run the pipeline on a full-si
 
 2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/) (you can follow [this tutorial](https://singularity-tutorial.github.io/01-installation/)), [`Podman`](https://podman.io/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility _(you can use [`Conda`](https://conda.io/miniconda.html) both to install Nextflow itself and also to manage software within pipelines. Please only use it within pipelines as a last resort; see [docs](https://nf-co.re/usage/configuration#basic-configuration-profiles))_.
 
-3. Download the pipeline and test it on a minimal dataset with a single command:
+Currently the pipeline has been tested with Docker, but should work without issues with Singularity or Conda.
 
-   ```bash
-   nextflow run gene2dis/mgap -profile test,YOURPROFILE --outdir <OUTDIR>
-   ```
+3. Download the pipeline, either cloning the repository or downloading the zip file
 
-   Note that some form of configuration will be needed so that Nextflow knows how to fetch the required software. This is usually done in the form of a config profile (`YOURPROFILE` in the example command above). You can chain multiple config profiles in a comma-separated string.
+## Running the pipeline
 
-   > - The pipeline comes with config profiles called `docker`, `singularity`, `podman`, `shifter`, `charliecloud` and `conda` which instruct the pipeline to use the named tool for software management. For example, `-profile test,docker`.
-   > - Please check [nf-core/configs](https://github.com/nf-core/configs#documentation) to see if a custom config file to run nf-core pipelines already exists for your Institute. If so, you can simply use `-profile <institute>` in your command. This will enable either `docker` or `singularity` and set the appropriate execution settings for your local compute environment.
-   > - If you are using `singularity`, please use the [`nf-core download`](https://nf-co.re/tools/#downloading-pipelines-for-offline-use) command to download images first, before running the pipeline. Setting the [`NXF_SINGULARITY_CACHEDIR` or `singularity.cacheDir`](https://www.nextflow.io/docs/latest/singularity.html?#singularity-docker-hub) Nextflow options enables you to store and re-use the images from a central location for future pipeline runs.
-   > - If you are using `conda`, it is highly recommended to use the [`NXF_CONDA_CACHEDIR` or `conda.cacheDir`](https://www.nextflow.io/docs/latest/conda.html) settings to store the environments in a central location for future pipeline runs.
+### Sample sheet file
+First you need to create a Samplesheet file, that contain the name of the samples and the location of the reads. This is an example of this file:
+
+```
+sample,fastq_1,fastq_2
+SCL10095,/home/jugalde/germlab/data/S190_R1.fastq.gz,/home/jugalde/germlab/data/S190_R2.fastq.gz
+```
+
+The file **always** has to include the header `sample,fastq_1,fastq_2`
+
+### Pipeline parameters
+
+The file `nextflow.config` contains all the parameteres used by the pipeline, including path to database files. Currently the path work in our server (_Arrakis_), but if you are running elsewhere, these need to be updated. *Later a section on how to download and prepare the DBs needed for the analysis, will be added to this Readme file*.
+
+
+#### Starting the pipeline
+
+Once you have everything ready, you can run the pipeline by calling the name of the repository, and adding the appropiate parameters. For example:
+
+```bash
+nextflow run 
+```
 
 4. Start running your own analysis!
 
    <!-- TODO nf-core: Update the example "typical command" below used to run the pipeline -->
 
    ```bash
-   nextflow run gene2dis/mgap --input samplesheet.csv --outdir <OUTDIR> -profile <docker/singularity/podman/shifter/charliecloud/conda/institute>
+   nextflow run gene2dis-mgap --input <SAMPLESHEET> --outdir <OUTDIR> -profile docker 
    ```
+
+   Here the parameters are:
+   - gene2dis-mgap: The name of the repository. This could be the path to a location on the computer (e.g. /home/jugalde/pipelines/gene2dis-mgap).
+   - --input: The samplesheet file
+   - --outdir: The output directory for the output of the pipeline
+   - -profile: either docker or conda (not tested yet)
+
+   *Notice that the pipeline parameters have two dashes (--), while parameters that are for nextflow only have one (-).
+
 
 ## Credits
 
