@@ -25,6 +25,11 @@
                         "git_sha": "20a508676f40d0fd3f911ac595af91ec845704c4",
                         "installed_by": ["modules"]
                     },
+                    "gtdbtk/classifywf": {
+                        "branch": "master",
+                        "git_sha": "57d1d24ab9c1d6d63dae939accf6680b35dfd4bf",
+                        "installed_by": ["modules"]
+                    },
                     "kraken2/kraken2": {
                         "branch": "master",
                         "git_sha": "7c695e0147df1157413e06246d9b0094617d3e6b",

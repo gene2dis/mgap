@@ -104,6 +104,7 @@ include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
 include { STAPHOPIASCCMEC } from '../modules/nf-core/staphopiasccmec/main'
+include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
 //include { FASTQC                      } from '../modules/nf-core/fastqc/main'
 //include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main'
@@ -235,6 +236,14 @@ workflow MGAP {
                 .map{meta, taxa -> [meta, taxa_names[taxa]]}
                 .set{species_code_ch}
 
+
+    // Run GTDB-Tk
+    //GTDBTK(
+    //    UNICYCLER.out.scaffolds,
+    //    params.gtbd_db
+    //)
+
+
     // RUN AMRFINDERPLUS 
     BAKTA.out.fna
                 .join(BAKTA.out.faa)
@@ -273,7 +282,6 @@ workflow MGAP {
     STAPHOPIASCCMEC(
         taxa_genome_process.saureus
     )
-
     
     //
     // MODULE: Run FastQC
