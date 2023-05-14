@@ -82,10 +82,13 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 include { INPUT_CHECK } from '../subworkflows/local/input_check'
 include { MASH_SKETCH } from '../modules/local/mash/sketch/main'
+include { SPADES } from '../modules/local/spades/main'
+include { UNICYCLER } from '../modules/local/unicycler/main'
 include { CHECKM2 } from '../modules/local/checkm2/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/main'
 include { GENOMAD } from '../modules/local/genomad/main'
 include { KLEBORATE } from '../modules/local/kleborate/main'
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT NF-CORE MODULES/SUBWORKFLOWS
@@ -99,7 +102,6 @@ include { FASTP } from '../modules/nf-core/fastp/main'
 include { KRAKEN2_KRAKEN2 as KRAKEN2} from '../modules/nf-core/kraken2/kraken2/main'
 include { BRACKEN_BRACKEN as BRACKEN} from '../modules/nf-core/bracken/bracken/main'
 include { SEQTK_SAMPLE } from '../modules/nf-core/seqtk/sample/main'
-include { UNICYCLER } from '../modules/local/unicycler/main'
 include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
@@ -192,15 +194,16 @@ workflow MGAP {
         ch_reads_for_assembly = FASTP.out.reads
     }
 
-    // Run Assembly with Unicycler
-    UNICYCLER(
+    // Run Assembly with Unicycler or SPADES
+    // TODO: Add option to choose between assemblers
+    SPADES(
         ch_reads_for_assembly
     )
 
     // Check assamblies with QUAST
 
     QUAST(
-        UNICYCLER.out.scaffolds,
+        SPADES.out.scaffolds,
         [],
         [],
         false,
@@ -209,18 +212,18 @@ workflow MGAP {
 
     // RUN Checkm2
     CHECKM2(
-        UNICYCLER.out.scaffolds,
+        SPADES.out.scaffolds,
         params.checkm2_db
     )
 
     // RUN MLST
     MLST(
-        UNICYCLER.out.scaffolds
+        SPADES.out.scaffolds
     )
 
     // RUN ANNOTATION
     BAKTA(
-        UNICYCLER.out.scaffolds,
+        SPADES.out.scaffolds,
         params.bakta_db,
         [],
         []
