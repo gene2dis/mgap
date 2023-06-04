@@ -269,12 +269,12 @@ workflow MGAP {
 
     // RUN ANTISMASH
     // Currently using a local installation
-    ANTISMASH_ANTISMASHLITE(
-        BAKTA.out.fna.join(BAKTA.out.gff),
-        params.antismash_db,
-        params.antismash_install
+    //ANTISMASH_ANTISMASHLITE(
+    //    BAKTA.out.fna.join(BAKTA.out.gff),
+    //    params.antismash_db,
+    //    params.antismash_install
         //BAKTA.out.gff
-    )
+   // )
 
     // RUN MACREL
     MACREL_CONTIGS(
