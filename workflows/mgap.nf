@@ -107,6 +107,8 @@ include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
 include { STAPHOPIASCCMEC } from '../modules/nf-core/staphopiasccmec/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
+include { ANTISMASH_ANTISMASHLITE } from '../modules/nf-core/antismash/antismashlite/main'
+include { MACREL_CONTIGS } from '../modules/nf-core/macrel/contigs/main'
 //include { FASTQC                      } from '../modules/nf-core/fastqc/main'
 //include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main'
@@ -263,6 +265,20 @@ workflow MGAP {
     GENOMAD(
         BAKTA.out.fna,
         params.genomad_db
+    )
+
+    // RUN ANTISMASH
+    // Currently using a local installation
+    //ANTISMASH_ANTISMASHLITE(
+    //    BAKTA.out.fna.join(BAKTA.out.gff),
+    //    params.antismash_db,
+    //    params.antismash_install
+        //BAKTA.out.gff
+   // )
+
+    // RUN MACREL
+    MACREL_CONTIGS(
+        BAKTA.out.fna
     )
 
     // Run taxa specific tools

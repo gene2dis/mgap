@@ -5,6 +5,11 @@
         "https://github.com/nf-core/modules.git": {
             "modules": {
                 "nf-core": {
+                    "antismash/antismashlite": {
+                        "branch": "master",
+                        "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+                        "installed_by": ["modules"]
+                    },
                     "bakta/bakta": {
                         "branch": "master",
                         "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
@@ -33,6 +38,11 @@
                     "kraken2/kraken2": {
                         "branch": "master",
                         "git_sha": "7c695e0147df1157413e06246d9b0094617d3e6b",
+                        "installed_by": ["modules"]
+                    },
+                    "macrel/contigs": {
+                        "branch": "master",
+                        "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
                         "installed_by": ["modules"]
                     },
                     "mlst": {
