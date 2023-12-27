@@ -12,7 +12,6 @@ def extract_species_code(line) {
     return columns[1]
     }
 
-
 // Organism list
 //TODO missing neisserias, salmonella
 taxa_names = ["abaumannii": "Acinetobacter_baumannii",
@@ -46,10 +45,6 @@ taxa_names = ["abaumannii": "Acinetobacter_baumannii",
               "spyogenes": "Streptococcus_pyogenes",
               "vcholerae": "Vibrio_cholerae"
             ]
-
-
-// Validate input parameters
-//WorkflowMgap.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
@@ -159,9 +154,7 @@ workflow MGAP {
     QUAST(
         genome_assembly,
         [],
-        [],
-        false,
-        false
+        []
     )
 
     // RUN Checkm2
