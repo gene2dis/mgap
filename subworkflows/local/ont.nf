@@ -11,6 +11,8 @@ include { PORECHOP_ABI } from "../../modules/local/porechop_abi/main"
 include { MASH_SKETCH } from '../../modules/local/mash/sketch/main'
 include { SPADES } from '../../modules/local/spades/main'
 include { FLYE } from '../../modules/local/flye/main'
+include { MEDAKA } from '../../modules/local/medaka/main'
+include { DNAAPLER } from '../../modules/local/dnaapler/main'
 
 
 workflow ONT {
@@ -19,7 +21,6 @@ workflow ONT {
         ch_reads
 
     main:
-        ch_reads.view()
         // MODULE: Run NANOQ for quality filtering
 
         NANOQ(ch_reads)
@@ -59,13 +60,22 @@ workflow ONT {
         }
 
 
-        // Run Assembly with SPADES
-        // TODO: Add option to choose between assemblers
+        // Run Assembly with FLYE
         FLYE(
             ch_reads_for_assembly,
             params.flye_mode
             )
 
+        // Polish assembly
+        MEDAKA(
+            ch_reads_for_assembly,
+            FLYE.out.fasta
+        )
+
+        // Reorient the contigs
+        DNAAPLER(MEDAKA.out.polished_fasta)
+
+
     emit:
-        FLYE.out.fasta
+        DNAAPLER.out.reoriented_fasta
 }
