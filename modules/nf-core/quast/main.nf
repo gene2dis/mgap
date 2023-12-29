@@ -8,9 +8,9 @@ process QUAST {
         'biocontainers/quast:5.2.0--py39pl5321h2add14b_1' }"
 
     input:
-    tuple val(meta) , path(consensus)
-    tuple val(meta2), path(fasta)
-    tuple val(meta3), path(gff)
+    tuple val(meta), path(consensus)
+    //tuple val(meta2), path(fasta)
+    //tuple val(meta3), path(gff)
 
     output:
     tuple val(meta), path("${prefix}")                   , emit: results
@@ -26,13 +26,11 @@ process QUAST {
     script:
     def args      = task.ext.args   ?: ''
     prefix        = task.ext.prefix ?: "${meta.id}"
-    def features  = gff             ?  "--features $gff" : ''
-    def reference = fasta           ?  "-r $fasta"       : ''
+    //def features  = gff             ?  "--features $gff" : ''
+    //def reference = fasta           ?  "-r $fasta"       : ''
     """
     quast.py \\
         --output-dir $prefix \\
-        $reference \\
-        $features \\
         --threads $task.cpus \\
         $args \\
         ${consensus.join(' ')}

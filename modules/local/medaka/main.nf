@@ -29,7 +29,7 @@ process MEDAKA {
         -d $assembly \\
         -o ./
 
-    mv consensus.fasta ${prefix}_polished.fna
+    mv consensus.fasta ${prefix}_polished.fasta
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

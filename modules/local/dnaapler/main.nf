@@ -23,7 +23,7 @@ process DNAAPLER {
     """
     dnaapler all \\
         -i $assembly \\
-        -o output
+        -o output \\
         -t $task.cpus 
 
     mv output/dnaapler_reoriented.fasta ${prefix}_reoriented.fasta

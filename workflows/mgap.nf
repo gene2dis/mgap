@@ -151,10 +151,11 @@ workflow MGAP {
     
     // Check assamblies with QUAST
 
+
+
+
     QUAST(
-        genome_assembly,
-        [],
-        []
+        genome_assembly
     )
 
     // RUN Checkm2

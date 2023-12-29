@@ -6,23 +6,37 @@
 
 The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across multiple compute infrastructures in a very portable manner. It uses Docker/Singularity containers making installation trivial and results highly reproducible. The [Nextflow DSL2](https://www.nextflow.io/docs/latest/dsl2.html) implementation of this pipeline uses one container per process which makes it much easier to maintain and update software dependencies. Where possible, these processes have been submitted to and installed from [nf-core/modules](https://github.com/nf-core/modules) in order to make them available to all nf-core pipelines, and to everyone within the Nextflow community!
 
-<!-- TODO nf-core: Add full-sized test dataset and amend the paragraph below if applicable -->
+This pipeline is divided in two main steps, genome assembly and genome annotation. 
 
+### Genome assembly
 
-## Pipeline summary
+The genome assembly workflow allows the read processing and assembly of Illumina and Oxford Nanopore data. For each sequencing technology, a different set of tools are used:
 
-<!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
-
+#### Illumina assembly
 1. Read QC, clean, and filter reads. ([`FastP`](https://github.com/OpenGene/fastp))
 2. If requested, calculate coverage of genome ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduce coverage ([`Seqtk`](https://github.com/lh3/seqtk).
 3. If requested, check the reads with Kraken2 against a standard (small) database to evaluate possible contaminations ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
-4. Genome assembly ([`Unicycler`](https://github.com/rrwick/Unicycler))
-5. MLST analysis ([`MLST`](https://github.com/tseemann/mlst))
-6. Annotation ([`BAKTA`](https://github.com/oschwengers/bakta))
-7. Antibiotic resistance prediction using AMRFinderPlus. If the organism is on the list provided by AMRFinderPlus, also point mutations are evaluated ([`AMRFinderPLus`](https://github.com/ncbi/amr))
-8. Prophage and plasmid search using [`Genomad`](https://github.com/apcamargo/genomad)
-9. For _Klebsiella_, evaluation of the genome using [`Kleborate`](https://github.com/klebgenomics/Kleborate)
-10. For _S. aureus_, SCCmec classification using [`staphophia-sccmec`](https://github.com/staphopia/staphopia-sccmec)
+4. Genome assembly with SPADES
+
+#### ONT reads
+1. Read QC with NANOQ
+2. Adapter removal with PORECHOP_ABI
+3. If requested, calculate coverage of genome ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduce coverage ([`Seqtk`](https://github.com/lh3/seqtk)
+4. Genome assembly using FLYE
+5. Genome polishing using MEDAKA
+6. Genome reorientation using Dnaapler
+
+### Genome annotation
+
+With the assembled genome, the annotation steps include:
+
+1. MLST analysis ([`MLST`](https://github.com/tseemann/mlst))
+2. Annotation ([`BAKTA`](https://github.com/oschwengers/bakta))
+3. Antibiotic resistance prediction using AMRFinderPlus. If the organism is on the list provided by AMRFinderPlus, also point mutations are evaluated ([`AMRFinderPLus`](https://github.com/ncbi/amr))
+4. Prophage and plasmid search using [`Genomad`](https://github.com/apcamargo/genomad)
+5. For _Klebsiella_, evaluation of the genome using [`Kleborate`](https://github.com/klebgenomics/Kleborate)
+6. For _S. aureus_, SCCmec classification using [`staphophia-sccmec`](https://github.com/staphopia/staphopia-sccmec)
+
 
 ## Quick Start
 
@@ -39,9 +53,20 @@ Currently the pipeline has been tested with Docker, but should work without issu
 ### Sample sheet file
 First you need to create a Samplesheet file, that contain the name of the samples and the location of the reads. This is an example of this file:
 
+#### Illumina reads
+
 ```
 sample,fastq_1,fastq_2
 SCL10095,/home/jugalde/germlab/data/S190_R1.fastq.gz,/home/jugalde/germlab/data/S190_R2.fastq.gz
+```
+
+The file **always** has to include the header `sample,fastq_1,fastq_2`
+
+#### ONT reads
+
+```
+sample,fastq_1
+C19013,/home/jugalde/germlab/data/C19013.fastq.gz
 ```
 
 The file **always** has to include the header `sample,fastq_1,fastq_2`
@@ -55,16 +80,9 @@ The file `nextflow.config` contains all the parameteres used by the pipeline, in
 
 Once you have everything ready, you can run the pipeline by calling the name of the repository, and adding the appropiate parameters. For example:
 
-```bash
-nextflow run 
-```
-
-4. Start running your own analysis!
-
-   <!-- TODO nf-core: Update the example "typical command" below used to run the pipeline -->
 
    ```bash
-   nextflow run gene2dis-mgap --input <SAMPLESHEET> --outdir <OUTDIR> -profile docker 
+   nextflow run gene2dis-mgap --input <SAMPLESHEET> --outdir <OUTDIR> -profile docker -seq_type illumina|ont
    ```
 
    Here the parameters are:
@@ -72,6 +90,7 @@ nextflow run
    - --input: The samplesheet file
    - --outdir: The output directory for the output of the pipeline
    - -profile: either docker or conda (not tested yet)
+   - --seq_type: sequencing technology used, either illumina or ont
 
    *Notice that the pipeline parameters have two dashes (--), while parameters that are for nextflow only have one (-).
 
