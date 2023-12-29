@@ -24,6 +24,7 @@ process FLYE {
     task.ext.when == null || task.ext.when
 
     script:
+    mode = "--" + mode
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     def valid_mode = ["--pacbio-raw", "--pacbio-corr", "--pacbio-hifi", "--nano-raw", "--nano-corr", "--nano-hq"]
