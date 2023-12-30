@@ -73,9 +73,9 @@ workflow ONT {
         )
 
         // Reorient the contigs
-        DNAAPLER(MEDAKA.out.polished_fasta)
+        //DNAAPLER(MEDAKA.out.polished_fasta)
 
 
     emit:
-        DNAAPLER.out.reoriented_fasta
+        MEDAKA.out.polished_fasta
 }

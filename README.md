@@ -24,7 +24,7 @@ The genome assembly workflow allows the read processing and assembly of Illumina
 3. If requested, calculate coverage of genome ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduce coverage ([`Seqtk`](https://github.com/lh3/seqtk)
 4. Genome assembly using FLYE
 5. Genome polishing using MEDAKA
-6. Genome reorientation using Dnaapler
+6. Genome reorientation using Dnaapler (*skipped at the moment, due to errors when the markers are not present*)
 
 ### Genome annotation
 
