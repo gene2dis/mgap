@@ -31,6 +31,17 @@ workflow ONT {
 
         // If selected, adjust coverage
 
+        // Call Kraken2 to evaluate contaminations
+        if (params.run_kraken2) {
+
+            KRAKEN2(
+                PORECHOP_ABI.out.reads,
+                params.kraken2db,
+                false,
+                false
+            )
+        }
+
         if (params.adjust_coverage){
 
             // Run MASH
@@ -67,9 +78,12 @@ workflow ONT {
             )
 
         // Polish assembly
+
+        ch_reads_for_assembly
+                            .join(FLYE.out.fasta)
+                            .set{medaka_ch}
         MEDAKA(
-            ch_reads_for_assembly,
-            FLYE.out.fasta
+            medaka_ch
         )
 
         // Reorient the contigs

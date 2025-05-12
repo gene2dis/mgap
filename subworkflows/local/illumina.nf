@@ -18,8 +18,6 @@ workflow ILLUMINA {
     main:
         // MODULE: Run FastP
 
-        ch_reads.view()
-
         FASTP (
             ch_reads,
             [],

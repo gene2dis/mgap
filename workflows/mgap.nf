@@ -223,9 +223,9 @@ workflow MGAP {
    // )
 
     // RUN MACREL
-    MACREL_CONTIGS(
-        BAKTA.out.fna
-    )
+    // MACREL_CONTIGS(
+    //    BAKTA.out.fna
+    // )
 
     // Run taxa specific tools
     species_code_ch

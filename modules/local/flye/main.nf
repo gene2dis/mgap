@@ -34,6 +34,8 @@ process FLYE {
     flye \\
         $mode \\
         $reads \\
+        --asm-coverage 50 \\
+        --genome-size 5m \\
         --out-dir . \\
         --threads \\
         $task.cpus \\

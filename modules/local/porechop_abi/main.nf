@@ -1,6 +1,6 @@
 process PORECHOP_ABI {
     tag "$meta.id"
-    label 'process_medium'
+    label 'process_high'
 
     conda "bioconda::porechop_abi=0.5.0-2"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
