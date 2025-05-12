@@ -2,10 +2,10 @@ process AMRFINDERPLUS_RUN {
     tag "$meta.id"
     label 'process_medium'
 
-    conda "bioconda::ncbi-amrfinderplus=3.11.4"
+    conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/ncbi-amrfinderplus:3.11.4--h6e70893_0':
-        'quay.io/biocontainers/ncbi-amrfinderplus:3.11.4--h6e70893_0' }"
+        'https://depot.galaxyproject.org/singularity/ncbi-amrfinderplus:3.11.18--h283d18e_0':
+        'biocontainers/ncbi-amrfinderplus:3.11.18--h283d18e_0' }"
 
     input:
     tuple val(meta), path(fasta_nuc), path(fasta_prot), path(gff3), val(species)

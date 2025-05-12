@@ -2,17 +2,17 @@ process MACREL_CONTIGS {
     tag "$meta.id"
     label 'process_medium'
 
-    conda "bioconda::macrel=1.2.0"
+    conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/macrel:1.2.0--pyh5e36f6f_0':
-        'quay.io/biocontainers/macrel:1.2.0--pyh5e36f6f_0' }"
+        'biocontainers/macrel:1.2.0--pyh5e36f6f_0' }"
 
     input:
     tuple val(meta), path(fasta)
 
     output:
-    tuple val(meta), path("*/*.smorfs.faa")      , emit: smorfs
-    tuple val(meta), path("*/*.all_orfs.faa")    , emit: all_orfs
+    tuple val(meta), path("*/*.smorfs.faa.gz")      , emit: smorfs
+    tuple val(meta), path("*/*.all_orfs.faa.gz")    , emit: all_orfs
     tuple val(meta), path("*/*.prediction.gz")      , emit: amp_prediction
     tuple val(meta), path("*/*.md")                 , emit: readme_file
     tuple val(meta), path("*/*_log.txt")            , emit: log_file
@@ -28,10 +28,12 @@ process MACREL_CONTIGS {
     macrel contigs \\
         $args \\
         --fasta $fasta \\
-        --output macrel \\
+        --output ${prefix}/ \\
         --tag ${prefix} \\
-        --log-file macrel/${prefix}_log.txt \\
+        --log-file ${prefix}/${prefix}_log.txt \\
         --threads $task.cpus
+
+    gzip --no-name ${prefix}/*.faa
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

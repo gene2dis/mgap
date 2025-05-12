@@ -12,7 +12,6 @@ def extract_species_code(line) {
     return columns[1]
     }
 
-
 // Organism list
 //TODO missing neisserias, salmonella
 taxa_names = ["abaumannii": "Acinetobacter_baumannii",
@@ -47,10 +46,6 @@ taxa_names = ["abaumannii": "Acinetobacter_baumannii",
               "vcholerae": "Vibrio_cholerae"
             ]
 
-
-// Validate input parameters
-//WorkflowMgap.initialise(params, log)
-
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
 //def checkPathParamList = [ params.input, params.multiqc_config, params.fasta ]
@@ -76,14 +71,14 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
     IMPORT LOCAL MODULES/SUBWORKFLOWS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+include { fromSamplesheet } from 'plugin/nf-validation'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK } from '../subworkflows/local/input_check'
-include { MASH_SKETCH } from '../modules/local/mash/sketch/main'
-include { SPADES } from '../modules/local/spades/main'
-include { UNICYCLER } from '../modules/local/unicycler/main'
+//include { INPUT_CHECK } from '../subworkflows/local/input_check'
+include { ILLUMINA } from '../subworkflows/local/illumina'
+include { ONT } from '../subworkflows/local/ont'
 include { CHECKM2 } from '../modules/local/checkm2/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/main'
 include { GENOMAD } from '../modules/local/genomad/main'
@@ -98,10 +93,6 @@ include { KLEBORATE } from '../modules/local/kleborate/main'
 //
 // MODULE: Installed directly from nf-core/modules
 //
-include { FASTP } from '../modules/nf-core/fastp/main'
-include { KRAKEN2_KRAKEN2 as KRAKEN2} from '../modules/nf-core/kraken2/kraken2/main'
-include { BRACKEN_BRACKEN as BRACKEN} from '../modules/nf-core/bracken/bracken/main'
-include { SEQTK_SAMPLE } from '../modules/nf-core/seqtk/sample/main'
 include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
@@ -131,101 +122,56 @@ workflow MGAP {
     // SUBWORKFLOW: Read in samplesheet, validate and stage input files
     //
     
-    INPUT_CHECK (
-        ch_input
-    )
-    ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
+    //INPUT_CHECK (
+    //   ch_input
+    //)
+    //ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
-    // MODULE: Run FastP
+    // Create the input read channel from the sampleshet
+    ch_input_samples = Channel.fromSamplesheet("input")
+                        .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1, fastq_2])}
 
-    FASTP (
-        INPUT_CHECK.out.reads,
-        [],
-        [],
-        []
-    )
+    // Decide if the illumina or ont workflow is used and create the proper input channels
 
-    if (params.run_kraken2) {
-
-        KRAKEN2(
-            FASTP.out.reads,
-            params.kraken2db,
-            false,
-            false
+    genome_assembly = Channel.empty()
+    if (params.seq_type == "illumina") {
+        genome_assembly = ILLUMINA(
+            Channel.fromSamplesheet("input")
+                        .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1, fastq_2])}
         )
-
-
-        BRACKEN(
-            KRAKEN2.out.report,
-            params.kraken2db
+    } else if (params.seq_type == "ont") {
+        genome_assembly = ONT(
+            Channel.fromSamplesheet("input")
+                        .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1])}
         )
-
-
+    } else {
+        error("Please specify sequence type")
     }
 
-    // If selected, adjust coverage
-
-    if (params.adjust_coverage){
-
-        MASH_SKETCH(
-            FASTP.out.reads
-        )
-
-       ch_coverage = MASH_SKETCH
-                               .out
-                               .coverage
-                               .map{
-                                     meta, reads, coverage -> [meta, reads, params.max_coverage / coverage.text.trim().toFloat()]
-                               }
-                               .branch{
-                                reduce_coverage: it[2].toFloat() < 1
-                                keep_coverage: it[2].toFloat() > 1
-                                }
-                                .set{coverage_status}
-
-
-        ch_subsample_out = SEQTK_SAMPLE(
-            coverage_status.reduce_coverage
-        )
-
-        ch_reads_for_assembly = coverage_status.keep_coverage
-                                                        .concat(SEQTK_SAMPLE.out.reads)
-            
-    }
-    else {
-        ch_reads_for_assembly = FASTP.out.reads
-    }
-
-    // Run Assembly with Unicycler or SPADES
-    // TODO: Add option to choose between assemblers
-    SPADES(
-        ch_reads_for_assembly
-    )
-
+    
     // Check assamblies with QUAST
 
+
+
+
     QUAST(
-        SPADES.out.scaffolds,
-        [],
-        [],
-        false,
-        false
+        genome_assembly
     )
 
     // RUN Checkm2
     CHECKM2(
-        SPADES.out.scaffolds,
+        genome_assembly,
         params.checkm2_db
     )
 
     // RUN MLST
     MLST(
-        SPADES.out.scaffolds
+        genome_assembly
     )
 
     // RUN ANNOTATION
     BAKTA(
-        SPADES.out.scaffolds,
+        genome_assembly,
         params.bakta_db,
         [],
         []
@@ -277,9 +223,9 @@ workflow MGAP {
    // )
 
     // RUN MACREL
-    MACREL_CONTIGS(
-        BAKTA.out.fna
-    )
+    // MACREL_CONTIGS(
+    //    BAKTA.out.fna
+    // )
 
     // Run taxa specific tools
     species_code_ch

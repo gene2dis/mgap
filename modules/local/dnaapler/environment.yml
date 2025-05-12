@@ -1,0 +1,7 @@
+name: medaka
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - bioconda::dnaapler=0.5.0
