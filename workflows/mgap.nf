@@ -163,8 +163,6 @@ workflow MGAP {
     
     // Check assamblies with QUAST
 
-    genome_assembly.view()
-
     QUAST(
         genome_assembly
     )
