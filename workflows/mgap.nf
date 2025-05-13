@@ -248,7 +248,6 @@ workflow MGAP {
                 }
                 .set{taxa_genome_process}
 
-    taxa_genome_process.saureus.view()
     // THIS SHOULD GO INTO A SUBWORKFLOW LATER TO KEEP THINGS ORGANIZED
 
     // Run Kleborate
