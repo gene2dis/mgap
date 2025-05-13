@@ -96,7 +96,7 @@ include { KLEBORATE } from '../modules/local/kleborate/main'
 include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
-include { STAPHOPIASCCMEC } from '../modules/nf-core/staphopiasccmec/main'
+include { STAPHOPIASCCMEC } from '../modules/local/staphopiasccmec/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
 include { ANTISMASH_ANTISMASHLITE } from '../modules/nf-core/antismash/antismashlite/main'
 include { MACREL_CONTIGS } from '../modules/nf-core/macrel/contigs/main'
@@ -128,8 +128,8 @@ workflow MGAP {
     //ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
     // Create the input read channel from the sampleshet
-    ch_input_samples = Channel.fromSamplesheet("input")
-                        .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1, fastq_2])}
+    //ch_input_samples = Channel.fromSamplesheet("input")
+    //                    .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1, fastq_2])}
 
     // Decide if the illumina or ont workflow is used and create the proper input channels
 
@@ -144,15 +144,26 @@ workflow MGAP {
             Channel.fromSamplesheet("input")
                         .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1])}
         )
-    } else {
+    } else if (params.seq_type == "contig") {
+        Channel
+        .fromPath(params.input)
+        .splitCsv(header:true)
+        .map { row -> 
+            def meta = [id: row.sample] 
+            def fasta = file(row.fasta)
+            tuple(meta, fasta)
+        }
+        .set { genome_assembly }
+        
+    }
+    else {
         error("Please specify sequence type")
     }
 
     
     // Check assamblies with QUAST
 
-
-
+    genome_assembly.view()
 
     QUAST(
         genome_assembly
@@ -237,6 +248,7 @@ workflow MGAP {
                 }
                 .set{taxa_genome_process}
 
+    taxa_genome_process.saureus.view()
     // THIS SHOULD GO INTO A SUBWORKFLOW LATER TO KEEP THINGS ORGANIZED
 
     // Run Kleborate

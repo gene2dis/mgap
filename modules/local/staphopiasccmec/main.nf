@@ -8,7 +8,7 @@ process STAPHOPIASCCMEC {
         'biocontainers/staphopia-sccmec:1.0.0--hdfd78af_0' }"
 
     input:
-    tuple val(meta), path(fasta)
+    tuple val(meta), val(species), path(fasta)
 
     output:
     tuple val(meta), path("*.tsv"), emit: tsv
