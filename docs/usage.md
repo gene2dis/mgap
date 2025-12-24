@@ -4,7 +4,13 @@
 
 ## Introduction
 
-<!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
+gene2dis/mgap is a Nextflow pipeline for microbial genome analysis. It supports:
+
+- **Illumina short-read assembly** (FastP → SPAdes)
+- **Oxford Nanopore long-read assembly** (Nanoq → Porechop → Flye → Medaka)
+- **Pre-assembled contigs** (direct annotation)
+
+The pipeline performs quality control, assembly, annotation (Bakta), AMR detection (AMRFinderPlus), mobile element detection (geNomad), and species-specific analyses.
 
 ## Samplesheet input
 
@@ -55,10 +61,61 @@ An [example samplesheet](../assets/samplesheet.csv) has been provided with the p
 The typical command for running the pipeline is as follows:
 
 ```bash
-nextflow run gene2dis/mgap --input samplesheet.csv --outdir <OUTDIR> --genome GRCh37 -profile docker
+# Illumina short-read data
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --bakta_db /path/to/bakta_db \
+    --checkm2_db /path/to/checkm2_db \
+    -profile docker
+
+# Oxford Nanopore long-read data
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --flye_mode nano-hq \
+    -profile docker
+
+# Pre-assembled contigs
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type contig \
+    -profile docker
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
+
+### Cloud execution
+
+The pipeline supports execution on AWS, Google Cloud, and Azure:
+
+```bash
+# AWS Batch
+nextflow run gene2dis/mgap \
+    --input s3://bucket/samplesheet.csv \
+    --outdir s3://bucket/results \
+    --seq_type illumina \
+    --awsqueue my-batch-queue \
+    -profile awsbatch,docker
+
+# Google Cloud Batch
+nextflow run gene2dis/mgap \
+    --input gs://bucket/samplesheet.csv \
+    --outdir gs://bucket/results \
+    --seq_type illumina \
+    --gcp_project my-project \
+    -profile googlebatch,docker
+
+# Seqera Platform (Tower)
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    -profile tower,docker
+```
 
 Note that the pipeline will create the following files in your working directory:
 

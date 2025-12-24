@@ -228,80 +228,218 @@
                     "help_text": "By default, parameters set as _hidden_ in the schema are not shown on the command line when a user runs with `--help`. Specifying this option will tell the pipeline to show all parameters."
                 }
             }
+        },
+        "pipeline_options": {
+            "title": "Pipeline options",
+            "type": "object",
+            "fa_icon": "fas fa-bacteria",
+            "description": "Core pipeline parameters for microbial genome analysis.",
+            "required": ["seq_type"],
+            "properties": {
+                "seq_type": {
+                    "type": "string",
+                    "description": "Type of sequencing data.",
+                    "enum": ["illumina", "ont", "contig"],
+                    "fa_icon": "fas fa-dna",
+                    "help_text": "Choose 'illumina' for short-read Illumina data, 'ont' for Oxford Nanopore long-reads, or 'contig' for pre-assembled contigs."
+                },
+                "run_kraken2": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run Kraken2 for contamination detection.",
+                    "fa_icon": "fas fa-search"
+                },
+                "adjust_coverage": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Subsample reads to target coverage.",
+                    "fa_icon": "fas fa-layer-group"
+                },
+                "max_coverage": {
+                    "type": "integer",
+                    "default": 110,
+                    "description": "Target maximum coverage for subsampling.",
+                    "fa_icon": "fas fa-chart-line"
+                }
+            }
+        },
+        "database_options": {
+            "title": "Database options",
+            "type": "object",
+            "fa_icon": "fas fa-database",
+            "description": "Paths to required databases. Set to null for cloud runs.",
+            "properties": {
+                "bakta_db": {
+                    "type": "string",
+                    "description": "Path to Bakta database directory.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "checkm2_db": {
+                    "type": "string",
+                    "description": "Path to CheckM2 database file.",
+                    "format": "file-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "kraken2db": {
+                    "type": "string",
+                    "description": "Path to Kraken2 database directory.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "amrfinder_db": {
+                    "type": "string",
+                    "description": "Path to AMRFinderPlus database directory.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "genomad_db": {
+                    "type": "string",
+                    "description": "Path to geNomad database directory.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "gtdbtk_db": {
+                    "type": "string",
+                    "description": "Path to GTDB-Tk database directory.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                }
+            }
+        },
+        "illumina_options": {
+            "title": "Illumina options",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "description": "Parameters for Illumina short-read processing.",
+            "properties": {
+                "fastp_qualified_quality": {
+                    "type": "integer",
+                    "default": 15,
+                    "description": "Minimum base quality score for fastp.",
+                    "fa_icon": "fas fa-sliders-h"
+                },
+                "fastp_unqualified_percent_limit": {
+                    "type": "integer",
+                    "default": 40,
+                    "description": "Maximum percentage of unqualified bases.",
+                    "fa_icon": "fas fa-sliders-h"
+                },
+                "fastp_cut_front_window_size": {
+                    "type": "integer",
+                    "default": 4,
+                    "description": "Window size for front trimming.",
+                    "fa_icon": "fas fa-cut"
+                },
+                "fastp_cut_front_mean_quality": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Mean quality threshold for front trimming.",
+                    "fa_icon": "fas fa-cut"
+                },
+                "fastp_cut_right_window_size": {
+                    "type": "integer",
+                    "default": 4,
+                    "description": "Window size for right trimming.",
+                    "fa_icon": "fas fa-cut"
+                },
+                "fastp_cut_right_mean_quality": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Mean quality threshold for right trimming.",
+                    "fa_icon": "fas fa-cut"
+                },
+                "fastp_reads_minlength": {
+                    "type": "integer",
+                    "default": 36,
+                    "description": "Minimum read length after trimming.",
+                    "fa_icon": "fas fa-ruler"
+                },
+                "fastp_n_base_limit": {
+                    "type": "integer",
+                    "default": 5,
+                    "description": "Maximum number of N bases allowed.",
+                    "fa_icon": "fas fa-ban"
+                }
+            }
+        },
+        "ont_options": {
+            "title": "ONT options",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "description": "Parameters for Oxford Nanopore long-read processing.",
+            "properties": {
+                "flye_mode": {
+                    "type": "string",
+                    "default": "nano-hq",
+                    "description": "Flye assembly mode for read type.",
+                    "enum": ["pacbio-raw", "pacbio-corr", "pacbio-hifi", "nano-raw", "nano-corr", "nano-hq"],
+                    "fa_icon": "fas fa-cogs"
+                },
+                "nanoq_min_length": {
+                    "type": "integer",
+                    "default": 1000,
+                    "description": "Minimum read length for Nanoq filtering.",
+                    "fa_icon": "fas fa-ruler"
+                },
+                "nanoq_min_quality": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Minimum quality score for Nanoq filtering.",
+                    "fa_icon": "fas fa-star"
+                }
+            }
+        },
+        "cloud_options": {
+            "title": "Cloud options",
+            "type": "object",
+            "fa_icon": "fas fa-cloud",
+            "description": "Parameters for cloud execution (AWS, GCP, Azure).",
+            "properties": {
+                "awsqueue": {
+                    "type": "string",
+                    "description": "AWS Batch queue name.",
+                    "fa_icon": "fab fa-aws",
+                    "hidden": true
+                },
+                "awsregion": {
+                    "type": "string",
+                    "default": "us-east-1",
+                    "description": "AWS region.",
+                    "fa_icon": "fab fa-aws",
+                    "hidden": true
+                },
+                "gcp_project": {
+                    "type": "string",
+                    "description": "Google Cloud project ID.",
+                    "fa_icon": "fab fa-google",
+                    "hidden": true
+                },
+                "gcp_region": {
+                    "type": "string",
+                    "default": "us-central1",
+                    "description": "Google Cloud region.",
+                    "fa_icon": "fab fa-google",
+                    "hidden": true
+                },
+                "azure_batch_account": {
+                    "type": "string",
+                    "description": "Azure Batch account name.",
+                    "fa_icon": "fab fa-microsoft",
+                    "hidden": true
+                }
+            }
         }
     },
     "allOf": [
-        {
-            "$ref": "#/$defs/input_output_options"
-        },
-        {
-            "$ref": "#/$defs/institutional_config_options"
-        },
-        {
-            "$ref": "#/$defs/max_job_request_options"
-        },
-        {
-            "$ref": "#/$defs/generic_options"
-        }
-    ],
-    "properties": {
-        "seq_type": {
-            "type": "string",
-            "description": "Type of sequencing data: illumina, ont, or contig",
-            "enum": ["illumina", "ont", "contig"],
-            "fa_icon": "fas fa-dna"
-        },
-        "fastp_qualified_quality": {
-            "type": "integer",
-            "default": 15
-        },
-        "fastp_unqualified_percent_limit": {
-            "type": "integer",
-            "default": 40
-        },
-        "fastp_cut_front_window_size": {
-            "type": "integer",
-            "default": 4
-        },
-        "fastp_cut_front_mean_quality": {
-            "type": "integer",
-            "default": 20
-        },
-        "fastp_cut_right_window_size": {
-            "type": "integer",
-            "default": 4
-        },
-        "fastp_cut_right_mean_quality": {
-            "type": "integer",
-            "default": 20
-        },
-        "fastp_reads_minlength": {
-            "type": "integer",
-            "default": 36
-        },
-        "fastp_n_base_limit": {
-            "type": "integer",
-            "default": 5
-        },
-        "adjust_coverage": {
-            "type": "boolean",
-            "default": true
-        },
-        "max_coverage": {
-            "type": "integer",
-            "default": 110
-        },
-        "unicycler_min_fasta_length": {
-            "type": "integer",
-            "default": 100
-        },
-        "unicycler_mode": {
-            "type": "string",
-            "default": "normal"
-        },
-        "bakta_db": {
-            "type": "string",
-            "default": "/mds_data/dbs/baktadb/db"
-        }
-    }
+        { "$ref": "#/$defs/input_output_options" },
+        { "$ref": "#/$defs/pipeline_options" },
+        { "$ref": "#/$defs/database_options" },
+        { "$ref": "#/$defs/illumina_options" },
+        { "$ref": "#/$defs/ont_options" },
+        { "$ref": "#/$defs/cloud_options" },
+        { "$ref": "#/$defs/institutional_config_options" },
+        { "$ref": "#/$defs/max_job_request_options" },
+        { "$ref": "#/$defs/generic_options" }
+    ]
 }
