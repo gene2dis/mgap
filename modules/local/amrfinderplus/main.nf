@@ -49,8 +49,8 @@ process AMRFINDERPLUS_RUN {
         -d $amrfinderdb \\
         --threads $task.cpus > ${prefix}.tsv
 
-    VER=\$(amrfinder --version)
-    DBVER=\$(echo \$(amrfinder --database amrfinderdb --database_version 2> stdout) | rev | cut -f 1 -d ' ' | rev)
+    export VER=\$(amrfinder --version)
+    export DBVER=\$(echo \$(amrfinder --database amrfinderdb --database_version 2> stdout) | rev | cut -f 1 -d ' ' | rev)
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

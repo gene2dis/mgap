@@ -20,7 +20,7 @@ concurrency:
 jobs:
   test:
     name: Run pipeline with test data
-    if: "${{ github.event_name != 'push' || (github.event_name == 'push' && github.repository == 'gene2dis/mgap') }}"
+    if: ${{ github.event_name != 'push' || (github.event_name == 'push' && github.repository == 'gene2dis/mgap') }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -45,7 +45,7 @@ jobs:
 
   test_stub:
     name: Run pipeline stub tests
-    if: "${{ github.event_name != 'push' || (github.event_name == 'push' && github.repository == 'gene2dis/mgap') }}"
+    if: ${{ github.event_name != 'push' || (github.event_name == 'push' && github.repository == 'gene2dis/mgap') }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out pipeline code

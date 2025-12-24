@@ -33,7 +33,7 @@ process BAKTA_BAKTA {
     def args = task.ext.args   ?: ''
     prefix   = task.ext.prefix ?: "${meta.id}"
     def proteins_opt = proteins ? "--proteins ${proteins[0]}" : ""
-    def prodigal_tf = prodigal_tf ? "--prodigal-tf ${prodigal_tf[0]}" : ""
+    def prodigal_tf_opt = prodigal_tf ? "--prodigal-tf ${prodigal_tf[0]}" : ""
     """
     bakta \\
         $fasta \\
@@ -41,7 +41,7 @@ process BAKTA_BAKTA {
         --threads $task.cpus \\
         --prefix $prefix \\
         $proteins_opt \\
-        $prodigal_tf \\
+        $prodigal_tf_opt \\
         --db $db
 
     cat <<-END_VERSIONS > versions.yml
