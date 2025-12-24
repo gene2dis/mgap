@@ -10,7 +10,7 @@ process GTDBTK_CLASSIFYWF {
 
     input:
     tuple val(meta), path("bins/*")
-    tuple val(db_name), path("database/*")
+    tuple val(db_name), path(database)
     path(mash_db)
 
     output:
@@ -30,13 +30,14 @@ process GTDBTK_CLASSIFYWF {
 
     script:
     def args = task.ext.args ?: ''
-    def pplacer_scratch = params.gtdbtk_pplacer_scratch ? "--scratch_dir pplacer_tmp" : ""
+    def pplacer_scratch = params.gtdbtk_pplacer_scratch ? true : false
     def mash_mode = mash_db ? "--mash_db ${mash_db}" : "--skip_ani_screen"
     prefix = task.ext.prefix ?: "${meta.id}"
+    def extension = params.gtdbtk_extension ?: "fa"
 
     """
-    export GTDBTK_DATA_PATH="\${PWD}/database"
-    if [ ${pplacer_scratch} != "" ] ; then
+    export GTDBTK_DATA_PATH="\${PWD}/${database}"
+    if [ "${pplacer_scratch}" = "true" ] ; then
         mkdir pplacer_tmp
     fi
 
@@ -46,8 +47,9 @@ process GTDBTK_CLASSIFYWF {
         --prefix "gtdbtk.${prefix}" \\
         --out_dir "\${PWD}" \\
         --cpus $task.cpus \\
+        --extension ${extension} \\
         $mash_mode \\
-        $pplacer_scratch \\
+        ${pplacer_scratch == true ? "--scratch_dir pplacer_tmp" : ""} \\
         --min_perc_aa $params.gtdbtk_min_perc_aa \\
         --min_af $params.gtdbtk_min_af
 

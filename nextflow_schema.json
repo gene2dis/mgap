@@ -260,6 +260,12 @@
                     "default": 110,
                     "description": "Target maximum coverage for subsampling.",
                     "fa_icon": "fas fa-chart-line"
+                },
+                "run_gtdbtk": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run GTDB-Tk for taxonomic classification.",
+                    "fa_icon": "fas fa-sitemap"
                 }
             }
         },
@@ -304,6 +310,36 @@
                     "description": "Path to GTDB-Tk database directory.",
                     "format": "directory-path",
                     "fa_icon": "fas fa-database"
+                },
+                "gtdbtk_mash_db": {
+                    "type": "string",
+                    "description": "Path to GTDB-Tk Mash database file for ANI screening. If not provided, ANI screening is skipped.",
+                    "format": "file-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "gtdbtk_min_perc_aa": {
+                    "type": "number",
+                    "default": 10,
+                    "description": "Minimum percentage of amino acids in MSA for GTDB-Tk.",
+                    "fa_icon": "fas fa-percentage"
+                },
+                "gtdbtk_min_af": {
+                    "type": "number",
+                    "default": 0.65,
+                    "description": "Minimum alignment fraction for GTDB-Tk.",
+                    "fa_icon": "fas fa-align-left"
+                },
+                "gtdbtk_pplacer_scratch": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Use scratch directory for pplacer to reduce memory usage.",
+                    "fa_icon": "fas fa-memory"
+                },
+                "gtdbtk_extension": {
+                    "type": "string",
+                    "default": "fa",
+                    "description": "File extension for genome files (e.g., 'fa', 'fasta', 'fna').",
+                    "fa_icon": "fas fa-file"
                 }
             }
         },

@@ -174,11 +174,21 @@ workflow MGAP {
         .set { species_code_ch }
 
 
-    // Run GTDB-Tk
-    //GTDBTK(
-    //    UNICYCLER.out.scaffolds,
-    //    params.gtbd_db
-    //)
+    // Run GTDB-Tk for taxonomic classification
+    if (params.run_gtdbtk) {
+        // Prepare database channel
+        ch_gtdbtk_db = channel.value([ "gtdbtk_db", file(params.gtdbtk_db) ])
+        
+        // Prepare optional Mash database
+        ch_mash_db = params.gtdbtk_mash_db ? file(params.gtdbtk_mash_db) : []
+
+        GTDBTK(
+            genome_assembly,
+            ch_gtdbtk_db,
+            ch_mash_db
+        )
+        ch_versions = ch_versions.mix(GTDBTK.out.versions.first())
+    }
 
 
     // RUN AMRFINDERPLUS 
