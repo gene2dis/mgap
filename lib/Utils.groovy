@@ -1,4 +1,7 @@
 //
+// DEPRECATED: This file is deprecated and will be removed in a future release.
+// Utility functions are now handled by Nextflow native features or plugins.
+//
 // This file holds several Groovy functions that could be useful for any Nextflow pipeline
 //
 

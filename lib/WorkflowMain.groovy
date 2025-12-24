@@ -1,4 +1,8 @@
 //
+// DEPRECATED: This file is deprecated and will be removed in a future release.
+// Initialization logic is now handled by the PIPELINE_INITIALISATION subworkflow
+// in subworkflows/local/utils_nfcore_mgap_pipeline/main.nf
+//
 // This file holds several functions specific to the main.nf workflow in the gene2dis/mgap pipeline
 //
 

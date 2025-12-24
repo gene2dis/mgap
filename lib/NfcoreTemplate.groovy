@@ -1,4 +1,8 @@
 //
+// DEPRECATED: This file is deprecated and will be removed in a future release.
+// Template functions are now handled by the PIPELINE_INITIALISATION and PIPELINE_COMPLETION
+// subworkflows in subworkflows/local/utils_nfcore_mgap_pipeline/main.nf
+//
 // This file holds several functions used within the nf-core pipeline template.
 //
 

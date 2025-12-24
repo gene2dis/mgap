@@ -1,4 +1,8 @@
 //
+// DEPRECATED: This file is deprecated and will be removed in a future release.
+// Parameter validation is now handled by the nf-schema plugin (nf-schema@2.2.0).
+// See: https://nextflow-io.github.io/nf-schema/
+//
 // This file holds several functions used to perform JSON parameter validation, help and summary rendering for the nf-core pipeline template.
 //
 
