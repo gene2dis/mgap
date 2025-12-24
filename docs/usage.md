@@ -10,7 +10,7 @@ gene2dis/mgap is a Nextflow pipeline for microbial genome analysis. It supports:
 - **Oxford Nanopore long-read assembly** (Nanoq → Porechop → Flye → Medaka)
 - **Pre-assembled contigs** (direct annotation)
 
-The pipeline performs quality control, assembly, annotation (Bakta), AMR detection (AMRFinderPlus), mobile element detection (geNomad), and species-specific analyses.
+The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), mobile element detection (geNomad), and species-specific analyses.
 
 ## Samplesheet input
 
@@ -127,9 +127,65 @@ nextflow run gene2dis/mgap \
     --outdir results \
     --seq_type contig \
     -profile docker
+
+# With GTDB-Tk taxonomic classification (optional)
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_gtdbtk \
+    --gtdbtk_db /path/to/gtdbtk_db \
+    -profile docker
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
+
+### GTDB-Tk Taxonomic Classification
+
+GTDB-Tk provides taxonomic classification using the Genome Taxonomy Database (GTDB). This is an optional step that can be enabled with the `--run_gtdbtk` flag.
+
+**Batch Processing:** The pipeline processes all genomes together in a single GTDB-Tk run, which significantly reduces runtime compared to processing genomes individually. Results are consolidated into a single set of output files in the `gtdbtk/` directory.
+
+**Basic usage:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_gtdbtk \
+    --gtdbtk_db /path/to/gtdbtk_db \
+    -profile docker
+```
+
+**Advanced GTDB-Tk parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--run_gtdbtk` | `false` | Enable GTDB-Tk taxonomic classification |
+| `--gtdbtk_db` | `null` | Path to GTDB-Tk reference database (required if enabled) |
+| `--gtdbtk_mash_db` | `null` | Path to Mash database for ANI screening (optional, skips ANI if not provided) |
+| `--gtdbtk_extension` | `fa` | File extension for genome files (`fa`, `fasta`, `fna`) |
+| `--gtdbtk_min_perc_aa` | `10` | Minimum percentage of amino acids in MSA |
+| `--gtdbtk_min_af` | `0.65` | Minimum alignment fraction |
+| `--gtdbtk_pplacer_scratch` | `true` | Use scratch directory for pplacer to reduce memory usage |
+
+**Example with custom parameters:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --run_gtdbtk \
+    --gtdbtk_db /path/to/gtdbtk_db \
+    --gtdbtk_mash_db /path/to/mash_db \
+    --gtdbtk_extension fasta \
+    --gtdbtk_min_af 0.7 \
+    -profile docker
+```
+
+**Note:** The GTDB-Tk database is large (~70GB) and must be downloaded separately. See the [GTDB-Tk documentation](https://ecogenomics.github.io/GTDBTk/installing/index.html) for database installation instructions.
 
 ### Cloud execution
 

@@ -13,6 +13,7 @@ The directories listed below will be created in the results directory after the 
 The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data using the following steps:
 
 - [FastQC](#fastqc) - Raw read QC
+- [GTDB-Tk](#gtdb-tk) - Taxonomic classification (optional)
 - [MultiQC](#multiqc) - Aggregate report describing results and QC from the whole pipeline
 - [Pipeline information](#pipeline-information) - Report metrics generated during the workflow execution
 
@@ -36,6 +37,37 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 ![MultiQC - FastQC adapter content plot](images/mqc_fastqc_adapter.png)
 
 > **NB:** The FastQC plots displayed in the MultiQC report shows _untrimmed_ reads. They may contain adapter sequence and potentially regions with low quality.
+
+### GTDB-Tk
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `gtdbtk/`
+  - `gtdbtk.batch.*.summary.tsv`: Taxonomic classification summary for all bacterial and archaeal genomes in the batch
+  - `gtdbtk.batch.*.classify.tree.gz`: Phylogenetic tree with genome placement (optional)
+  - `gtdbtk.batch.*.markers_summary.tsv`: Summary of identified marker genes (optional)
+  - `gtdbtk.batch.*.msa.fasta.gz`: Multiple sequence alignment of marker genes (optional)
+  - `gtdbtk.batch.*.filtered.tsv`: Genomes filtered during classification (optional)
+  - `gtdbtk.batch.failed_genomes.tsv`: Genomes that failed classification (optional)
+  - `gtdbtk.batch.log`: GTDB-Tk execution log
+  - `gtdbtk.batch.warnings.log`: Warnings generated during classification
+
+</details>
+
+[GTDB-Tk](https://ecogenomics.github.io/GTDBTk/) is a toolkit for assigning objective taxonomic classifications to bacterial and archaeal genomes based on the Genome Database Taxonomy (GTDB). It uses average nucleotide identity (ANI) to assign genomes to species clusters and phylogenetic placement for higher-level taxonomic assignments.
+
+**Batch Processing:** GTDB-Tk processes all genomes in a single batch run, which significantly reduces runtime compared to processing genomes individually. All samples are analyzed together and results are consolidated into a single set of output files.
+
+The main output file is the `summary.tsv` which contains:
+- Taxonomic classification (domain to species level) for all genomes
+- Classification method used
+- Closest reference genome
+- ANI to reference genome
+- Alignment fraction
+- Warnings and notes
+
+This step is optional and only runs when `--run_gtdbtk` is enabled. The GTDB-Tk database must be provided via `--gtdbtk_db`.
 
 ### MultiQC
 

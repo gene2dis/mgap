@@ -48,9 +48,10 @@ With the assembled genome (or provided contigs), the annotation steps include:
 1. Quality assessment ([`CheckM2`](https://github.com/chklovski/CheckM2))
 2. MLST analysis ([`MLST`](https://github.com/tseemann/mlst))
 3. Annotation ([`Bakta`](https://github.com/oschwengers/bakta))
-4. Antibiotic resistance prediction ([`AMRFinderPlus`](https://github.com/ncbi/amr)) - includes point mutation analysis for supported organisms
-5. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
-6. Species-specific analyses:
+4. Taxonomic classification ([`GTDB-Tk`](https://github.com/Ecogenomics/GTDBTk)) - optional, uses GTDB reference database
+5. Antibiotic resistance prediction ([`AMRFinderPlus`](https://github.com/ncbi/amr)) - includes point mutation analysis for supported organisms
+6. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
+7. Species-specific analyses:
    - _Klebsiella_: [`Kleborate`](https://github.com/klebgenomics/Kleborate)
    - _S. aureus_: SCCmec classification using [`staphopia-sccmec`](https://github.com/staphopia/staphopia-sccmec)
 
@@ -136,6 +137,8 @@ nextflow run gene2dis/mgap \
 | `-profile` | Configuration profile: `docker`, `singularity`, `conda` |
 | `--bakta_db` | Path to Bakta database |
 | `--checkm2_db` | Path to CheckM2 database |
+| `--run_gtdbtk` | Enable GTDB-Tk taxonomic classification (default: false) |
+| `--gtdbtk_db` | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled) |
 
 > **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
 
