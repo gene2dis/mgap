@@ -2,106 +2,143 @@
 
 **Microbial Genome Analysis Pipeline**
 
-**MGAP** is a bioinformatics best-practice analysis pipeline for Microbial Genome Analysis Pipeline.
+**MGAP** is a bioinformatics best-practice analysis pipeline for Microbial Genome Analysis.
 
 The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across multiple compute infrastructures in a very portable manner. It uses Docker/Singularity containers making installation trivial and results highly reproducible. The [Nextflow DSL2](https://www.nextflow.io/docs/latest/dsl2.html) implementation of this pipeline uses one container per process which makes it much easier to maintain and update software dependencies. Where possible, these processes have been submitted to and installed from [nf-core/modules](https://github.com/nf-core/modules) in order to make them available to all nf-core pipelines, and to everyone within the Nextflow community!
 
-This pipeline is divided in two main steps, genome assembly and genome annotation. 
+## Documentation
 
-### Genome assembly
+The gene2dis/mgap documentation is available in the [docs](docs/) folder:
 
-The genome assembly workflow allows the read processing and assembly of Illumina and Oxford Nanopore data. For each sequencing technology, a different set of tools are used:
+- [Usage](docs/usage.md) - An overview of how the pipeline works, how to run it, and a description of all command-line flags
+- [Output](docs/output.md) - An overview of the different results produced by the pipeline and how to interpret them
 
-#### Illumina assembly
-1. Read QC, clean, and filter reads. ([`FastP`](https://github.com/OpenGene/fastp))
-2. If requested, calculate coverage of genome ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduce coverage ([`Seqtk`](https://github.com/lh3/seqtk).
-3. If requested, check the reads with Kraken2 against a standard (small) database to evaluate possible contaminations ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
-4. Genome assembly with SPADES
+## Pipeline Overview
 
-#### ONT reads
-1. Read QC with NANOQ
-2. Adapter removal with PORECHOP_ABI
-3. If requested, calculate coverage of genome ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduce coverage ([`Seqtk`](https://github.com/lh3/seqtk)
-4. Genome assembly using FLYE
-5. Genome polishing using MEDAKA
-6. Genome reorientation using Dnaapler (*skipped at the moment, due to errors when the markers are not present*)
+This pipeline supports three input modes:
 
-### Genome annotation
+- **Illumina short-read assembly** (FastP → SPAdes)
+- **Oxford Nanopore long-read assembly** (Nanoq → Porechop → Flye → Medaka)
+- **Pre-assembled contigs** (direct annotation) 
 
-With the assembled genome, the annotation steps include:
+### Genome Assembly
 
-1. MLST analysis ([`MLST`](https://github.com/tseemann/mlst))
-2. Annotation ([`BAKTA`](https://github.com/oschwengers/bakta))
-3. Antibiotic resistance prediction using AMRFinderPlus. If the organism is on the list provided by AMRFinderPlus, also point mutations are evaluated ([`AMRFinderPLus`](https://github.com/ncbi/amr))
-4. Prophage and plasmid search using [`Genomad`](https://github.com/apcamargo/genomad)
-5. For _Klebsiella_, evaluation of the genome using [`Kleborate`](https://github.com/klebgenomics/Kleborate)
-6. For _S. aureus_, SCCmec classification using [`staphophia-sccmec`](https://github.com/staphopia/staphopia-sccmec)
+The genome assembly workflow processes Illumina and Oxford Nanopore data using technology-specific tools:
+
+#### Illumina Assembly
+1. Read QC, cleaning, and filtering ([`FastP`](https://github.com/OpenGene/fastp))
+2. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
+3. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
+4. Genome assembly ([`SPAdes`](https://github.com/ablab/spades))
+
+#### ONT Assembly
+1. Read QC ([`Nanoq`](https://github.com/esteinig/nanoq))
+2. Adapter removal ([`Porechop_ABI`](https://github.com/bonsai-team/Porechop_ABI))
+3. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
+4. Genome assembly ([`Flye`](https://github.com/fenderglass/Flye))
+5. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
+
+#### Pre-assembled Contigs
+- Direct annotation workflow (skips assembly steps)
+
+### Genome Annotation
+
+With the assembled genome (or provided contigs), the annotation steps include:
+
+1. Quality assessment ([`CheckM2`](https://github.com/chklovski/CheckM2))
+2. MLST analysis ([`MLST`](https://github.com/tseemann/mlst))
+3. Annotation ([`Bakta`](https://github.com/oschwengers/bakta))
+4. Antibiotic resistance prediction ([`AMRFinderPlus`](https://github.com/ncbi/amr)) - includes point mutation analysis for supported organisms
+5. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
+6. Species-specific analyses:
+   - _Klebsiella_: [`Kleborate`](https://github.com/klebgenomics/Kleborate)
+   - _S. aureus_: SCCmec classification using [`staphopia-sccmec`](https://github.com/staphopia/staphopia-sccmec)
 
 
 ## Quick Start
 
 1. Install [`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=22.10.1`)
 
-2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/) (you can follow [this tutorial](https://singularity-tutorial.github.io/01-installation/)), [`Podman`](https://podman.io/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility _(you can use [`Conda`](https://conda.io/miniconda.html) both to install Nextflow itself and also to manage software within pipelines. Please only use it within pipelines as a last resort; see [docs](https://nf-co.re/usage/configuration#basic-configuration-profiles))_.
+2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/), [`Podman`](https://podman.io/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility. Conda is also supported as a last resort.
 
-Currently the pipeline has been tested with Docker, but should work without issues with Singularity or Conda.
+3. Download the pipeline by cloning the repository or downloading the zip file
 
-3. Download the pipeline, either cloning the repository or downloading the zip file
+## Running the Pipeline
 
-## Running the pipeline
+For detailed usage instructions, see the [Usage documentation](docs/usage.md).
 
-### Sample sheet file
-First you need to create a Samplesheet file, that contain the name of the samples and the location of the reads. This is an example of this file:
+### Samplesheet
 
-#### Illumina reads
+Create a CSV samplesheet with your samples. Examples:
 
-```
+**Illumina reads:**
+```csv
 sample,fastq_1,fastq_2
-SCL10095,/home/jugalde/germlab/data/S190_R1.fastq.gz,/home/jugalde/germlab/data/S190_R2.fastq.gz
+SAMPLE1,/path/to/sample1_R1.fastq.gz,/path/to/sample1_R2.fastq.gz
 ```
 
-The file **always** has to include the header `sample,fastq_1,fastq_2`
-
-#### ONT reads
-
-```
+**ONT reads:**
+```csv
 sample,fastq_1
-C19013,/home/jugalde/germlab/data/C19013.fastq.gz
+SAMPLE1,/path/to/sample1.fastq.gz
 ```
 
-The file **always** has to include the header `sample,fastq_1,fastq_2`
+**Pre-assembled contigs:**
+```csv
+sample,fasta
+SAMPLE1,/path/to/sample1.fasta
+```
 
-### Pipeline parameters
+An [example samplesheet](assets/samplesheet.csv) is provided with the pipeline.
 
-The file `nextflow.config` contains all the parameteres used by the pipeline, including path to database files. Currently the path work in our server (_Arrakis_), but if you are running elsewhere, these need to be updated. *Later a section on how to download and prepare the DBs needed for the analysis, will be added to this Readme file*.
+### Basic Usage
+
+```bash
+# Illumina short-read data
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    -profile docker
+
+# Oxford Nanopore long-read data
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    -profile docker
+
+# Pre-assembled contigs
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type contig \
+    -profile docker
+```
+
+### Key Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `--input` | Path to samplesheet CSV file |
+| `--outdir` | Output directory for results |
+| `--seq_type` | Sequencing type: `illumina`, `ont`, or `contig` |
+| `-profile` | Configuration profile: `docker`, `singularity`, `conda` |
+| `--bakta_db` | Path to Bakta database |
+| `--checkm2_db` | Path to CheckM2 database |
+
+> **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
+
+For a complete list of parameters and advanced configuration options, see the [Usage documentation](docs/usage.md).
 
 
-#### Starting the pipeline
+## Output
 
-Once you have everything ready, you can run the pipeline by calling the name of the repository, and adding the appropiate parameters. For example:
-
-
-   ```bash
-   nextflow run gene2dis-mgap --input <SAMPLESHEET> --outdir <OUTDIR> -profile docker -seq_type illumina|ont
-   ```
-
-   Here the parameters are:
-   - gene2dis-mgap: The name of the repository. This could be the path to a location on the computer (e.g. /home/jugalde/pipelines/gene2dis-mgap).
-   - --input: The samplesheet file
-   - --outdir: The output directory for the output of the pipeline
-   - -profile: either docker or conda (not tested yet)
-   - --seq_type: sequencing technology used, either illumina or ont
-
-   *Notice that the pipeline parameters have two dashes (--), while parameters that are for nextflow only have one (-).
-
+For detailed information about the pipeline outputs, see the [Output documentation](docs/output.md).
 
 ## Credits
 
-gene2dis/mgap was originally written by the Microbial Data Science Lab, Center for Bioinformatics and Integrative Biology, Universidad Andres Bello. Its development was led by Juan A. Ugalde
-
-We thank the following people for their extensive assistance in the development of this pipeline:
-
-- Juan A. Ugalde
+gene2dis/mgap was originally written by the Microbial Data Science Lab, Center for Bioinformatics and Integrative Biology, Universidad Andres Bello. Its development was led by Juan A. Ugalde.
 
 
 ## Contributions and Support
