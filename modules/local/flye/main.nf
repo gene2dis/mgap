@@ -54,4 +54,19 @@ process FLYE {
     END_VERSIONS
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    """
+    touch ${prefix}.assembly.fasta
+    touch ${prefix}.assembly_graph.gfa
+    touch ${prefix}.assembly_graph.gv
+    touch ${prefix}.assembly_info.txt
+    touch ${prefix}.flye.log
+    touch ${prefix}.params.json
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        flye: 2.9.3
+    END_VERSIONS
+    """
 }

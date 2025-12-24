@@ -2,7 +2,7 @@ process KLEBORATE {
     tag "$meta.id"
     label 'process_medium'
 
-    conda "bioconda::kleborate=2.3.2"
+    conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/kleborate:2.3.2--pyhdfd78af_0' :
         'quay.io/biocontainers/kleborate:2.3.2--pyhdfd78af_0' }"

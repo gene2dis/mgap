@@ -1,0 +1,43 @@
+name: "dnaapler"
+description: Reorient circular microbial genomes
+keywords:
+  - reorientation
+  - circular genome
+  - bacteria
+  - dnaA
+  - chromosome
+tools:
+  - dnaapler:
+      description: "Reorients complete circular microbial genomes"
+      homepage: "https://github.com/gbouras13/dnaapler"
+      documentation: "https://github.com/gbouras13/dnaapler"
+      tool_dev_url: "https://github.com/gbouras13/dnaapler"
+      licence: ["MIT"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - assembly:
+      type: file
+      description: Assembled genome FASTA file
+      pattern: "*.{fa,fasta,fna}"
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - reoriented_fasta:
+      type: file
+      description: Reoriented genome FASTA file
+      pattern: "*_reoriented.fasta"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"
