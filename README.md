@@ -91,6 +91,16 @@ SAMPLE1,/path/to/sample1.fasta
 
 An [example samplesheet](assets/samplesheet.csv) is provided with the pipeline.
 
+**Automatic samplesheet generation:**
+
+A helper script is available to automatically generate samplesheets from a directory of sequencing files:
+
+```bash
+python accesory_scripts/CreateSampleSheet.py /path/to/data samplesheet.csv
+```
+
+The script auto-detects the data type (Illumina/ONT/contigs) and intelligently extracts sample names from filenames. See the [Usage documentation](docs/usage.md#automatic-samplesheet-generation) for detailed examples.
+
 ### Basic Usage
 
 ```bash

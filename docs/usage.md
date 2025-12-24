@@ -56,6 +56,49 @@ TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
+### Automatic samplesheet generation
+
+For convenience, a helper script is provided to automatically generate samplesheets from a directory of sequencing files:
+
+```bash
+python accesory_scripts/CreateSampleSheet.py <input_directory> <output_samplesheet.csv>
+```
+
+The script supports three types of sequencing data and can auto-detect the type:
+
+- **Illumina paired-end reads**: Automatically pairs R1/R2 files
+- **Oxford Nanopore reads**: Single FASTQ files
+- **Pre-assembled contigs**: FASTA files
+
+#### Usage examples
+
+```bash
+# Auto-detect data type (recommended)
+python accesory_scripts/CreateSampleSheet.py /path/to/fastq_files samplesheet.csv
+
+# Explicitly specify Illumina paired-end data
+python accesory_scripts/CreateSampleSheet.py /path/to/fastq_files samplesheet.csv --type illumina
+
+# Oxford Nanopore long reads
+python accesory_scripts/CreateSampleSheet.py /path/to/ont_reads samplesheet.csv --type ont
+
+# Pre-assembled contigs
+python accesory_scripts/CreateSampleSheet.py /path/to/contigs samplesheet.csv --type contig
+```
+
+#### Sample name extraction
+
+The script intelligently extracts sample names from filenames:
+
+- For Illumina data with standard naming (e.g., `Sample_S123_R1_001.fastq.gz`), it extracts `Sample`
+- For simple R1/R2 naming (e.g., `Sample_R1.fastq.gz`), it extracts `Sample`
+- For contigs and ONT data, it uses the base filename without extensions
+
+#### Supported file formats
+
+- **FASTQ files**: `.fastq.gz`, `.fq.gz`, `.fastq`, `.fq`
+- **FASTA files**: `.fasta`, `.fa`, `.fna`, `.fasta.gz`, `.fa.gz`, `.fna.gz`
+
 ## Running the pipeline
 
 The typical command for running the pipeline is as follows:
