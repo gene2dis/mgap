@@ -1,0 +1,46 @@
+nextflow_pipeline {
+
+    name "Test pipeline"
+    script "../main.nf"
+
+    test("Run pipeline with test profile - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.trace.succeeded().count { true } >= 1 }
+            )
+        }
+
+    }
+
+    test("Run pipeline with test profile") {
+
+        tag "pipeline"
+        tag "slow"
+
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.trace.succeeded().count { true } >= 1 }
+            )
+        }
+
+    }
+
+}

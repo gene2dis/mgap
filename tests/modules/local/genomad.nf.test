@@ -1,0 +1,38 @@
+nextflow_process {
+
+    name "Test GENOMAD module"
+    script "../../../modules/local/genomad/main.nf"
+    process "GENOMAD"
+
+    tag "modules"
+    tag "modules_local"
+    tag "genomad"
+
+    test("GENOMAD - virus/plasmid detection - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('test.fasta')
+                ]
+                input[1] = file('genomad_db')
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

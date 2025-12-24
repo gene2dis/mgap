@@ -1,0 +1,42 @@
+nextflow_process {
+
+    name "Test AMRFINDERPLUS_RUN module"
+    script "../../../modules/local/amrfinderplus/main.nf"
+    process "AMRFINDERPLUS_RUN"
+
+    tag "modules"
+    tag "modules_local"
+    tag "amrfinderplus"
+
+    test("AMRFINDERPLUS_RUN - AMR detection - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('test.fna'),
+                    file('test.faa'),
+                    file('test.gff'),
+                    'Escherichia'
+                ]
+                input[1] = file('amrfinderdb')
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.report },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

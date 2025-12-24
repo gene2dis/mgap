@@ -1,0 +1,39 @@
+nextflow_process {
+
+    name "Test CHECKM2 module"
+    script "../../../modules/local/checkm2/main.nf"
+    process "CHECKM2"
+
+    tag "modules"
+    tag "modules_local"
+    tag "checkm2"
+
+    test("CHECKM2 - genome quality - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('test.fasta')
+                ]
+                input[1] = file('checkm2_db')
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.report },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

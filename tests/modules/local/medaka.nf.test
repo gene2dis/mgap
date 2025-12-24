@@ -1,0 +1,40 @@
+nextflow_process {
+
+    name "Test MEDAKA module"
+    script "../../../modules/local/medaka/main.nf"
+    process "MEDAKA"
+
+    tag "modules"
+    tag "modules_local"
+    tag "medaka"
+
+    test("MEDAKA - polishing - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('reads.fastq.gz'),
+                    50,
+                    file('assembly.fasta')
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.polished_fasta },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}
