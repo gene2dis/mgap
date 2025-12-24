@@ -1,0 +1,48 @@
+name: "checkm2"
+description: Assess the quality of microbial genomes using machine learning
+keywords:
+  - quality control
+  - genome quality
+  - completeness
+  - contamination
+  - bacteria
+  - archaea
+tools:
+  - checkm2:
+      description: "CheckM2 - Rapid assessment of genome bin quality using machine learning"
+      homepage: "https://github.com/chklovski/CheckM2"
+      documentation: "https://github.com/chklovski/CheckM2"
+      tool_dev_url: "https://github.com/chklovski/CheckM2"
+      doi: "10.1038/s41592-023-01940-w"
+      licence: ["GPL-3.0"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - fasta:
+      type: file
+      description: Genome assembly FASTA file
+      pattern: "*.{fa,fasta,fna}"
+  - db:
+      type: directory
+      description: Path to CheckM2 database
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - report:
+      type: file
+      description: Quality report TSV file
+      pattern: "*.quality_report.tsv"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

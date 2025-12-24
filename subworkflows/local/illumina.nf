@@ -1,85 +1,114 @@
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    SUBWORKFLOW: ILLUMINA
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Illumina short-read processing and assembly subworkflow.
+    Includes quality trimming, contamination detection, coverage adjustment, and assembly.
+----------------------------------------------------------------------------------------
+*/
+
+//
 // MODULE: Installed directly from nf-core/modules
 //
-include { FASTP } from '../../modules/nf-core/fastp/main'
-include { KRAKEN2_KRAKEN2 as KRAKEN2} from '../../modules/nf-core/kraken2/kraken2/main'
-include { BRACKEN_BRACKEN as BRACKEN} from '../../modules/nf-core/bracken/bracken/main'
-include { SEQTK_SAMPLE } from '../../modules/nf-core/seqtk/sample/main'
+include { FASTP                      } from '../../modules/nf-core/fastp/main'
+include { KRAKEN2_KRAKEN2 as KRAKEN2 } from '../../modules/nf-core/kraken2/kraken2/main'
+include { BRACKEN_BRACKEN as BRACKEN } from '../../modules/nf-core/bracken/bracken/main'
+include { SEQTK_SAMPLE               } from '../../modules/nf-core/seqtk/sample/main'
 
-// LOCAL:
+//
+// MODULE: Local modules
+//
 include { MASH_SKETCH } from '../../modules/local/mash/sketch/main'
-include { SPADES } from '../../modules/local/spades/main'
-
+include { SPADES      } from '../../modules/local/spades/main'
 
 workflow ILLUMINA {
 
     take:
-        ch_reads
+    ch_reads  // channel: [ val(meta), [ reads ] ]
 
     main:
-        // MODULE: Run FastP
+    ch_versions = channel.empty()
 
-        FASTP (
-            ch_reads,
-            [],
-            [],
-            []
+    //
+    // MODULE: Run FastP for quality trimming
+    //
+    FASTP (
+        ch_reads,
+        [],
+        [],
+        []
+    )
+    ch_versions = ch_versions.mix(FASTP.out.versions.first())
+
+    //
+    // MODULE: Run Kraken2/Bracken for contamination detection (optional)
+    //
+    if (params.run_kraken2 && params.kraken2db) {
+        KRAKEN2 (
+            FASTP.out.reads,
+            params.kraken2db,
+            false,
+            false
         )
+        ch_versions = ch_versions.mix(KRAKEN2.out.versions.first())
 
-        // Call Kraken2 to evaluate contaminations
-        if (params.run_kraken2) {
+        BRACKEN (
+            KRAKEN2.out.report,
+            params.kraken2db
+        )
+        ch_versions = ch_versions.mix(BRACKEN.out.versions.first())
+    }
 
-            KRAKEN2(
-                FASTP.out.reads,
-                params.kraken2db,
-                false,
-                false
-            )
+    //
+    // Coverage adjustment (optional)
+    //
+    if (params.adjust_coverage) {
+        //
+        // MODULE: Estimate coverage with Mash
+        //
+        MASH_SKETCH ( FASTP.out.reads )
+        ch_versions = ch_versions.mix(MASH_SKETCH.out.versions.first())
 
-            BRACKEN(
-                KRAKEN2.out.report,
-                params.kraken2db
-            )
+        //
+        // Calculate coverage ratio and branch
+        //
+        MASH_SKETCH.out.coverage
+            .map { meta, reads, coverage ->
+                def ratio = params.max_coverage / coverage.text.trim().toFloat()
+                [ meta, reads, ratio ]
+            }
+            .branch { meta, reads, ratio ->
+                reduce_coverage: ratio < 1
+                    return [ meta, reads, ratio ]
+                keep_coverage: ratio >= 1
+                    return [ meta, reads ]
+            }
+            .set { coverage_status }
 
+        //
+        // MODULE: Subsample reads if coverage is too high
+        //
+        SEQTK_SAMPLE ( coverage_status.reduce_coverage )
+        ch_versions = ch_versions.mix(SEQTK_SAMPLE.out.versions.first())
 
-        }
+        //
+        // Combine subsampled and non-subsampled reads
+        //
+        ch_reads_for_assembly = coverage_status.keep_coverage
+            .mix(SEQTK_SAMPLE.out.reads)
 
-        // If selected, adjust coverage
+    } else {
+        ch_reads_for_assembly = FASTP.out.reads
+    }
 
-        if (params.adjust_coverage){
-
-            MASH_SKETCH(
-                FASTP.out.reads
-            )
-
-        ch_coverage = MASH_SKETCH
-                                .out
-                                .coverage
-                                .map{
-                                        meta, reads, coverage -> [meta, reads, params.max_coverage / coverage.text.trim().toFloat()]
-                                }
-                                .branch{
-                                    reduce_coverage: it[2].toFloat() < 1
-                                    keep_coverage: it[2].toFloat() > 1
-                                    }
-                                    .set{coverage_status}
-
-
-            ch_subsample_out = SEQTK_SAMPLE(
-                coverage_status.reduce_coverage
-            )
-
-            ch_reads_for_assembly = coverage_status.keep_coverage
-                                                            .concat(SEQTK_SAMPLE.out.reads)
-                
-        }
-        else {
-            ch_reads_for_assembly = FASTP.out.reads
-        }
-
-        // Run Assembly with SPADES
-        // TODO: Add option to choose between assemblers
-        SPADES(ch_reads_for_assembly)
+    //
+    // MODULE: Assemble with SPAdes
+    // TODO: Add option to choose between assemblers
+    //
+    SPADES ( ch_reads_for_assembly )
+    ch_versions = ch_versions.mix(SPADES.out.versions.first())
 
     emit:
-        SPADES.out.scaffolds
+    assembly = SPADES.out.scaffolds  // channel: [ val(meta), path(fasta) ]
+    versions = ch_versions            // channel: [ path(versions.yml) ]
 }

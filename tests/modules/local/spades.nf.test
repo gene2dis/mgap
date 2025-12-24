@@ -1,0 +1,40 @@
+nextflow_process {
+
+    name "Test SPADES module"
+    script "../../../modules/local/spades/main.nf"
+    process "SPADES"
+
+    tag "modules"
+    tag "modules_local"
+    tag "spades"
+
+    test("SPADES - paired-end assembly - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:false ],
+                    [ file('test_1.fastq.gz'), file('test_2.fastq.gz') ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.scaffolds },
+                { assert process.out.contigs },
+                { assert process.out.gfa },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

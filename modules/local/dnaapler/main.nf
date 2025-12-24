@@ -30,7 +30,7 @@ process DNAAPLER {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dnaapler: \$( medaka --version 2>&1 | sed 's/dnaapler //g' )
+        dnaapler: \$( dnaapler --version 2>&1 | sed 's/dnaapler, version //' )
     END_VERSIONS
     """
 }

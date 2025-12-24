@@ -1,0 +1,51 @@
+name: Bug Report
+description: File a bug report
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to fill out this bug report!
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command used and terminal output
+      description: |
+        Please provide the command you used to run the pipeline and the terminal output.
+        ```console
+        nextflow run gene2dis/mgap ...
+        ```
+      render: console
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Relevant files
+      description: |
+        Please provide any relevant log files, config files, or input data.
+        Drag and drop files here or paste file contents.
+
+  - type: textarea
+    id: system
+    attributes:
+      label: System information
+      description: |
+        * Nextflow version (`nextflow -version`)
+        * Pipeline version (e.g., `1.0.0` or `dev`)
+        * Hardware (e.g., HPC, cloud, local)
+        * Executor (e.g., slurm, lsf, awsbatch)
+        * Container engine (e.g., docker, singularity, conda)
+        * OS (e.g., Ubuntu 22.04)
+    validations:
+      required: true

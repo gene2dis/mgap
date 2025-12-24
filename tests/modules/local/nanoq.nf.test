@@ -1,0 +1,39 @@
+nextflow_process {
+
+    name "Test NANOQ module"
+    script "../../../modules/local/nanoq/main.nf"
+    process "NANOQ"
+
+    tag "modules"
+    tag "modules_local"
+    tag "nanoq"
+
+    test("NANOQ - quality filtering - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('test.fastq.gz')
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.reads },
+                { assert process.out.report },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

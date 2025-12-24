@@ -1,0 +1,68 @@
+name: "flye"
+description: De novo assembler for long reads
+keywords:
+  - assembly
+  - long-reads
+  - nanopore
+  - pacbio
+  - de novo
+tools:
+  - flye:
+      description: "De novo assembler for single molecule sequencing reads using repeat graphs"
+      homepage: "https://github.com/fenderglass/Flye"
+      documentation: "https://github.com/fenderglass/Flye/blob/flye/docs/USAGE.md"
+      tool_dev_url: "https://github.com/fenderglass/Flye"
+      doi: "10.1038/s41587-019-0072-8"
+      licence: ["BSD-3-Clause"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - reads:
+      type: file
+      description: FASTQ file with long reads
+      pattern: "*.{fastq.gz,fq.gz}"
+  - mode:
+      type: string
+      description: |
+        Flye mode for read type. Options: pacbio-raw, pacbio-corr, pacbio-hifi, nano-raw, nano-corr, nano-hq
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - fasta:
+      type: file
+      description: Assembled contigs/scaffolds
+      pattern: "*.fasta"
+  - gfa:
+      type: file
+      description: Assembly graph in GFA format
+      pattern: "*.gfa"
+  - gv:
+      type: file
+      description: Assembly graph in Graphviz format
+      pattern: "*.gv"
+  - txt:
+      type: file
+      description: Assembly info text file
+      pattern: "*.txt"
+  - log:
+      type: file
+      description: Flye log file
+      pattern: "*.log"
+  - json:
+      type: file
+      description: Assembly parameters JSON file
+      pattern: "*.json"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

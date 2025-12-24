@@ -4,7 +4,13 @@
 
 ## Introduction
 
-<!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
+gene2dis/mgap is a Nextflow pipeline for microbial genome analysis. It supports:
+
+- **Illumina short-read assembly** (FastP → SPAdes)
+- **Oxford Nanopore long-read assembly** (Nanoq → Porechop → Flye → Medaka)
+- **Pre-assembled contigs** (direct annotation)
+
+The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), mobile element detection (geNomad), and species-specific analyses.
 
 ## Samplesheet input
 
@@ -50,15 +56,165 @@ TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
+### Automatic samplesheet generation
+
+For convenience, a helper script is provided to automatically generate samplesheets from a directory of sequencing files:
+
+```bash
+python accesory_scripts/CreateSampleSheet.py <input_directory> <output_samplesheet.csv>
+```
+
+The script supports three types of sequencing data and can auto-detect the type:
+
+- **Illumina paired-end reads**: Automatically pairs R1/R2 files
+- **Oxford Nanopore reads**: Single FASTQ files
+- **Pre-assembled contigs**: FASTA files
+
+#### Usage examples
+
+```bash
+# Auto-detect data type (recommended)
+python accesory_scripts/CreateSampleSheet.py /path/to/fastq_files samplesheet.csv
+
+# Explicitly specify Illumina paired-end data
+python accesory_scripts/CreateSampleSheet.py /path/to/fastq_files samplesheet.csv --type illumina
+
+# Oxford Nanopore long reads
+python accesory_scripts/CreateSampleSheet.py /path/to/ont_reads samplesheet.csv --type ont
+
+# Pre-assembled contigs
+python accesory_scripts/CreateSampleSheet.py /path/to/contigs samplesheet.csv --type contig
+```
+
+#### Sample name extraction
+
+The script intelligently extracts sample names from filenames:
+
+- For Illumina data with standard naming (e.g., `Sample_S123_R1_001.fastq.gz`), it extracts `Sample`
+- For simple R1/R2 naming (e.g., `Sample_R1.fastq.gz`), it extracts `Sample`
+- For contigs and ONT data, it uses the base filename without extensions
+
+#### Supported file formats
+
+- **FASTQ files**: `.fastq.gz`, `.fq.gz`, `.fastq`, `.fq`
+- **FASTA files**: `.fasta`, `.fa`, `.fna`, `.fasta.gz`, `.fa.gz`, `.fna.gz`
+
 ## Running the pipeline
 
 The typical command for running the pipeline is as follows:
 
 ```bash
-nextflow run gene2dis/mgap --input samplesheet.csv --outdir <OUTDIR> --genome GRCh37 -profile docker
+# Illumina short-read data
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --bakta_db /path/to/bakta_db \
+    --checkm2_db /path/to/checkm2_db \
+    -profile docker
+
+# Oxford Nanopore long-read data
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --flye_mode nano-hq \
+    -profile docker
+
+# Pre-assembled contigs
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type contig \
+    -profile docker
+
+# With GTDB-Tk taxonomic classification (optional)
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_gtdbtk \
+    --gtdbtk_db /path/to/gtdbtk_db \
+    -profile docker
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
+
+### GTDB-Tk Taxonomic Classification
+
+GTDB-Tk provides taxonomic classification using the Genome Taxonomy Database (GTDB). This is an optional step that can be enabled with the `--run_gtdbtk` flag.
+
+**Batch Processing:** The pipeline processes all genomes together in a single GTDB-Tk run, which significantly reduces runtime compared to processing genomes individually. Results are consolidated into a single set of output files in the `gtdbtk/` directory.
+
+**Basic usage:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_gtdbtk \
+    --gtdbtk_db /path/to/gtdbtk_db \
+    -profile docker
+```
+
+**Advanced GTDB-Tk parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--run_gtdbtk` | `false` | Enable GTDB-Tk taxonomic classification |
+| `--gtdbtk_db` | `null` | Path to GTDB-Tk reference database (required if enabled) |
+| `--gtdbtk_mash_db` | `null` | Path to Mash database for ANI screening (optional, skips ANI if not provided) |
+| `--gtdbtk_extension` | `fa` | File extension for genome files (`fa`, `fasta`, `fna`) |
+| `--gtdbtk_min_perc_aa` | `10` | Minimum percentage of amino acids in MSA |
+| `--gtdbtk_min_af` | `0.65` | Minimum alignment fraction |
+| `--gtdbtk_pplacer_scratch` | `true` | Use scratch directory for pplacer to reduce memory usage |
+
+**Example with custom parameters:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --run_gtdbtk \
+    --gtdbtk_db /path/to/gtdbtk_db \
+    --gtdbtk_mash_db /path/to/mash_db \
+    --gtdbtk_extension fasta \
+    --gtdbtk_min_af 0.7 \
+    -profile docker
+```
+
+**Note:** The GTDB-Tk database is large (~70GB) and must be downloaded separately. See the [GTDB-Tk documentation](https://ecogenomics.github.io/GTDBTk/installing/index.html) for database installation instructions.
+
+### Cloud execution
+
+The pipeline supports execution on AWS, Google Cloud, and Azure:
+
+```bash
+# AWS Batch
+nextflow run gene2dis/mgap \
+    --input s3://bucket/samplesheet.csv \
+    --outdir s3://bucket/results \
+    --seq_type illumina \
+    --awsqueue my-batch-queue \
+    -profile awsbatch,docker
+
+# Google Cloud Batch
+nextflow run gene2dis/mgap \
+    --input gs://bucket/samplesheet.csv \
+    --outdir gs://bucket/results \
+    --seq_type illumina \
+    --gcp_project my-project \
+    -profile googlebatch,docker
+
+# Seqera Platform (Tower)
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    -profile tower,docker
+```
 
 Note that the pipeline will create the following files in your working directory:
 

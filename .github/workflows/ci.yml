@@ -1,0 +1,61 @@
+name: nf-core CI
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+  release:
+    types: [published]
+
+env:
+  NXF_ANSI_LOG: false
+  NXF_SINGULARITY_CACHEDIR: ${{ github.workspace }}/.singularity
+  NXF_SINGULARITY_LIBRARYDIR: ${{ github.workspace }}/.singularity
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run pipeline with test data
+    if: ${{ github.event_name != 'push' || (github.event_name == 'push' && github.repository == 'gene2dis/mgap') }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        NXF_VER:
+          - "23.04.0"
+          - "latest-everything"
+    steps:
+      - name: Check out pipeline code
+        uses: actions/checkout@v4
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@v2
+        with:
+          version: "${{ matrix.NXF_VER }}"
+
+      - name: Disk space cleanup
+        uses: jlumbroso/free-disk-space@v1.3.1
+
+      - name: Run pipeline with test data
+        run: |
+          nextflow run ${GITHUB_WORKSPACE} -profile test,docker --outdir ./results
+
+  test_stub:
+    name: Run pipeline stub tests
+    if: ${{ github.event_name != 'push' || (github.event_name == 'push' && github.repository == 'gene2dis/mgap') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pipeline code
+        uses: actions/checkout@v4
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@v2
+        with:
+          version: "latest-everything"
+
+      - name: Run pipeline with stub
+        run: |
+          nextflow run ${GITHUB_WORKSPACE} -profile test,docker -stub --outdir ./results

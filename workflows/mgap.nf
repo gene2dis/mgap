@@ -1,77 +1,53 @@
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    VALIDATE INPUTS
+    ORGANISM MAPPING
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    MLST scheme to AMRFinderPlus organism mapping.
+    TODO: Add missing neisserias, salmonella
+----------------------------------------------------------------------------------------
 */
 
-def summary_params = NfcoreSchema.paramsSummaryMap(workflow, params)
-
-// Extract organism information based on the MLST result
-def extract_species_code(line) {
-    def columns = line.split("\t")
-    return columns[1]
-    }
-
-// Organism list
-//TODO missing neisserias, salmonella
-taxa_names = ["abaumannii": "Acinetobacter_baumannii",
-              "abaumannii_2": "Acinetobacter_baumannii",
-              "bcc": "Burkholderia_cepacia",
-              "bseudomallei": "Burhkholderia_pesudomallei",
-              "campylobacter" : "Campylobacter",
-              "campylobacter_nonjejuni" : "Campylobacter",
-              "campylobacter_nonjejuni_2" : "Campylobacter",
-              "campylobacter_nonjejuni_3" : "Campylobacter",
-              "campylobacter_nonjejuni_4" : "Campylobacter",
-              "campylobacter_nonjejuni_5" : "Campylobacter",
-              "campylobacter_nonjejuni_6" : "Campylobacter",
-              "campylobacter_nonjejuni_7" : "Campylobacter",
-              "campylobacter_nonjejuni_8" : "Campylobacter",
-              "campylobacter_nonjejuni_9" : "Campylobacter",
-              "cdifficile": "Clostridioides_difficile",
-              "efaecalis": "Enterococcus_faecalis",
-              "efaecium": "Enterococcus_faecium",
-              "ecoli": "Escherichia",
-              "ecoli_achtman_4": "Escherichia",
-              "ecoli_2": "Escherichia",
-              "koxytoca": "Klebsiella_oxytoca",
-              "kpneumoniae": "Klebsiella_pneumoniae",
-              "paeruginosa": "Pseudomonas_aeruginosa",
-              "senterica": "Salmonella",
-              "saureus": "Staphylococcus_aureus",
-              "spseudintermedius": "Staphylococcus_pseudintermedius",
-              "sagalactiae": "Streptococcus_agalactiae",
-              "spneumoniae": "Streptococcus_pneumoniae",
-              "spyogenes": "Streptococcus_pyogenes",
-              "vcholerae": "Vibrio_cholerae"
-            ]
-
-// TODO nf-core: Add all file path parameters for the pipeline to the list below
-// Check input path parameters to see if they exist
-//def checkPathParamList = [ params.input, params.multiqc_config, params.fasta ]
-def checkPathParamList = [params.input]
-for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
-
-// Check mandatory parameters
-if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' }
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    CONFIG FILES
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-ch_multiqc_config          = Channel.fromPath("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
-ch_multiqc_custom_config   = params.multiqc_config ? Channel.fromPath( params.multiqc_config, checkIfExists: true ) : Channel.empty()
-ch_multiqc_logo            = params.multiqc_logo   ? Channel.fromPath( params.multiqc_logo, checkIfExists: true ) : Channel.empty()
-ch_multiqc_custom_methods_description = params.multiqc_methods_description ? file(params.multiqc_methods_description, checkIfExists: true) : file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
+def getTaxaNames() {
+    return [
+        "abaumannii": "Acinetobacter_baumannii",
+        "abaumannii_2": "Acinetobacter_baumannii",
+        "bcc": "Burkholderia_cepacia",
+        "bseudomallei": "Burhkholderia_pesudomallei",
+        "campylobacter": "Campylobacter",
+        "campylobacter_nonjejuni": "Campylobacter",
+        "campylobacter_nonjejuni_2": "Campylobacter",
+        "campylobacter_nonjejuni_3": "Campylobacter",
+        "campylobacter_nonjejuni_4": "Campylobacter",
+        "campylobacter_nonjejuni_5": "Campylobacter",
+        "campylobacter_nonjejuni_6": "Campylobacter",
+        "campylobacter_nonjejuni_7": "Campylobacter",
+        "campylobacter_nonjejuni_8": "Campylobacter",
+        "campylobacter_nonjejuni_9": "Campylobacter",
+        "cdifficile": "Clostridioides_difficile",
+        "efaecalis": "Enterococcus_faecalis",
+        "efaecium": "Enterococcus_faecium",
+        "ecoli": "Escherichia",
+        "ecoli_achtman_4": "Escherichia",
+        "ecoli_2": "Escherichia",
+        "koxytoca": "Klebsiella_oxytoca",
+        "kpneumoniae": "Klebsiella_pneumoniae",
+        "paeruginosa": "Pseudomonas_aeruginosa",
+        "senterica": "Salmonella",
+        "saureus": "Staphylococcus_aureus",
+        "spseudintermedius": "Staphylococcus_pseudintermedius",
+        "sagalactiae": "Streptococcus_agalactiae",
+        "spneumoniae": "Streptococcus_pneumoniae",
+        "spyogenes": "Streptococcus_pyogenes",
+        "vcholerae": "Vibrio_cholerae"
+    ]
+}
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT LOCAL MODULES/SUBWORKFLOWS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { fromSamplesheet } from 'plugin/nf-validation'
+include { samplesheetToList } from 'plugin/nf-schema'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -111,53 +87,52 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoft
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// Info required for completion email and summary
-def multiqc_report = []
-
 workflow MGAP {
 
-    ch_versions = Channel.empty()
+    ch_versions = channel.empty()
 
     //
-    // SUBWORKFLOW: Read in samplesheet, validate and stage input files
+    // Create input channel based on sequencing type
     //
-    
-    //INPUT_CHECK (
-    //   ch_input
-    //)
-    //ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
+    genome_assembly = channel.empty()
 
-    // Create the input read channel from the sampleshet
-    //ch_input_samples = Channel.fromSamplesheet("input")
-    //                    .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1, fastq_2])}
-
-    // Decide if the illumina or ont workflow is used and create the proper input channels
-
-    genome_assembly = Channel.empty()
     if (params.seq_type == "illumina") {
-        genome_assembly = ILLUMINA(
-            Channel.fromSamplesheet("input")
-                        .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1, fastq_2])}
-        )
+        //
+        // SUBWORKFLOW: Illumina short-read assembly
+        //
+        ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
+            .map { meta, fastq_1, fastq_2 -> [ meta, [ fastq_1, fastq_2 ] ] }
+
+        ILLUMINA ( ch_input )
+        genome_assembly = ILLUMINA.out.assembly
+        ch_versions = ch_versions.mix(ILLUMINA.out.versions)
+
     } else if (params.seq_type == "ont") {
-        genome_assembly = ONT(
-            Channel.fromSamplesheet("input")
-                        .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1])}
-        )
+        //
+        // SUBWORKFLOW: ONT long-read assembly
+        //
+        ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
+            .map { meta, fastq_1, _fastq_2 -> [ meta, [ fastq_1 ] ] }
+
+        ONT ( ch_input )
+        genome_assembly = ONT.out.assembly
+        ch_versions = ch_versions.mix(ONT.out.versions)
+
     } else if (params.seq_type == "contig") {
-        Channel
-        .fromPath(params.input)
-        .splitCsv(header:true)
-        .map { row -> 
-            def meta = [id: row.sample] 
-            def fasta = file(row.fasta)
-            tuple(meta, fasta)
-        }
-        .set { genome_assembly }
-        
-    }
-    else {
-        error("Please specify sequence type")
+        //
+        // Direct contig input (pre-assembled)
+        //
+        channel.fromPath(params.input)
+            .splitCsv(header: true)
+            .map { row ->
+                def meta = [ id: row.sample ]
+                def fasta = file(row.fasta)
+                [ meta, fasta ]
+            }
+            .set { genome_assembly }
+
+    } else {
+        error("Invalid seq_type: '${params.seq_type}'. Must be 'illumina', 'ont', or 'contig'.")
     }
 
     
@@ -186,22 +161,46 @@ workflow MGAP {
         []
     )
 
-    // Process MLST to get species name
+    //
+    // Process MLST to get species name for AMRFinderPlus
+    //
+    def taxa_map = getTaxaNames()
     MLST.out.tsv
-                .map{meta, tsv -> [meta, tsv
-                                            .splitCsv(header:false, sep:"\t")
-                                            .flatten()[1]
-                                    ]
-                }
-                .map{meta, taxa -> [meta, taxa_names[taxa]]}
-                .set{species_code_ch}
+        .map { meta, tsv ->
+            def mlst_scheme = tsv.splitCsv(header: false, sep: "\t").flatten()[1]
+            [ meta, mlst_scheme ]
+        }
+        .map { meta, taxa -> [ meta, taxa_map[taxa] ] }
+        .set { species_code_ch }
 
 
-    // Run GTDB-Tk
-    //GTDBTK(
-    //    UNICYCLER.out.scaffolds,
-    //    params.gtbd_db
-    //)
+    // Run GTDB-Tk for taxonomic classification (batch mode)
+    if (params.run_gtdbtk) {
+        // Collect all genome assemblies for batch processing
+        genome_assembly
+            .map { meta, _fasta -> [ meta ] }
+            .collect()
+            .set { ch_metas }
+        
+        genome_assembly
+            .map { _meta, fasta -> fasta }
+            .collect()
+            .set { ch_genomes }
+        
+        // Prepare database channel
+        ch_gtdbtk_db = channel.value([ "gtdbtk_db", file(params.gtdbtk_db) ])
+        
+        // Prepare optional Mash database
+        ch_mash_db = params.gtdbtk_mash_db ? file(params.gtdbtk_mash_db) : []
+
+        GTDBTK(
+            ch_metas,
+            ch_genomes,
+            ch_gtdbtk_db,
+            ch_mash_db
+        )
+        ch_versions = ch_versions.mix(GTDBTK.out.versions)
+    }
 
 
     // RUN AMRFINDERPLUS 
@@ -236,15 +235,21 @@ workflow MGAP {
     //    BAKTA.out.fna
     // )
 
-    // Run taxa specific tools
+    //
+    // Run taxa-specific tools
+    // TODO: Move to dedicated subworkflow
+    //
     species_code_ch
-                .join(BAKTA.out.fna)
-                .branch{
-                    klebsiella: it[1] == "Klebsiella_pneumoniae"
-                    saureus: it[1] == "Staphylococcus_aureus"
-                    other: true
-                }
-                .set{taxa_genome_process}
+        .join(BAKTA.out.fna)
+        .branch { meta, species, fasta ->
+            klebsiella: species == "Klebsiella_pneumoniae"
+                return [ meta, fasta ]
+            saureus: species == "Staphylococcus_aureus"
+                return [ meta, fasta ]
+            other: true
+                return [ meta, fasta ]
+        }
+        .set { taxa_genome_process }
 
     // THIS SHOULD GO INTO A SUBWORKFLOW LATER TO KEEP THINGS ORGANIZED
 
@@ -291,22 +296,6 @@ workflow MGAP {
     //    ch_multiqc_logo.toList()
     //)
     //multiqc_report = MULTIQC.out.report.toList()
-}
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    COMPLETION EMAIL AND SUMMARY
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-workflow.onComplete {
-    if (params.email || params.email_on_fail) {
-        NfcoreTemplate.email(workflow, params, summary_params, projectDir, log, multiqc_report)
-    }
-    NfcoreTemplate.summary(workflow, params, log)
-    if (params.hook_url) {
-        NfcoreTemplate.IM_notification(workflow, params, summary_params, projectDir, log)
-    }
 }
 
 /*

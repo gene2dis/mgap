@@ -1,0 +1,47 @@
+name: "porechop_abi"
+description: Adapter trimmer for Oxford Nanopore reads
+keywords:
+  - adapter
+  - trimming
+  - nanopore
+  - ont
+  - preprocessing
+tools:
+  - porechop_abi:
+      description: "Fork of Porechop with updated models for adapter trimming of ONT reads"
+      homepage: "https://github.com/bonsai-team/Porechop_ABI"
+      documentation: "https://github.com/bonsai-team/Porechop_ABI"
+      tool_dev_url: "https://github.com/bonsai-team/Porechop_ABI"
+      licence: ["GPL-3.0"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - reads:
+      type: file
+      description: FASTQ file with nanopore reads
+      pattern: "*.{fastq.gz,fq.gz}"
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - reads:
+      type: file
+      description: Adapter-trimmed FASTQ file
+      pattern: "*.porechop.fastq.gz"
+  - report:
+      type: file
+      description: Trimming log file
+      pattern: "*.log"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

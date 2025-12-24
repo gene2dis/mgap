@@ -1,0 +1,43 @@
+name: nf-test
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+
+env:
+  NXF_ANSI_LOG: false
+  NFT_VER: "0.9.0"
+  NFT_WORKDIR: "~"
+  NFT_DIFF: "pdiff"
+  NFT_DIFF_ARGS: "--line-numbers --expand-tabs=2"
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  nf-test:
+    runs-on: ubuntu-latest
+    name: Run nf-test
+    steps:
+      - name: Check out pipeline code
+        uses: actions/checkout@v4
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@v2
+        with:
+          version: "latest-everything"
+
+      - name: Disk space cleanup
+        uses: jlumbroso/free-disk-space@v1.3.1
+
+      - name: Install nf-test
+        uses: nf-core/setup-nf-test@v1
+        with:
+          version: ${{ env.NFT_VER }}
+
+      - name: Run nf-test
+        run: |
+          nf-test test --profile docker --ci

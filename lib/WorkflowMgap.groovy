@@ -1,4 +1,7 @@
 //
+// DEPRECATED: This file is deprecated and will be removed in a future release.
+// Pipeline-specific workflow functions have been migrated to subworkflows.
+//
 // This file holds several functions specific to the workflow/mgap.nf in the gene2dis/mgap pipeline
 //
 
