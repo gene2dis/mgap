@@ -1,19 +1,23 @@
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    VALIDATE INPUTS
+    HELPER FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
-def summary_params = NfcoreSchema.paramsSummaryMap(workflow, params)
 
 // Extract organism information based on the MLST result
 def extract_species_code(line) {
     def columns = line.split("\t")
     return columns[1]
-    }
+}
 
-// Organism list
-//TODO missing neisserias, salmonella
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ORGANISM MAPPING
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+// Organism list for AMRFinderPlus species mapping
+// TODO: Add missing neisserias, salmonella
 taxa_names = ["abaumannii": "Acinetobacter_baumannii",
               "abaumannii_2": "Acinetobacter_baumannii",
               "bcc": "Burkholderia_cepacia",
@@ -45,15 +49,6 @@ taxa_names = ["abaumannii": "Acinetobacter_baumannii",
               "spyogenes": "Streptococcus_pyogenes",
               "vcholerae": "Vibrio_cholerae"
             ]
-
-// TODO nf-core: Add all file path parameters for the pipeline to the list below
-// Check input path parameters to see if they exist
-//def checkPathParamList = [ params.input, params.multiqc_config, params.fasta ]
-def checkPathParamList = [params.input]
-for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
-
-// Check mandatory parameters
-if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' }
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,9 +105,6 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoft
     RUN MAIN WORKFLOW
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
-// Info required for completion email and summary
-def multiqc_report = []
 
 workflow MGAP {
 
@@ -291,22 +283,6 @@ workflow MGAP {
     //    ch_multiqc_logo.toList()
     //)
     //multiqc_report = MULTIQC.out.report.toList()
-}
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    COMPLETION EMAIL AND SUMMARY
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-workflow.onComplete {
-    if (params.email || params.email_on_fail) {
-        NfcoreTemplate.email(workflow, params, summary_params, projectDir, log, multiqc_report)
-    }
-    NfcoreTemplate.summary(workflow, params, log)
-    if (params.hook_url) {
-        NfcoreTemplate.IM_notification(workflow, params, summary_params, projectDir, log)
-    }
 }
 
 /*
