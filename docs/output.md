@@ -43,22 +43,24 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 <details markdown="1">
 <summary>Output files</summary>
 
-- `<sample_id>/annotation/gtdbtk/`
-  - `gtdbtk.<sample_id>.*.summary.tsv`: Taxonomic classification summary for bacterial and archaeal genomes
-  - `gtdbtk.<sample_id>.*.classify.tree.gz`: Phylogenetic tree with genome placement (optional)
-  - `gtdbtk.<sample_id>.*.markers_summary.tsv`: Summary of identified marker genes (optional)
-  - `gtdbtk.<sample_id>.*.msa.fasta.gz`: Multiple sequence alignment of marker genes (optional)
-  - `gtdbtk.<sample_id>.*.filtered.tsv`: Genomes filtered during classification (optional)
-  - `gtdbtk.<sample_id>.failed_genomes.tsv`: Genomes that failed classification (optional)
-  - `gtdbtk.<sample_id>.log`: GTDB-Tk execution log
-  - `gtdbtk.<sample_id>.warnings.log`: Warnings generated during classification
+- `gtdbtk/`
+  - `gtdbtk.batch.*.summary.tsv`: Taxonomic classification summary for all bacterial and archaeal genomes in the batch
+  - `gtdbtk.batch.*.classify.tree.gz`: Phylogenetic tree with genome placement (optional)
+  - `gtdbtk.batch.*.markers_summary.tsv`: Summary of identified marker genes (optional)
+  - `gtdbtk.batch.*.msa.fasta.gz`: Multiple sequence alignment of marker genes (optional)
+  - `gtdbtk.batch.*.filtered.tsv`: Genomes filtered during classification (optional)
+  - `gtdbtk.batch.failed_genomes.tsv`: Genomes that failed classification (optional)
+  - `gtdbtk.batch.log`: GTDB-Tk execution log
+  - `gtdbtk.batch.warnings.log`: Warnings generated during classification
 
 </details>
 
 [GTDB-Tk](https://ecogenomics.github.io/GTDBTk/) is a toolkit for assigning objective taxonomic classifications to bacterial and archaeal genomes based on the Genome Database Taxonomy (GTDB). It uses average nucleotide identity (ANI) to assign genomes to species clusters and phylogenetic placement for higher-level taxonomic assignments.
 
+**Batch Processing:** GTDB-Tk processes all genomes in a single batch run, which significantly reduces runtime compared to processing genomes individually. All samples are analyzed together and results are consolidated into a single set of output files.
+
 The main output file is the `summary.tsv` which contains:
-- Taxonomic classification (domain to species level)
+- Taxonomic classification (domain to species level) for all genomes
 - Classification method used
 - Closest reference genome
 - ANI to reference genome

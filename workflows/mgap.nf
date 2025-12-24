@@ -174,8 +174,19 @@ workflow MGAP {
         .set { species_code_ch }
 
 
-    // Run GTDB-Tk for taxonomic classification
+    // Run GTDB-Tk for taxonomic classification (batch mode)
     if (params.run_gtdbtk) {
+        // Collect all genome assemblies for batch processing
+        genome_assembly
+            .map { meta, _fasta -> [ meta ] }
+            .collect()
+            .set { ch_metas }
+        
+        genome_assembly
+            .map { _meta, fasta -> fasta }
+            .collect()
+            .set { ch_genomes }
+        
         // Prepare database channel
         ch_gtdbtk_db = channel.value([ "gtdbtk_db", file(params.gtdbtk_db) ])
         
@@ -183,11 +194,12 @@ workflow MGAP {
         ch_mash_db = params.gtdbtk_mash_db ? file(params.gtdbtk_mash_db) : []
 
         GTDBTK(
-            genome_assembly,
+            ch_metas,
+            ch_genomes,
             ch_gtdbtk_db,
             ch_mash_db
         )
-        ch_versions = ch_versions.mix(GTDBTK.out.versions.first())
+        ch_versions = ch_versions.mix(GTDBTK.out.versions)
     }
 
 

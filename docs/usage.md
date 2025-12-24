@@ -144,6 +144,8 @@ This will launch the pipeline with the `docker` configuration profile. See below
 
 GTDB-Tk provides taxonomic classification using the Genome Taxonomy Database (GTDB). This is an optional step that can be enabled with the `--run_gtdbtk` flag.
 
+**Batch Processing:** The pipeline processes all genomes together in a single GTDB-Tk run, which significantly reduces runtime compared to processing genomes individually. Results are consolidated into a single set of output files in the `gtdbtk/` directory.
+
 **Basic usage:**
 
 ```bash
