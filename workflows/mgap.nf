@@ -71,7 +71,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
     IMPORT LOCAL MODULES/SUBWORKFLOWS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { fromSamplesheet } from 'plugin/nf-validation'
+include { samplesheetToList } from 'plugin/nf-schema'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -136,12 +136,12 @@ workflow MGAP {
     genome_assembly = Channel.empty()
     if (params.seq_type == "illumina") {
         genome_assembly = ILLUMINA(
-            Channel.fromSamplesheet("input")
+            Channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
                         .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1, fastq_2])}
         )
     } else if (params.seq_type == "ont") {
         genome_assembly = ONT(
-            Channel.fromSamplesheet("input")
+            Channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
                         .map{meta, fastq_1, fastq_2 -> tuple(meta, [fastq_1])}
         )
     } else if (params.seq_type == "contig") {

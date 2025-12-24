@@ -25,7 +25,7 @@ class WorkflowMain {
         def command = "nextflow run ${workflow.manifest.name} --input samplesheet.csv --genome GRCh37 -profile docker"
         def help_string = ''
         help_string += NfcoreTemplate.logo(workflow, params.monochrome_logs)
-        help_string += NfcoreSchema.paramsHelp(workflow, params, command)
+        //help_string += NfcoreSchema.paramsHelp(workflow, params, command)
         help_string += '\n' + citation(workflow) + '\n'
         help_string += NfcoreTemplate.dashedLine(params.monochrome_logs)
         return help_string
@@ -37,7 +37,7 @@ class WorkflowMain {
     public static String paramsSummaryLog(workflow, params, log) {
         def summary_log = ''
         summary_log += NfcoreTemplate.logo(workflow, params.monochrome_logs)
-        summary_log += NfcoreSchema.paramsSummaryLog(workflow, params)
+        //summary_log += NfcoreSchema.paramsSummaryLog(workflow, params)
         summary_log += '\n' + citation(workflow) + '\n'
         summary_log += NfcoreTemplate.dashedLine(params.monochrome_logs)
         return summary_log
@@ -64,9 +64,9 @@ class WorkflowMain {
         log.info paramsSummaryLog(workflow, params, log)
 
         // Validate workflow parameters via the JSON schema
-        if (params.validate_params) {
-            NfcoreSchema.validateParameters(workflow, params, log)
-        }
+        //if (params.validate_params) {
+            //NfcoreSchema.validateParameters(workflow, params, log)
+        //}
 
         // Check that a -profile or Nextflow config has been provided to run the pipeline
         NfcoreTemplate.checkConfigProvided(workflow, log)
