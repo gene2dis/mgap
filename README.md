@@ -88,6 +88,7 @@ SAMPLE1,/path/to/sample1.fastq.gz
 ```csv
 sample,fasta
 SAMPLE1,/path/to/sample1.fasta
+SAMPLE2,/path/to/sample2.fa.gz
 ```
 
 An [example samplesheet](assets/samplesheet.csv) is provided with the pipeline.

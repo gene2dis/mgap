@@ -43,7 +43,18 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
   - `kleborate`: Updated module (no species parameter)
   - `staphopiasccmec`: Updated module
   - `gtdbtk/classifywf`: Updated module with 3-input signature
+  - `kraken2/kraken2`: Updated module with enhanced test coverage
+  - `macrel/contigs`: Updated module with improved testing
+  - `mlst`: Updated module with environment.yml
+  - `multiqc`: Updated module with custom prefix support
+  - `seqtk/sample`: Updated module with standard config
 - Changed default `gtdbtk_extension` from `fa` to `gz` to match gzipped SPAdes output
+- **Improved samplesheet handling for contig mode:**
+  - `CreateSampleSheet.py` now uses `fasta` column instead of `fastq_1` for contig mode
+  - CSV output format now matches data type (sample,fasta vs sample,fastq_1,fastq_2)
+  - Added dedicated `schema_input_contig.json` for contig-specific validation
+  - Schema validation now uses `oneOf` constraint for mutually exclusive fastq/fasta inputs
+  - Enabled lenient mode for more flexible input validation
 
 ### `Fixed`
 
