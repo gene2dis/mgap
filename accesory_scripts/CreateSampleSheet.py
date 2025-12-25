@@ -235,8 +235,7 @@ class SampleSheetGenerator:
             
             self.samples.append({
                 'sample': sample_name,
-                'fastq_1': str(filepath.absolute()),
-                'fastq_2': ''
+                'fasta': str(filepath.absolute())
             })
 
     def generate(self):
@@ -282,8 +281,14 @@ class SampleSheetGenerator:
         """Write the samplesheet to CSV file."""
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
         
+        # Use different columns for contig mode
+        if self.data_type == 'contig':
+            fieldnames = ['sample', 'fasta']
+        else:
+            fieldnames = ['sample', 'fastq_1', 'fastq_2']
+        
         with self.output_file.open('w', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=['sample', 'fastq_1', 'fastq_2'])
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(self.samples)
 

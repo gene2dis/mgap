@@ -99,9 +99,10 @@ workflow MGAP {
     if (params.seq_type == "illumina") {
         //
         // SUBWORKFLOW: Illumina short-read assembly
+        // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
         //
         ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
-            .map { meta, fastq_1, fastq_2 -> [ meta, [ fastq_1, fastq_2 ] ] }
+            .map { meta, fastq_1, fastq_2, _fasta -> [ meta, [ fastq_1, fastq_2 ] ] }
 
         ILLUMINA ( ch_input )
         genome_assembly = ILLUMINA.out.assembly
@@ -110,9 +111,10 @@ workflow MGAP {
     } else if (params.seq_type == "ont") {
         //
         // SUBWORKFLOW: ONT long-read assembly
+        // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
         //
         ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
-            .map { meta, fastq_1, _fastq_2 -> [ meta, [ fastq_1 ] ] }
+            .map { meta, fastq_1, _fastq_2, _fasta -> [ meta, [ fastq_1 ] ] }
 
         ONT ( ch_input )
         genome_assembly = ONT.out.assembly
@@ -121,15 +123,12 @@ workflow MGAP {
     } else if (params.seq_type == "contig") {
         //
         // Direct contig input (pre-assembled)
+        // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
         //
-        channel.fromPath(params.input)
-            .splitCsv(header: true)
-            .map { row ->
-                def meta = [ id: row.sample ]
-                def fasta = file(row.fasta)
-                [ meta, fasta ]
-            }
-            .set { genome_assembly }
+        ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
+            .map { meta, _fastq_1, _fastq_2, fasta -> [ meta, fasta ] }
+        
+        genome_assembly = ch_input
 
     } else {
         error("Invalid seq_type: '${params.seq_type}'. Must be 'illumina', 'ont', or 'contig'.")
