@@ -14,6 +14,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 
 - [FastQC](#fastqc) - Raw read QC
 - [GTDB-Tk](#gtdb-tk) - Taxonomic classification (optional)
+- [Kleborate](#kleborate) - Klebsiella-specific analysis (when detected)
 - [MultiQC](#multiqc) - Aggregate report describing results and QC from the whole pipeline
 - [Pipeline information](#pipeline-information) - Report metrics generated during the workflow execution
 
@@ -68,6 +69,29 @@ The main output file is the `summary.tsv` which contains:
 - Warnings and notes
 
 This step is optional and only runs when `--run_gtdbtk` is enabled. The GTDB-Tk database must be provided via `--gtdbtk_db`.
+
+### Kleborate
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `kleborate/`
+  - `*.results.txt`: Kleborate analysis results for each Klebsiella sample
+
+</details>
+
+[Kleborate](https://github.com/klebgenomics/Kleborate) is a tool for screening genome assemblies of _Klebsiella pneumoniae_ and the _Klebsiella pneumoniae_ species complex (KpSC) for:
+
+- MLST sequence type
+- Species identification (within the KpSC)
+- ICEKp-associated virulence loci: yersiniabactin (*ybt*), colibactin (*clb*), salmochelin (*iro*), hypermucoidy (*rmpA*)
+- Virulence plasmid associated loci: salmochelin (*iro*), aerobactin (*iuc*), hypermucoidy (*rmpA*, *rmpA2*)
+- Antimicrobial resistance determinants: acquired genes, SNPs, gene truncations and intrinsic β-lactamases
+- K (capsule) and O antigen (LPS) serotype prediction
+
+**Automatic detection:** Kleborate analysis is automatically triggered when _Klebsiella_ species are detected based on MLST results. The analysis runs on a per-sample basis, generating detailed reports for each identified Klebsiella genome.
+
+The output file contains comprehensive typing and screening information that helps characterize the virulence and resistance profiles of Klebsiella isolates.
 
 ### MultiQC
 

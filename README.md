@@ -101,7 +101,12 @@ A helper script is available to automatically generate samplesheets from a direc
 python accesory_scripts/CreateSampleSheet.py /path/to/data samplesheet.csv
 ```
 
-The script auto-detects the data type (Illumina/ONT/contigs) and intelligently extracts sample names from filenames. See the [Usage documentation](docs/usage.md#automatic-samplesheet-generation) for detailed examples.
+The script auto-detects the data type (Illumina/ONT/contigs) and intelligently extracts sample names from filenames. It automatically generates the correct column format based on the detected data type:
+- Illumina: `sample,fastq_1,fastq_2`
+- ONT: `sample,fastq_1`
+- Contigs: `sample,fasta`
+
+See the [Usage documentation](docs/usage.md#automatic-samplesheet-generation) for detailed examples.
 
 ### Basic Usage
 

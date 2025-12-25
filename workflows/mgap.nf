@@ -55,10 +55,10 @@ include { samplesheetToList } from 'plugin/nf-schema'
 //include { INPUT_CHECK } from '../subworkflows/local/input_check'
 include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
+include { KLEBSIELLA } from '../subworkflows/local/klebsiella'
 include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
 include { AMRFINDERPLUS_RUN } from '../modules/nf-core/amrfinderplus/run/main'
 include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoend/main'
-include { KLEBORATE } from '../modules/nf-core/kleborate/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -257,13 +257,11 @@ workflow MGAP {
         }
         .set { taxa_genome_process }
 
-    // THIS SHOULD GO INTO A SUBWORKFLOW LATER TO KEEP THINGS ORGANIZED
-
-    // Run Kleborate
-    // nf-core kleborate expects tuple val(meta), path(fastas) - no species parameter
-    KLEBORATE(
+    // Run Klebsiella-specific subworkflow
+    KLEBSIELLA(
         taxa_genome_process.klebsiella
     )
+    ch_versions = ch_versions.mix(KLEBSIELLA.out.versions)
 
     // nf-core staphopiasccmec expects tuple val(meta), path(fasta) - no species parameter
     STAPHOPIASCCMEC(

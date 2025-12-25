@@ -51,8 +51,8 @@ TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
 | Column    | Description                                                                                                                                                                            |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+| `fastq_1` | Full path to FastQ file for Illumina short reads 1 or ONT reads. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                |
+| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz". Leave empty for ONT single-end reads.                      |
 | `fasta`   | Full path to FASTA file for pre-assembled contigs. Supports `.fasta`, `.fa`, `.fna` extensions (with optional `.gz` compression). Used only for `--seq_type contig` mode.              |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
@@ -65,11 +65,13 @@ For convenience, a helper script is provided to automatically generate sampleshe
 python accesory_scripts/CreateSampleSheet.py <input_directory> <output_samplesheet.csv>
 ```
 
-The script supports three types of sequencing data and can auto-detect the type:
+The script supports three types of sequencing data and can auto-detect the type. It automatically generates the correct column format based on the detected data type:
 
-- **Illumina paired-end reads**: Automatically pairs R1/R2 files (outputs `sample,fastq_1,fastq_2` columns)
-- **Oxford Nanopore reads**: Single FASTQ files (outputs `sample,fastq_1` columns)
-- **Pre-assembled contigs**: FASTA files (outputs `sample,fasta` columns)
+- **Illumina paired-end reads**: Automatically pairs R1/R2 files → outputs `sample,fastq_1,fastq_2` columns
+- **Oxford Nanopore reads**: Single FASTQ files → outputs `sample,fastq_1` columns  
+- **Pre-assembled contigs**: FASTA files → outputs `sample,fasta` columns
+
+The script intelligently detects the data type by examining file extensions and naming patterns, ensuring the samplesheet format matches the pipeline's requirements for each sequencing mode.
 
 #### Usage examples
 
@@ -98,7 +100,9 @@ The script intelligently extracts sample names from filenames:
 #### Supported file formats
 
 - **FASTQ files**: `.fastq.gz`, `.fq.gz`, `.fastq`, `.fq`
-- **FASTA files**: `.fasta`, `.fa`, `.fna`, `.fasta.gz`, `.fa.gz`, `.fna.gz`
+- **FASTA files**: `.fasta`, `.fa`, `.fna` (all optionally gzipped: `.fasta.gz`, `.fa.gz`, `.fna.gz`)
+
+**Note:** The pipeline fully supports gzipped FASTA files for contig mode, allowing you to work with compressed assemblies directly without manual decompression.
 
 ## Running the pipeline
 

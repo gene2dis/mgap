@@ -40,8 +40,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
   - `checkm2/predict`: Updated module with database tuple input
   - `amrfinderplus/run`: Updated to v4.2.5
   - `genomad/endtoend`: Updated module
-  - `kleborate`: Updated module (no species parameter)
-  - `staphopiasccmec`: Updated module
+  - `kleborate`: Updated to v2.1.0, removed species parameter
+  - `staphopiasccmec`: Migrated from local to nf-core module
   - `gtdbtk/classifywf`: Updated module with 3-input signature
   - `kraken2/kraken2`: Updated module with enhanced test coverage
   - `macrel/contigs`: Updated module with improved testing
@@ -55,6 +55,10 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
   - Added dedicated `schema_input_contig.json` for contig-specific validation
   - Schema validation now uses `oneOf` constraint for mutually exclusive fastq/fasta inputs
   - Enabled lenient mode for more flexible input validation
+  - Added support for gzipped FASTA files (.fasta.gz, .fa.gz, .fna.gz)
+- **Removed deprecated local modules** (replaced by nf-core versions):
+  - Removed local versions of: amrfinderplus, checkm2, flye, genomad, kleborate, nanoq, spades, staphopiasccmec
+  - All functionality now provided by standardized nf-core modules
 
 ### `Fixed`
 
