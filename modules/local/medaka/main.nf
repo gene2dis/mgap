@@ -8,7 +8,7 @@ process MEDAKA {
         'biocontainers/medaka:1.11.3--py310h87e71ce_0 ' }"
 
     input:
-    tuple val(meta), path(reads), val(coverage), path(assembly)
+    tuple val(meta), path(reads), path(assembly)
 
     output:
     tuple val(meta), path("*.fasta"), emit: polished_fasta

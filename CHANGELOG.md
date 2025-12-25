@@ -29,12 +29,29 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Updated `nextflow_schema.json` to JSON Schema draft 2020-12 with organized sections
 - Updated documentation in `docs/usage.md` with cloud execution examples
 - All local modules now use `${moduleDir}/environment.yml` syntax
+- **Updated nf-core modules to latest versions:**
+  - `nanoq`: Updated module with output_format parameter
+  - `porechop/abi`: Updated module with custom_adapters parameter
+  - `flye`: Updated to v2.9.5, outputs gzipped FASTA
+  - `spades`: Updated to v4.1.0, outputs gzipped FASTA
+  - `fastp`: Updated module with new input signature (adapter in tuple)
+  - `quast`: Updated module with 3-input signature (consensus, reference, gff)
+  - `bakta`: Updated module with 6-input signature (+regions, +hmms)
+  - `checkm2/predict`: Updated module with database tuple input
+  - `amrfinderplus/run`: Updated to v4.2.5
+  - `genomad/endtoend`: Updated module
+  - `kleborate`: Updated module (no species parameter)
+  - `staphopiasccmec`: Updated module
+  - `gtdbtk/classifywf`: Updated module with 3-input signature
+- Changed default `gtdbtk_extension` from `fa` to `gz` to match gzipped SPAdes output
 
 ### `Fixed`
 
 - Fixed implicit closure parameter warnings in map/branch operations
 - Fixed deprecated `Channel` factory usage (now uses lowercase `channel`)
 - Fixed dnaapler version command (was incorrectly calling medaka)
+- Fixed AMRFinderPlus null organism error when MLST scheme not in taxa_map
+- Fixed GTDB-Tk extension parameter not being passed to the module
 
 ### `Dependencies`
 

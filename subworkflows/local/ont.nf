@@ -14,12 +14,16 @@ include { KRAKEN2_KRAKEN2 as KRAKEN2 } from '../../modules/nf-core/kraken2/krake
 include { SEQTK_SAMPLE               } from '../../modules/nf-core/seqtk/sample/main'
 
 //
-// MODULE: Local modules
+// MODULE: nf-core modules
 //
-include { NANOQ        } from '../../modules/local/nanoq/main'
-include { PORECHOP_ABI } from '../../modules/local/porechop_abi/main'
+include { NANOQ                      } from '../../modules/nf-core/nanoq/main'
+include { PORECHOP_ABI               } from '../../modules/nf-core/porechop/abi/main'
+include { FLYE                       } from '../../modules/nf-core/flye/main'
+
+//
+// MODULE: Local modules (no nf-core equivalent yet)
+//
 include { MASH_SKETCH  } from '../../modules/local/mash/sketch/main'
-include { FLYE         } from '../../modules/local/flye/main'
 include { MEDAKA       } from '../../modules/local/medaka/main'
 include { DNAAPLER     } from '../../modules/local/dnaapler/main'
 
@@ -33,14 +37,16 @@ workflow ONT {
 
     //
     // MODULE: Run NANOQ for quality filtering
+    // nf-core nanoq requires output_format parameter
     //
-    NANOQ ( ch_reads )
+    NANOQ ( ch_reads, 'fastq.gz' )
     ch_versions = ch_versions.mix(NANOQ.out.versions.first())
 
     //
     // MODULE: Remove adapters with Porechop ABI
+    // nf-core porechop/abi requires custom_adapters parameter (can be empty)
     //
-    PORECHOP_ABI ( NANOQ.out.reads )
+    PORECHOP_ABI ( NANOQ.out.reads, [] )
     ch_versions = ch_versions.mix(PORECHOP_ABI.out.versions.first())
 
     //
@@ -100,10 +106,12 @@ workflow ONT {
 
     //
     // MODULE: Assemble with Flye
+    // nf-core flye expects mode with -- prefix (e.g., --nano-hq)
     //
+    def flye_mode_full = "--${params.flye_mode}"
     FLYE (
         ch_reads_for_assembly,
-        params.flye_mode
+        flye_mode_full
     )
     ch_versions = ch_versions.mix(FLYE.out.versions.first())
 

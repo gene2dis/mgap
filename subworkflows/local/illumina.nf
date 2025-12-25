@@ -16,10 +16,14 @@ include { BRACKEN_BRACKEN as BRACKEN } from '../../modules/nf-core/bracken/brack
 include { SEQTK_SAMPLE               } from '../../modules/nf-core/seqtk/sample/main'
 
 //
-// MODULE: Local modules
+// MODULE: nf-core modules
+//
+include { SPADES      } from '../../modules/nf-core/spades/main'
+
+//
+// MODULE: Local modules (no nf-core equivalent yet)
 //
 include { MASH_SKETCH } from '../../modules/local/mash/sketch/main'
-include { SPADES      } from '../../modules/local/spades/main'
 
 workflow ILLUMINA {
 
@@ -31,12 +35,14 @@ workflow ILLUMINA {
 
     //
     // MODULE: Run FastP for quality trimming
+    // nf-core fastp expects: tuple(meta, reads, adapter_fasta), discard_trimmed_pass, save_trimmed_fail, save_merged
     //
+    ch_fastp_input = ch_reads.map { meta, reads -> [ meta, reads, [] ] }
     FASTP (
-        ch_reads,
-        [],
-        [],
-        []
+        ch_fastp_input,
+        false,  // discard_trimmed_pass
+        false,  // save_trimmed_fail
+        false   // save_merged
     )
     ch_versions = ch_versions.mix(FASTP.out.versions.first())
 
@@ -103,12 +109,19 @@ workflow ILLUMINA {
 
     //
     // MODULE: Assemble with SPAdes
-    // TODO: Add option to choose between assemblers
+    // nf-core spades expects: tuple(meta, illumina, pacbio, nanopore), yml, hmm
     //
-    SPADES ( ch_reads_for_assembly )
+    ch_spades_input = ch_reads_for_assembly.map { meta, reads -> [ meta, reads, [], [] ] }
+    SPADES (
+        ch_spades_input,
+        [],  // yml
+        []   // hmm
+    )
     ch_versions = ch_versions.mix(SPADES.out.versions.first())
 
     emit:
-    assembly = SPADES.out.scaffolds  // channel: [ val(meta), path(fasta) ]
+    // nf-core spades outputs gzipped scaffolds (.fa.gz)
+    // Downstream tools (QUAST, CheckM2, MLST, Bakta, GTDB-Tk) all support gzipped FASTA
+    assembly = SPADES.out.scaffolds  // channel: [ val(meta), path(fasta.gz) ]
     versions = ch_versions            // channel: [ path(versions.yml) ]
 }

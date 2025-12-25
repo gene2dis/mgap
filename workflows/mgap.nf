@@ -55,10 +55,10 @@ include { samplesheetToList } from 'plugin/nf-schema'
 //include { INPUT_CHECK } from '../subworkflows/local/input_check'
 include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
-include { CHECKM2 } from '../modules/local/checkm2/main'
-include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/main'
-include { GENOMAD } from '../modules/local/genomad/main'
-include { KLEBORATE } from '../modules/local/kleborate/main'
+include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
+include { AMRFINDERPLUS_RUN } from '../modules/nf-core/amrfinderplus/run/main'
+include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoend/main'
+include { KLEBORATE } from '../modules/nf-core/kleborate/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,7 +72,7 @@ include { KLEBORATE } from '../modules/local/kleborate/main'
 include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
-include { STAPHOPIASCCMEC } from '../modules/local/staphopiasccmec/main'
+include { STAPHOPIASCCMEC } from '../modules/nf-core/staphopiasccmec/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
 include { ANTISMASH_ANTISMASHLITE } from '../modules/nf-core/antismash/antismashlite/main'
 include { MACREL_CONTIGS } from '../modules/nf-core/macrel/contigs/main'
@@ -136,16 +136,20 @@ workflow MGAP {
     }
 
     
-    // Check assamblies with QUAST
-
+    // Check assemblies with QUAST
+    // nf-core quast expects 3 inputs: consensus, reference (optional), gff (optional)
     QUAST(
-        genome_assembly
+        genome_assembly,
+        [ [:], [] ],  // no reference
+        [ [:], [] ]   // no gff
     )
 
     // RUN Checkm2
+    // nf-core checkm2/predict expects tuple val(dbmeta), path(db) for database
+    ch_checkm2_db = channel.value([ [id: 'checkm2_db'], file(params.checkm2_db) ])
     CHECKM2(
         genome_assembly,
-        params.checkm2_db
+        ch_checkm2_db
     )
 
     // RUN MLST
@@ -154,11 +158,14 @@ workflow MGAP {
     )
 
     // RUN ANNOTATION
+    // nf-core bakta expects 6 inputs: fasta, db, proteins, prodigal_tf, regions, hmms
     BAKTA(
         genome_assembly,
         params.bakta_db,
-        [],
-        []
+        [],  // proteins
+        [],  // prodigal_tf
+        [],  // regions
+        []   // hmms
     )
 
     //
@@ -176,39 +183,39 @@ workflow MGAP {
 
     // Run GTDB-Tk for taxonomic classification (batch mode)
     if (params.run_gtdbtk) {
+        // nf-core gtdbtk/classifywf expects: tuple(meta, bins), tuple(db_name, db), use_pplacer_scratch_dir
         // Collect all genome assemblies for batch processing
         genome_assembly
-            .map { meta, _fasta -> [ meta ] }
+            .map { meta, fasta -> fasta }
             .collect()
-            .set { ch_metas }
-        
-        genome_assembly
-            .map { _meta, fasta -> fasta }
-            .collect()
-            .set { ch_genomes }
+            .map { fastas -> [ [id: 'gtdbtk_batch'], fastas ] }
+            .set { ch_gtdbtk_input }
         
         // Prepare database channel
         ch_gtdbtk_db = channel.value([ "gtdbtk_db", file(params.gtdbtk_db) ])
-        
-        // Prepare optional Mash database
-        ch_mash_db = params.gtdbtk_mash_db ? file(params.gtdbtk_mash_db) : []
 
         GTDBTK(
-            ch_metas,
-            ch_genomes,
+            ch_gtdbtk_input,
             ch_gtdbtk_db,
-            ch_mash_db
+            params.gtdbtk_pplacer_scratch
         )
         ch_versions = ch_versions.mix(GTDBTK.out.versions)
     }
 
 
     // RUN AMRFINDERPLUS 
+    // nf-core amrfinderplus/run expects tuple val(meta), path(fasta) with organism in meta
+    // Only set meta.organism if species is valid (not null) - otherwise AMRFinder runs without organism-specific analysis
     BAKTA.out.fna
-                .join(BAKTA.out.faa)
-                .join(BAKTA.out.gff)
-                .join(species_code_ch)
-                .set{amrfinder_ch}
+        .join(species_code_ch)
+        .map { meta, fasta, species -> 
+            def new_meta = meta.clone()
+            if (species) {
+                new_meta.organism = species
+            }
+            [ new_meta, fasta ]
+        }
+        .set { amrfinder_ch }
 
     AMRFINDERPLUS_RUN(
         amrfinder_ch,
@@ -254,10 +261,12 @@ workflow MGAP {
     // THIS SHOULD GO INTO A SUBWORKFLOW LATER TO KEEP THINGS ORGANIZED
 
     // Run Kleborate
+    // nf-core kleborate expects tuple val(meta), path(fastas) - no species parameter
     KLEBORATE(
         taxa_genome_process.klebsiella
     )
 
+    // nf-core staphopiasccmec expects tuple val(meta), path(fasta) - no species parameter
     STAPHOPIASCCMEC(
         taxa_genome_process.saureus
     )
