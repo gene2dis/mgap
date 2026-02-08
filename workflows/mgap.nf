@@ -58,7 +58,8 @@ include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
 include { KLEBSIELLA } from '../subworkflows/local/klebsiella'
 include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
-include { AMRFINDERPLUS_RUN } from '../modules/nf-core/amrfinderplus/run/main'
+include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/run/main'
+include { RGI_MAIN } from '../modules/local/rgi/main/main'
 include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoend/main'
 
 /*
@@ -204,16 +205,14 @@ workflow MGAP {
 
 
     // RUN AMRFINDERPLUS 
-    // nf-core amrfinderplus/run expects tuple val(meta), path(fasta) with organism in meta
-    // Only set meta.organism if species is valid (not null) - otherwise AMRFinder runs without organism-specific analysis
+    // Local amrfinderplus/run expects tuple val(meta), path(fasta_nuc), path(fasta_prot), path(gff3), val(species)
+    // Join Bakta outputs (fna, faa, gff3) with species code
     BAKTA.out.fna
+        .join(BAKTA.out.faa)
+        .join(BAKTA.out.gff)
         .join(species_code_ch)
-        .map { meta, fasta, species -> 
-            def new_meta = meta.clone()
-            if (species) {
-                new_meta.organism = species
-            }
-            [ new_meta, fasta ]
+        .map { meta, fasta_nuc, fasta_prot, gff3, species -> 
+            [ meta, fasta_nuc, fasta_prot, gff3, species ]
         }
         .set { amrfinder_ch }
 
@@ -227,6 +226,15 @@ workflow MGAP {
         BAKTA.out.fna,
         params.genomad_db
     )
+
+    // RUN RGI for antimicrobial resistance gene prediction
+    if (params.run_rgi) {
+        RGI_MAIN(
+            genome_assembly,
+            params.rgi_db
+        )
+        ch_versions = ch_versions.mix(RGI_MAIN.out.versions.first())
+    }
 
     // RUN ANTISMASH
     // Currently using a local installation

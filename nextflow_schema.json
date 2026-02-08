@@ -266,6 +266,51 @@
                     "default": false,
                     "description": "Run GTDB-Tk for taxonomic classification.",
                     "fa_icon": "fas fa-sitemap"
+                },
+                "run_rgi": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run RGI for antimicrobial resistance gene prediction using CARD database.",
+                    "fa_icon": "fas fa-shield-virus"
+                }
+            }
+        },
+        "rgi_options": {
+            "title": "RGI options",
+            "type": "object",
+            "fa_icon": "fas fa-shield-virus",
+            "description": "Parameters for RGI (Resistance Gene Identifier) antimicrobial resistance prediction.",
+            "properties": {
+                "rgi_db": {
+                    "type": "string",
+                    "description": "Path to RGI/CARD database directory.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "rgi_include_loose": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Include loose hits in RGI results (hits below detection model cut-off).",
+                    "fa_icon": "fas fa-filter"
+                },
+                "rgi_include_nudge": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Include hits nudged from loose to strict interpreting partial gene sequences.",
+                    "fa_icon": "fas fa-arrow-up"
+                },
+                "rgi_low_quality": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use low quality/coverage for short contigs to predict partial genes.",
+                    "fa_icon": "fas fa-exclamation-triangle"
+                },
+                "rgi_alignment_tool": {
+                    "type": "string",
+                    "default": "DIAMOND",
+                    "description": "Alignment tool for RGI sequence searches.",
+                    "enum": ["BLAST", "DIAMOND"],
+                    "fa_icon": "fas fa-align-left"
                 }
             }
         },
@@ -470,6 +515,7 @@
     "allOf": [
         { "$ref": "#/$defs/input_output_options" },
         { "$ref": "#/$defs/pipeline_options" },
+        { "$ref": "#/$defs/rgi_options" },
         { "$ref": "#/$defs/database_options" },
         { "$ref": "#/$defs/illumina_options" },
         { "$ref": "#/$defs/ont_options" },

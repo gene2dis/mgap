@@ -10,7 +10,7 @@ gene2dis/mgap is a Nextflow pipeline for microbial genome analysis. It supports:
 - **Oxford Nanopore long-read assembly** (Nanoq → Porechop → Flye → Medaka)
 - **Pre-assembled contigs** (direct annotation)
 
-The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), mobile element detection (geNomad), and species-specific analyses.
+The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), resistome analysis (RGI, optional), mobile element detection (geNomad), and species-specific analyses.
 
 ## Samplesheet input
 
@@ -211,6 +211,75 @@ nextflow run gene2dis/mgap \
 ```
 
 **Note:** The GTDB-Tk database is large (~70GB) and must be downloaded separately. See the [GTDB-Tk documentation](https://ecogenomics.github.io/GTDBTk/installing/index.html) for database installation instructions.
+
+### RGI Antimicrobial Resistance Gene Prediction
+
+RGI (Resistance Gene Identifier) predicts resistomes from genome assemblies using the Comprehensive Antibiotic Resistance Database (CARD). This is an optional step that can be enabled with the `--run_rgi` flag.
+
+**Basic usage:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_rgi \
+    --rgi_db /path/to/card_db \
+    -profile docker
+```
+
+**RGI parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--run_rgi` | `false` | Enable RGI antimicrobial resistance gene prediction |
+| `--rgi_db` | `null` | Path to RGI/CARD database directory (required if enabled) |
+| `--rgi_include_loose` | `false` | Include loose hits (below detection model cut-off) |
+| `--rgi_include_nudge` | `false` | Nudge loose hits to strict for partial gene sequences |
+| `--rgi_low_quality` | `false` | Use low quality mode for short contigs to predict partial genes |
+| `--rgi_alignment_tool` | `DIAMOND` | Alignment tool: `BLAST` or `DIAMOND` |
+
+**Example with loose hits and low quality mode:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_rgi \
+    --rgi_db /path/to/card_db \
+    --rgi_include_loose \
+    --rgi_low_quality \
+    -profile docker
+```
+
+**Example using BLAST instead of DIAMOND:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_rgi \
+    --rgi_db /path/to/card_db \
+    --rgi_alignment_tool BLAST \
+    -profile docker
+```
+
+**Database setup:**
+
+The CARD database must be downloaded and set up before running RGI. See the [RGI documentation](https://github.com/arpcard/rgi#card-database) for database installation instructions:
+
+```bash
+# Download CARD database
+wget https://card.mcmaster.ca/latest/data
+tar -xvf data ./card.json
+
+# Load database (creates localDB directory)
+rgi load --card_json card.json --local
+```
+
+Then provide the path to the database directory (containing the loaded database files) via `--rgi_db`.
 
 ### Cloud execution
 

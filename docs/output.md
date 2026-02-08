@@ -14,6 +14,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 
 - [FastQC](#fastqc) - Raw read QC
 - [GTDB-Tk](#gtdb-tk) - Taxonomic classification (optional)
+- [RGI](#rgi) - Antimicrobial resistance gene prediction (optional)
 - [Kleborate](#kleborate) - Klebsiella-specific analysis (when detected)
 - [MultiQC](#multiqc) - Aggregate report describing results and QC from the whole pipeline
 - [Pipeline information](#pipeline-information) - Report metrics generated during the workflow execution
@@ -69,6 +70,37 @@ The main output file is the `summary.tsv` which contains:
 - Warnings and notes
 
 This step is optional and only runs when `--run_gtdbtk` is enabled. The GTDB-Tk database must be provided via `--gtdbtk_db`.
+
+### RGI
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/rgi/`
+  - `<sample_id>.txt`: Tab-separated file containing RGI predictions with detailed information about detected resistance genes
+  - `<sample_id>.json`: JSON file containing comprehensive RGI results including gene sequences and additional metadata
+
+</details>
+
+[RGI](https://github.com/arpcard/rgi) (Resistance Gene Identifier) predicts resistomes from protein or nucleotide sequences using the Comprehensive Antibiotic Resistance Database (CARD). The tool identifies antimicrobial resistance genes based on homology and SNP models.
+
+The main output file (`*.txt`) contains:
+- **ORF_ID**: Open reading frame identifier
+- **Contig**: Source contig name
+- **Cut_Off**: Detection paradigm (Strict, Perfect, or Loose)
+- **Best_Hit_ARO**: Best matching ARO (Antibiotic Resistance Ontology) term
+- **Drug Class**: Antibiotic drug class(es) the gene confers resistance to
+- **Resistance Mechanism**: Mechanism of resistance (e.g., antibiotic efflux, antibiotic inactivation)
+- **AMR Gene Family**: Gene family classification
+- **% Identity**: Sequence identity to reference
+- **% Coverage**: Sequence coverage of reference
+
+The JSON output provides additional details including:
+- Full nucleotide and protein sequences
+- CARD database annotations
+- Model information and detection parameters
+
+This step is optional and only runs when `--run_rgi` is enabled. The CARD database must be provided via `--rgi_db`.
 
 ### Kleborate
 

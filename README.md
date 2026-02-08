@@ -50,8 +50,9 @@ With the assembled genome (or provided contigs), the annotation steps include:
 3. Annotation ([`Bakta`](https://github.com/oschwengers/bakta))
 4. Taxonomic classification ([`GTDB-Tk`](https://github.com/Ecogenomics/GTDBTk)) - optional, uses GTDB reference database
 5. Antibiotic resistance prediction ([`AMRFinderPlus`](https://github.com/ncbi/amr)) - includes point mutation analysis for supported organisms
-6. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
-7. Species-specific analyses:
+6. Antibiotic resistance gene prediction ([`RGI`](https://github.com/arpcard/rgi)) - optional, uses CARD database for resistome analysis
+7. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
+8. Species-specific analyses:
    - _Klebsiella_: [`Kleborate`](https://github.com/klebgenomics/Kleborate)
    - _S. aureus_: SCCmec classification using [`staphopia-sccmec`](https://github.com/staphopia/staphopia-sccmec)
 
@@ -145,6 +146,8 @@ nextflow run gene2dis/mgap \
 | `--checkm2_db` | Path to CheckM2 database |
 | `--run_gtdbtk` | Enable GTDB-Tk taxonomic classification (default: false) |
 | `--gtdbtk_db` | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled) |
+| `--run_rgi` | Enable RGI antimicrobial resistance gene prediction (default: false) |
+| `--rgi_db` | Path to RGI/CARD database (required if `--run_rgi` is enabled) |
 
 > **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
 
