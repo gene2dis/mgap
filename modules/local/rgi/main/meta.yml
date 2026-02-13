@@ -1,0 +1,75 @@
+name: rgi_main
+description: Predict antibiotic resistance genes from protein or nucleotide sequences using the CARD database
+keywords:
+  - bacteria
+  - fasta
+  - antibiotic resistance
+  - antimicrobial resistance
+  - AMR
+  - CARD
+tools:
+  - rgi:
+      description: |
+        Resistance Gene Identifier (RGI) predicts resistome(s) from protein or 
+        nucleotide data based on homology and SNP models. RGI uses the CARD 
+        (Comprehensive Antibiotic Resistance Database) for reference data.
+      homepage: https://github.com/arpcard/rgi
+      documentation: https://github.com/arpcard/rgi#documentation
+      tool_dev_url: https://github.com/arpcard/rgi
+      doi: "10.1093/nar/gkz935"
+      licence: ["Apache-2.0"]
+      identifier: biotools:rgi
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test', single_end:false ]
+    - fasta:
+        type: file
+        description: Nucleotide sequences (contigs) in FASTA format
+        pattern: "*.{fasta,fasta.gz,fa,fa.gz,fna,fna.gz}"
+        ontologies:
+          - edam: "http://edamontology.org/format_1929"
+  - - db:
+        type: directory
+        description: |
+          Path to the CARD database directory. The database should be pre-loaded
+          using 'rgi load' or contain the necessary CARD JSON files.
+        pattern: "*"
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - ${prefix}.txt:
+          type: file
+          description: Tab-separated file containing RGI predictions
+          pattern: "*.txt"
+          ontologies:
+            - edam: "http://edamontology.org/format_3475"
+  json:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - ${prefix}.json:
+          type: file
+          description: JSON file containing detailed RGI predictions
+          pattern: "*.json"
+          ontologies:
+            - edam: "http://edamontology.org/format_3464"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+        ontologies:
+          - edam: "http://edamontology.org/format_3750"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

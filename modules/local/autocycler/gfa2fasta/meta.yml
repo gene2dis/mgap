@@ -1,0 +1,42 @@
+name: "autocycler_gfa2fasta"
+description: Convert Autocycler GFA assembly to FASTA format
+keywords:
+  - autocycler
+  - gfa
+  - fasta
+  - conversion
+tools:
+  - autocycler:
+      description: "Consensus long-read assembly for bacterial genomes"
+      homepage: "https://github.com/rrwick/Autocycler"
+      documentation: "https://github.com/rrwick/Autocycler/wiki/Autocycler-gfa2fasta"
+      tool_dev_url: "https://github.com/rrwick/Autocycler"
+      licence: ["GPL-3.0"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - gfa:
+      type: file
+      description: Autocycler GFA assembly file
+      pattern: "*.gfa"
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - fasta:
+      type: file
+      description: FASTA file converted from GFA
+      pattern: "*.fasta"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

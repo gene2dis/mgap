@@ -21,8 +21,8 @@ input:
         e.g. [ id:'sample1' ]
   - assembly:
       type: file
-      description: Assembled genome FASTA file
-      pattern: "*.{fa,fasta,fna}"
+      description: Assembled genome in FASTA or GFA format
+      pattern: "*.{fa,fasta,fna,gfa}"
 output:
   - meta:
       type: map
@@ -31,8 +31,12 @@ output:
         e.g. [ id:'sample1' ]
   - reoriented_fasta:
       type: file
-      description: Reoriented genome FASTA file
+      description: Reoriented genome FASTA file (when FASTA input)
       pattern: "*_reoriented.fasta"
+  - reoriented_gfa:
+      type: file
+      description: Reoriented genome GFA file (when GFA input)
+      pattern: "*_reoriented.gfa"
   - versions:
       type: file
       description: File containing software versions

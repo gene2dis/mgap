@@ -29,12 +29,44 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Updated `nextflow_schema.json` to JSON Schema draft 2020-12 with organized sections
 - Updated documentation in `docs/usage.md` with cloud execution examples
 - All local modules now use `${moduleDir}/environment.yml` syntax
+- **Updated nf-core modules to latest versions:**
+  - `nanoq`: Updated module with output_format parameter
+  - `porechop/abi`: Updated module with custom_adapters parameter
+  - `flye`: Updated to v2.9.5, outputs gzipped FASTA
+  - `spades`: Updated to v4.1.0, outputs gzipped FASTA
+  - `fastp`: Updated module with new input signature (adapter in tuple)
+  - `quast`: Updated module with 3-input signature (consensus, reference, gff)
+  - `bakta`: Updated module with 6-input signature (+regions, +hmms)
+  - `checkm2/predict`: Updated module with database tuple input
+  - `amrfinderplus/run`: Updated to v4.2.5
+  - `genomad/endtoend`: Updated module
+  - `kleborate`: Updated to v2.1.0, removed species parameter
+  - `staphopiasccmec`: Migrated from local to nf-core module
+  - `gtdbtk/classifywf`: Updated module with 3-input signature
+  - `kraken2/kraken2`: Updated module with enhanced test coverage
+  - `macrel/contigs`: Updated module with improved testing
+  - `mlst`: Updated module with environment.yml
+  - `multiqc`: Updated module with custom prefix support
+  - `seqtk/sample`: Updated module with standard config
+- Changed default `gtdbtk_extension` from `fa` to `gz` to match gzipped SPAdes output
+- **Improved samplesheet handling for contig mode:**
+  - `CreateSampleSheet.py` now uses `fasta` column instead of `fastq_1` for contig mode
+  - CSV output format now matches data type (sample,fasta vs sample,fastq_1,fastq_2)
+  - Added dedicated `schema_input_contig.json` for contig-specific validation
+  - Schema validation now uses `oneOf` constraint for mutually exclusive fastq/fasta inputs
+  - Enabled lenient mode for more flexible input validation
+  - Added support for gzipped FASTA files (.fasta.gz, .fa.gz, .fna.gz)
+- **Removed deprecated local modules** (replaced by nf-core versions):
+  - Removed local versions of: amrfinderplus, checkm2, flye, genomad, kleborate, nanoq, spades, staphopiasccmec
+  - All functionality now provided by standardized nf-core modules
 
 ### `Fixed`
 
 - Fixed implicit closure parameter warnings in map/branch operations
 - Fixed deprecated `Channel` factory usage (now uses lowercase `channel`)
 - Fixed dnaapler version command (was incorrectly calling medaka)
+- Fixed AMRFinderPlus null organism error when MLST scheme not in taxa_map
+- Fixed GTDB-Tk extension parameter not being passed to the module
 
 ### `Dependencies`
 

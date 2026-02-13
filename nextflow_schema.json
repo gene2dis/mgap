@@ -245,7 +245,7 @@
                 },
                 "run_kraken2": {
                     "type": "boolean",
-                    "default": false,
+                    "default": true,
                     "description": "Run Kraken2 for contamination detection.",
                     "fa_icon": "fas fa-search"
                 },
@@ -266,6 +266,51 @@
                     "default": false,
                     "description": "Run GTDB-Tk for taxonomic classification.",
                     "fa_icon": "fas fa-sitemap"
+                },
+                "run_rgi": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run RGI for antimicrobial resistance gene prediction using CARD database.",
+                    "fa_icon": "fas fa-shield-virus"
+                }
+            }
+        },
+        "rgi_options": {
+            "title": "RGI options",
+            "type": "object",
+            "fa_icon": "fas fa-shield-virus",
+            "description": "Parameters for RGI (Resistance Gene Identifier) antimicrobial resistance prediction.",
+            "properties": {
+                "rgi_db": {
+                    "type": "string",
+                    "description": "Path to RGI/CARD database directory.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "rgi_include_loose": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Include loose hits in RGI results (hits below detection model cut-off).",
+                    "fa_icon": "fas fa-filter"
+                },
+                "rgi_include_nudge": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Include hits nudged from loose to strict interpreting partial gene sequences.",
+                    "fa_icon": "fas fa-arrow-up"
+                },
+                "rgi_low_quality": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use low quality/coverage for short contigs to predict partial genes.",
+                    "fa_icon": "fas fa-exclamation-triangle"
+                },
+                "rgi_alignment_tool": {
+                    "type": "string",
+                    "default": "DIAMOND",
+                    "description": "Alignment tool for RGI sequence searches.",
+                    "enum": ["BLAST", "DIAMOND"],
+                    "fa_icon": "fas fa-align-left"
                 }
             }
         },
@@ -337,7 +382,7 @@
                 },
                 "gtdbtk_extension": {
                     "type": "string",
-                    "default": "fa",
+                    "default": "gz",
                     "description": "File extension for genome files (e.g., 'fa', 'fasta', 'fna').",
                     "fa_icon": "fas fa-file"
                 }
@@ -387,7 +432,7 @@
                 },
                 "fastp_reads_minlength": {
                     "type": "integer",
-                    "default": 36,
+                    "default": 50,
                     "description": "Minimum read length after trimming.",
                     "fa_icon": "fas fa-ruler"
                 },
@@ -405,6 +450,32 @@
             "fa_icon": "fas fa-dna",
             "description": "Parameters for Oxford Nanopore long-read processing.",
             "properties": {
+                "ont_assembler": {
+                    "type": "string",
+                    "default": "flye",
+                    "description": "ONT assembler to use. 'flye' uses Flye + Medaka (default). 'autocycler' uses a consensus multi-assembler approach.",
+                    "enum": ["flye", "autocycler"],
+                    "fa_icon": "fas fa-cogs"
+                },
+                "autocycler_assemblers": {
+                    "type": "string",
+                    "default": "raven,miniasm,flye,metamdbg,necat,nextdenovo",
+                    "description": "Comma-separated list of assemblers for Autocycler. Supported: raven, miniasm, flye, metamdbg, necat, nextdenovo, canu, myloasm, plassembler.",
+                    "fa_icon": "fas fa-layer-group"
+                },
+                "autocycler_read_type": {
+                    "type": "string",
+                    "default": "ont_r10",
+                    "description": "Read type for Autocycler assembler helper.",
+                    "enum": ["ont_r9", "ont_r10", "pacbio_clr", "pacbio_hifi"],
+                    "fa_icon": "fas fa-dna"
+                },
+                "plassembler_db": {
+                    "type": "string",
+                    "description": "Path to Plassembler database directory. Required only if 'plassembler' is included in autocycler_assemblers.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
                 "flye_mode": {
                     "type": "string",
                     "default": "nano-hq",
@@ -412,17 +483,23 @@
                     "enum": ["pacbio-raw", "pacbio-corr", "pacbio-hifi", "nano-raw", "nano-corr", "nano-hq"],
                     "fa_icon": "fas fa-cogs"
                 },
-                "nanoq_min_length": {
+                "fastplong_qualified_quality": {
+                    "type": "integer",
+                    "default": 15,
+                    "description": "Minimum base quality score for fastplong (phred quality >= this value is qualified).",
+                    "fa_icon": "fas fa-sliders-h"
+                },
+                "fastplong_unqualified_percent_limit": {
+                    "type": "integer",
+                    "default": 40,
+                    "description": "Maximum percentage of unqualified bases allowed per read (0-100).",
+                    "fa_icon": "fas fa-sliders-h"
+                },
+                "fastplong_min_read_length": {
                     "type": "integer",
                     "default": 1000,
-                    "description": "Minimum read length for Nanoq filtering.",
+                    "description": "Minimum read length for fastplong filtering.",
                     "fa_icon": "fas fa-ruler"
-                },
-                "nanoq_min_quality": {
-                    "type": "integer",
-                    "default": 10,
-                    "description": "Minimum quality score for Nanoq filtering.",
-                    "fa_icon": "fas fa-star"
                 }
             }
         },
@@ -470,6 +547,7 @@
     "allOf": [
         { "$ref": "#/$defs/input_output_options" },
         { "$ref": "#/$defs/pipeline_options" },
+        { "$ref": "#/$defs/rgi_options" },
         { "$ref": "#/$defs/database_options" },
         { "$ref": "#/$defs/illumina_options" },
         { "$ref": "#/$defs/ont_options" },

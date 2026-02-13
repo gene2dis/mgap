@@ -1,0 +1,26 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/gene2dis/mgap/master/assets/schema_input_contig.json",
+    "title": "gene2dis/mgap pipeline - params.input schema for contigs",
+    "description": "Schema for the file provided with params.input when using pre-assembled contigs",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "sample": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Sample name must be provided and cannot contain spaces",
+                "meta": ["id"]
+            },
+            "fasta": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.(fasta|fa|fna)(\\.gz)?$",
+                "errorMessage": "FASTA file must be provided, cannot contain spaces and must have extension '.fasta', '.fa', '.fna' (optionally gzipped)"
+            }
+        },
+        "required": ["sample", "fasta"]
+    }
+}

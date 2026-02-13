@@ -4,15 +4,16 @@ process DNAAPLER {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/dnaapler:0.5.0--pyhdfd78af_0' :
-        'biocontainers/dnaapler:0.5.0--pyhdfd78af_0' }"
+        'https://depot.galaxyproject.org/singularity/dnaapler:1.3.0--pyhdfd78af_0' :
+        'biocontainers/dnaapler:1.3.0--pyhdfd78af_0' }"
 
     input:
     tuple val(meta), path(assembly)
 
     output:
-    tuple val(meta), path("*.fasta"), emit: reoriented_fasta
-    path "versions.yml"             , emit: versions
+    tuple val(meta), path("*_reoriented.fasta"), emit: reoriented_fasta, optional: true
+    tuple val(meta), path("*_reoriented.gfa")  , emit: reoriented_gfa  , optional: true
+    path "versions.yml"                        , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -24,9 +25,16 @@ process DNAAPLER {
     dnaapler all \\
         -i $assembly \\
         -o output \\
-        -t $task.cpus 
+        -t $task.cpus \\
+        ${args}
 
-    mv output/dnaapler_reoriented.fasta ${prefix}_reoriented.fasta
+    # dnaapler outputs the same format as input (FASTA or GFA)
+    if [ -f output/dnaapler_reoriented.fasta ]; then
+        mv output/dnaapler_reoriented.fasta ${prefix}_reoriented.fasta
+    fi
+    if [ -f output/dnaapler_reoriented.gfa ]; then
+        mv output/dnaapler_reoriented.gfa ${prefix}_reoriented.gfa
+    fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -7,10 +7,10 @@
 gene2dis/mgap is a Nextflow pipeline for microbial genome analysis. It supports:
 
 - **Illumina short-read assembly** (FastP → SPAdes)
-- **Oxford Nanopore long-read assembly** (Nanoq → Porechop → Flye → Medaka)
+- **Oxford Nanopore long-read assembly** (fastplong → Flye → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
 - **Pre-assembled contigs** (direct annotation)
 
-The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), mobile element detection (geNomad), and species-specific analyses.
+The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), resistome analysis (RGI, optional), mobile element detection (geNomad), and species-specific analyses.
 
 ## Samplesheet input
 
@@ -51,8 +51,9 @@ TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
 | Column    | Description                                                                                                                                                                            |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+| `fastq_1` | Full path to FastQ file for Illumina short reads 1 or ONT reads. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                |
+| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz". Leave empty for ONT single-end reads.                      |
+| `fasta`   | Full path to FASTA file for pre-assembled contigs. Supports `.fasta`, `.fa`, `.fna` extensions (with optional `.gz` compression). Used only for `--seq_type contig` mode.              |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
@@ -64,11 +65,13 @@ For convenience, a helper script is provided to automatically generate sampleshe
 python accesory_scripts/CreateSampleSheet.py <input_directory> <output_samplesheet.csv>
 ```
 
-The script supports three types of sequencing data and can auto-detect the type:
+The script supports three types of sequencing data and can auto-detect the type. It automatically generates the correct column format based on the detected data type:
 
-- **Illumina paired-end reads**: Automatically pairs R1/R2 files
-- **Oxford Nanopore reads**: Single FASTQ files
-- **Pre-assembled contigs**: FASTA files
+- **Illumina paired-end reads**: Automatically pairs R1/R2 files → outputs `sample,fastq_1,fastq_2` columns
+- **Oxford Nanopore reads**: Single FASTQ files → outputs `sample,fastq_1` columns  
+- **Pre-assembled contigs**: FASTA files → outputs `sample,fasta` columns
+
+The script intelligently detects the data type by examining file extensions and naming patterns, ensuring the samplesheet format matches the pipeline's requirements for each sequencing mode.
 
 #### Usage examples
 
@@ -97,7 +100,9 @@ The script intelligently extracts sample names from filenames:
 #### Supported file formats
 
 - **FASTQ files**: `.fastq.gz`, `.fq.gz`, `.fastq`, `.fq`
-- **FASTA files**: `.fasta`, `.fa`, `.fna`, `.fasta.gz`, `.fa.gz`, `.fna.gz`
+- **FASTA files**: `.fasta`, `.fa`, `.fna` (all optionally gzipped: `.fasta.gz`, `.fa.gz`, `.fna.gz`)
+
+**Note:** The pipeline fully supports gzipped FASTA files for contig mode, allowing you to work with compressed assemblies directly without manual decompression.
 
 ## Running the pipeline
 
@@ -140,6 +145,108 @@ nextflow run gene2dis/mgap \
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
+### Autocycler Consensus Assembly (ONT)
+
+For ONT data, the pipeline supports an alternative assembler: [Autocycler](https://github.com/rrwick/Autocycler) (v0.6.0+). Autocycler generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results, producing higher-quality assemblies than any single assembler alone.
+
+**Basic usage:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --ont_assembler autocycler \
+    -profile docker
+```
+
+**With custom assembler set (including slow assemblers):**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --ont_assembler autocycler \
+    --autocycler_assemblers 'raven,miniasm,flye,metamdbg,necat,nextdenovo,canu,myloasm' \
+    -profile docker
+```
+
+**With Plassembler (requires database):**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --ont_assembler autocycler \
+    --autocycler_assemblers 'raven,miniasm,flye,metamdbg,necat,nextdenovo,plassembler' \
+    --plassembler_db /path/to/plassembler_db \
+    -profile docker
+```
+
+**Autocycler parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--ont_assembler` | `flye` | ONT assembler: `flye` (Flye + Medaka) or `autocycler` (consensus multi-assembler) |
+| `--autocycler_assemblers` | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler |
+| `--autocycler_read_type` | `ont_r10` | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi` |
+| `--plassembler_db` | `null` | Path to Plassembler database. Plassembler is skipped if not provided |
+
+**Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
+
+> **Note:** The default assembler set excludes slow assemblers (Canu) and those requiring external databases (Plassembler). Add them explicitly via `--autocycler_assemblers` if needed.
+
+> **Note:** When using `--ont_assembler autocycler`, the coverage adjustment step (Mash + Seqtk) is automatically skipped, as Autocycler handles its own read subsampling internally.
+
+#### Autocycler Docker image
+
+The Autocycler modules require a Docker image containing Autocycler and all supported assemblers. A pre-built image is available on Docker Hub and will be pulled automatically:
+
+```
+microds/autocycler:0.6.0
+```
+
+A Dockerfile is also provided in the repository if you need to build a custom image:
+
+```bash
+cd docker/autocycler-suite
+docker build -t microds/autocycler:0.6.0 .
+```
+
+For Singularity users, the image is pulled automatically via `docker://microds/autocycler:0.6.0`. To build manually:
+
+```bash
+singularity build autocycler.sif docker://microds/autocycler:0.6.0
+```
+
+### Dnaapler Contig Reorientation (ONT)
+
+[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.3.0) reorients assembled microbial sequences so that each contig starts at a consistent location (e.g., at the *dnaA*, *repA*, or *terL* gene). This is an optional step enabled by default (`--run_dnaapler true`).
+
+The behavior differs depending on the assembler:
+
+- **Flye mode:** Dnaapler runs on the polished FASTA output from Medaka. All contigs are candidates for reorientation.
+- **Autocycler mode:** Dnaapler runs on the consensus GFA from `autocycler combine`. Only circular contigs are reoriented (GFA-aware mode). The reoriented GFA is then converted back to FASTA via `autocycler gfa2fasta`. This follows the [recommended Autocycler workflow](https://github.com/rrwick/Autocycler/wiki/Reorienting-with-Dnaapler).
+
+**Dnaapler parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--run_dnaapler` | `true` | Enable contig reorientation with Dnaapler |
+
+**To disable Dnaapler:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --run_dnaapler false \
+    -profile docker
+```
+
 ### GTDB-Tk Taxonomic Classification
 
 GTDB-Tk provides taxonomic classification using the Genome Taxonomy Database (GTDB). This is an optional step that can be enabled with the `--run_gtdbtk` flag.
@@ -165,12 +272,22 @@ nextflow run gene2dis/mgap \
 | `--run_gtdbtk` | `false` | Enable GTDB-Tk taxonomic classification |
 | `--gtdbtk_db` | `null` | Path to GTDB-Tk reference database (required if enabled) |
 | `--gtdbtk_mash_db` | `null` | Path to Mash database for ANI screening (optional, skips ANI if not provided) |
-| `--gtdbtk_extension` | `fa` | File extension for genome files (`fa`, `fasta`, `fna`) |
+| `--gtdbtk_extension` | `gz` | File extension for genome files (see table below) |
 | `--gtdbtk_min_perc_aa` | `10` | Minimum percentage of amino acids in MSA |
 | `--gtdbtk_min_af` | `0.65` | Minimum alignment fraction |
 | `--gtdbtk_pplacer_scratch` | `true` | Use scratch directory for pplacer to reduce memory usage |
 
-**Example with custom parameters:**
+**Important: File extension by sequencing type**
+
+The `--gtdbtk_extension` parameter must match the file extension of your assembled genomes:
+
+| `--seq_type` | Assembler | Output extension | `--gtdbtk_extension` |
+|--------------|-----------|------------------|----------------------|
+| `illumina` | SPAdes | `.scaffolds.fa.gz` | `gz` (default) |
+| `ont` | Medaka | `.fasta` | `fasta` |
+| `contig` | N/A | varies | match your input files |
+
+**Example with ONT data (requires extension override):**
 
 ```bash
 nextflow run gene2dis/mgap \
@@ -179,13 +296,92 @@ nextflow run gene2dis/mgap \
     --seq_type ont \
     --run_gtdbtk \
     --gtdbtk_db /path/to/gtdbtk_db \
-    --gtdbtk_mash_db /path/to/mash_db \
     --gtdbtk_extension fasta \
-    --gtdbtk_min_af 0.7 \
+    -profile docker
+```
+
+**Example with Illumina data (uses default extension):**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_gtdbtk \
+    --gtdbtk_db /path/to/gtdbtk_db \
     -profile docker
 ```
 
 **Note:** The GTDB-Tk database is large (~70GB) and must be downloaded separately. See the [GTDB-Tk documentation](https://ecogenomics.github.io/GTDBTk/installing/index.html) for database installation instructions.
+
+### RGI Antimicrobial Resistance Gene Prediction
+
+RGI (Resistance Gene Identifier) predicts resistomes from genome assemblies using the Comprehensive Antibiotic Resistance Database (CARD). This is an optional step that can be enabled with the `--run_rgi` flag.
+
+**Basic usage:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_rgi \
+    --rgi_db /path/to/card_db \
+    -profile docker
+```
+
+**RGI parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--run_rgi` | `false` | Enable RGI antimicrobial resistance gene prediction |
+| `--rgi_db` | `null` | Path to RGI/CARD database directory (required if enabled) |
+| `--rgi_include_loose` | `false` | Include loose hits (below detection model cut-off) |
+| `--rgi_include_nudge` | `false` | Nudge loose hits to strict for partial gene sequences |
+| `--rgi_low_quality` | `false` | Use low quality mode for short contigs to predict partial genes |
+| `--rgi_alignment_tool` | `DIAMOND` | Alignment tool: `BLAST` or `DIAMOND` |
+
+**Example with loose hits and low quality mode:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_rgi \
+    --rgi_db /path/to/card_db \
+    --rgi_include_loose \
+    --rgi_low_quality \
+    -profile docker
+```
+
+**Example using BLAST instead of DIAMOND:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_rgi \
+    --rgi_db /path/to/card_db \
+    --rgi_alignment_tool BLAST \
+    -profile docker
+```
+
+**Database setup:**
+
+The CARD database must be downloaded and set up before running RGI. See the [RGI documentation](https://github.com/arpcard/rgi#card-database) for database installation instructions:
+
+```bash
+# Download CARD database
+wget https://card.mcmaster.ca/latest/data
+tar -xvf data ./card.json
+
+# Load database (creates localDB directory)
+rgi load --card_json card.json --local
+```
+
+Then provide the path to the database directory (containing the loaded database files) via `--rgi_db`.
 
 ### Cloud execution
 

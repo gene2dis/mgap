@@ -12,13 +12,14 @@ The gene2dis/mgap documentation is available in the [docs](docs/) folder:
 
 - [Usage](docs/usage.md) - An overview of how the pipeline works, how to run it, and a description of all command-line flags
 - [Output](docs/output.md) - An overview of the different results produced by the pipeline and how to interpret them
+- [Workflow Diagram](docs/workflow_diagram.md) - A detailed Mermaid diagram of the full pipeline architecture
 
 ## Pipeline Overview
 
 This pipeline supports three input modes:
 
 - **Illumina short-read assembly** (FastP → SPAdes)
-- **Oxford Nanopore long-read assembly** (Nanoq → Porechop → Flye → Medaka)
+- **Oxford Nanopore long-read assembly** (fastplong → Flye → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
 - **Pre-assembled contigs** (direct annotation) 
 
 ### Genome Assembly
@@ -31,12 +32,17 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 3. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
 4. Genome assembly ([`SPAdes`](https://github.com/ablab/spades))
 
-#### ONT Assembly
-1. Read QC ([`Nanoq`](https://github.com/esteinig/nanoq))
-2. Adapter removal ([`Porechop_ABI`](https://github.com/bonsai-team/Porechop_ABI))
-3. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
-4. Genome assembly ([`Flye`](https://github.com/fenderglass/Flye))
-5. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
+#### ONT Assembly (Flye mode, default)
+1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
+2. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
+3. Genome assembly ([`Flye`](https://github.com/fenderglass/Flye))
+4. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
+5. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
+
+#### ONT Assembly (Autocycler mode)
+1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
+2. Consensus multi-assembler assembly ([`Autocycler`](https://github.com/rrwick/Autocycler))
+3. Optional contig reorientation on GFA ([`Dnaapler`](https://github.com/gbouras13/dnaapler)) + GFA-to-FASTA conversion ([`Autocycler gfa2fasta`](https://github.com/rrwick/Autocycler/wiki/Autocycler-gfa2fasta))
 
 #### Pre-assembled Contigs
 - Direct annotation workflow (skips assembly steps)
@@ -50,8 +56,9 @@ With the assembled genome (or provided contigs), the annotation steps include:
 3. Annotation ([`Bakta`](https://github.com/oschwengers/bakta))
 4. Taxonomic classification ([`GTDB-Tk`](https://github.com/Ecogenomics/GTDBTk)) - optional, uses GTDB reference database
 5. Antibiotic resistance prediction ([`AMRFinderPlus`](https://github.com/ncbi/amr)) - includes point mutation analysis for supported organisms
-6. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
-7. Species-specific analyses:
+6. Antibiotic resistance gene prediction ([`RGI`](https://github.com/arpcard/rgi)) - optional, uses CARD database for resistome analysis
+7. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
+8. Species-specific analyses:
    - _Klebsiella_: [`Kleborate`](https://github.com/klebgenomics/Kleborate)
    - _S. aureus_: SCCmec classification using [`staphopia-sccmec`](https://github.com/staphopia/staphopia-sccmec)
 
@@ -88,6 +95,7 @@ SAMPLE1,/path/to/sample1.fastq.gz
 ```csv
 sample,fasta
 SAMPLE1,/path/to/sample1.fasta
+SAMPLE2,/path/to/sample2.fa.gz
 ```
 
 An [example samplesheet](assets/samplesheet.csv) is provided with the pipeline.
@@ -100,7 +108,12 @@ A helper script is available to automatically generate samplesheets from a direc
 python accesory_scripts/CreateSampleSheet.py /path/to/data samplesheet.csv
 ```
 
-The script auto-detects the data type (Illumina/ONT/contigs) and intelligently extracts sample names from filenames. See the [Usage documentation](docs/usage.md#automatic-samplesheet-generation) for detailed examples.
+The script auto-detects the data type (Illumina/ONT/contigs) and intelligently extracts sample names from filenames. It automatically generates the correct column format based on the detected data type:
+- Illumina: `sample,fastq_1,fastq_2`
+- ONT: `sample,fastq_1`
+- Contigs: `sample,fasta`
+
+See the [Usage documentation](docs/usage.md#automatic-samplesheet-generation) for detailed examples.
 
 ### Basic Usage
 
@@ -139,6 +152,9 @@ nextflow run gene2dis/mgap \
 | `--checkm2_db` | Path to CheckM2 database |
 | `--run_gtdbtk` | Enable GTDB-Tk taxonomic classification (default: false) |
 | `--gtdbtk_db` | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled) |
+| `--run_dnaapler` | Enable contig reorientation with Dnaapler (default: true, ONT only) |
+| `--run_rgi` | Enable RGI antimicrobial resistance gene prediction (default: false) |
+| `--rgi_db` | Path to RGI/CARD database (required if `--run_rgi` is enabled) |
 
 > **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
 
