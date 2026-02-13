@@ -9,22 +9,22 @@ The **gene2dis/mgap** pipeline supports three input modes based on the `--seq_ty
 ```mermaid
 flowchart TD
     %% ── Input ──
-    INPUT["Samplesheet\n(--input)"] --> SEQ_TYPE{seq_type?}
+    INPUT["Samplesheet<br>(--input)"] --> SEQ_TYPE{seq_type?}
 
     %% ── Illumina subworkflow ──
-    SEQ_TYPE -- "illumina" --> FASTP["Fastp\n(quality trimming)"]
+    SEQ_TYPE -- "illumina" --> FASTP["Fastp<br>(quality trimming)"]
     FASTP --> KR2_ILL{"run_kraken2?"}
     KR2_ILL -- yes --> KRAKEN2_ILL["Kraken2"] --> BRACKEN["Bracken"]
     KR2_ILL -- no --> COV_ILL
     BRACKEN --> COV_ILL{"adjust_coverage?"}
     FASTP --> COV_ILL
-    COV_ILL -- yes --> MASH_ILL["Mash Sketch\n(estimate coverage)"]
-    MASH_ILL --> SEQTK_ILL["Seqtk Sample\n(subsample if needed)"]
+    COV_ILL -- yes --> MASH_ILL["Mash Sketch<br>(estimate coverage)"]
+    MASH_ILL --> SEQTK_ILL["Seqtk Sample<br>(subsample if needed)"]
     SEQTK_ILL --> SPADES
-    COV_ILL -- no --> SPADES["SPAdes\n(assembly)"]
+    COV_ILL -- no --> SPADES["SPAdes<br>(assembly)"]
 
     %% ── ONT subworkflow ──
-    SEQ_TYPE -- "ont" --> FASTPLONG["fastplong\n(QC + adapter trimming)"]
+    SEQ_TYPE -- "ont" --> FASTPLONG["fastplong<br>(QC + adapter trimming)"]
     FASTPLONG --> KR2_ONT{"run_kraken2?"}
     KR2_ONT -- yes --> KRAKEN2_ONT["Kraken2"]
     KR2_ONT -- no --> ASM_ONT
@@ -33,27 +33,27 @@ flowchart TD
 
     %% ── Flye branch ──
     ASM_ONT -- "flye" --> COV_ONT{"adjust_coverage?"}
-    COV_ONT -- yes --> MASH_ONT["Mash Sketch\n(estimate coverage)"]
-    MASH_ONT --> SEQTK_ONT["Seqtk Sample\n(subsample if needed)"]
+    COV_ONT -- yes --> MASH_ONT["Mash Sketch<br>(estimate coverage)"]
+    MASH_ONT --> SEQTK_ONT["Seqtk Sample<br>(subsample if needed)"]
     SEQTK_ONT --> FLYE
-    COV_ONT -- no --> FLYE["Flye\n(assembly)"]
-    FLYE --> MEDAKA["Medaka\n(polishing)"]
+    COV_ONT -- no --> FLYE["Flye<br>(assembly)"]
+    FLYE --> MEDAKA["Medaka<br>(polishing)"]
     MEDAKA --> DNAAPLER_FLYE{"run_dnaapler?"}
-    DNAAPLER_FLYE -- yes --> DNAAPLER_F["Dnaapler\n(reorientation, FASTA)"]
+    DNAAPLER_FLYE -- yes --> DNAAPLER_F["Dnaapler<br>(reorientation, FASTA)"]
     DNAAPLER_FLYE -- no --> ASSEMBLY
     DNAAPLER_F --> ASSEMBLY
 
     %% ── Autocycler branch ──
-    ASM_ONT -- "autocycler" --> AC_GSIZE["Autocycler\n(genome size)"]
-    AC_GSIZE --> AC_SUB["Autocycler\n(subsample)"]
-    AC_SUB --> AC_ASM["Autocycler\n(multi-assembler)"]
-    AC_ASM --> AC_COMP["Autocycler\n(compress)"]
-    AC_COMP --> AC_CLUST["Autocycler\n(cluster)"]
-    AC_CLUST --> AC_TR["Autocycler\n(trim + resolve)"]
-    AC_TR --> AC_COMB["Autocycler\n(combine)"]
+    ASM_ONT -- "autocycler" --> AC_GSIZE["Autocycler<br>(genome size)"]
+    AC_GSIZE --> AC_SUB["Autocycler<br>(subsample)"]
+    AC_SUB --> AC_ASM["Autocycler<br>(multi-assembler)"]
+    AC_ASM --> AC_COMP["Autocycler<br>(compress)"]
+    AC_COMP --> AC_CLUST["Autocycler<br>(cluster)"]
+    AC_CLUST --> AC_TR["Autocycler<br>(trim + resolve)"]
+    AC_TR --> AC_COMB["Autocycler<br>(combine)"]
     AC_COMB --> DNAAPLER_AC{"run_dnaapler?"}
-    DNAAPLER_AC -- yes --> DNAAPLER_G["Dnaapler\n(reorientation, GFA)"]
-    DNAAPLER_G --> GFA2FASTA["Autocycler\n(gfa2fasta)"]
+    DNAAPLER_AC -- yes --> DNAAPLER_G["Dnaapler<br>(reorientation, GFA)"]
+    DNAAPLER_G --> GFA2FASTA["Autocycler<br>(gfa2fasta)"]
     GFA2FASTA --> ASSEMBLY
     DNAAPLER_AC -- no --> ASSEMBLY
 
@@ -64,27 +64,27 @@ flowchart TD
     SPADES --> ASSEMBLY["Genome Assembly"]
 
     %% ── Shared downstream analysis ──
-    ASSEMBLY --> QUAST["QUAST\n(assembly QC)"]
-    ASSEMBLY --> CHECKM2["CheckM2\n(completeness / contamination)"]
-    ASSEMBLY --> MLST["MLST\n(sequence typing)"]
-    ASSEMBLY --> BAKTA["Bakta\n(annotation)"]
+    ASSEMBLY --> QUAST["QUAST<br>(assembly QC)"]
+    ASSEMBLY --> CHECKM2["CheckM2<br>(completeness / contamination)"]
+    ASSEMBLY --> MLST["MLST<br>(sequence typing)"]
+    ASSEMBLY --> BAKTA["Bakta<br>(annotation)"]
 
     %% ── Taxonomy ──
     ASSEMBLY --> GTDBTK_CHK{"run_gtdbtk?"}
-    GTDBTK_CHK -- yes --> GTDBTK["GTDB-Tk\n(taxonomic classification)"]
+    GTDBTK_CHK -- yes --> GTDBTK["GTDB-Tk<br>(taxonomic classification)"]
 
     %% ── AMR detection ──
-    MLST --> SPECIES["Species Code\n(MLST → taxa map)"]
-    BAKTA --> AMR_JOIN["Join Bakta outputs\n+ species code"]
+    MLST --> SPECIES["Species Code<br>(MLST → taxa map)"]
+    BAKTA --> AMR_JOIN["Join Bakta outputs<br>+ species code"]
     SPECIES --> AMR_JOIN
-    AMR_JOIN --> AMRFINDER["AMRFinderPlus\n(AMR detection)"]
+    AMR_JOIN --> AMRFINDER["AMRFinderPlus<br>(AMR detection)"]
 
     %% ── Genomad ──
-    BAKTA --> GENOMAD["geNomad\n(mobile genetic elements)"]
+    BAKTA --> GENOMAD["geNomad<br>(mobile genetic elements)"]
 
     %% ── RGI (optional) ──
     ASSEMBLY --> RGI_CHK{"run_rgi?"}
-    RGI_CHK -- yes --> RGI["RGI\n(AMR gene prediction)"]
+    RGI_CHK -- yes --> RGI["RGI<br>(AMR gene prediction)"]
 
     %% ── Taxa-specific tools ──
     SPECIES --> TAXA_BRANCH{"Species?"}
@@ -93,7 +93,7 @@ flowchart TD
     TAXA_BRANCH -- "S. aureus" --> STAPHOPIASCCMEC["staphopia-sccmec"]
 
     %% ── Software versions ──
-    QUAST & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD --> VERSIONS["CUSTOM_DUMPSOFTWAREVERSIONS\n(collect versions)"]
+    QUAST & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD --> VERSIONS["CUSTOM_DUMPSOFTWAREVERSIONS<br>(collect versions)"]
     KLEBORATE & STAPHOPIASCCMEC --> VERSIONS
 
     %% ── Styling ──

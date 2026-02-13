@@ -12,6 +12,7 @@ The gene2dis/mgap documentation is available in the [docs](docs/) folder:
 
 - [Usage](docs/usage.md) - An overview of how the pipeline works, how to run it, and a description of all command-line flags
 - [Output](docs/output.md) - An overview of the different results produced by the pipeline and how to interpret them
+- [Workflow Diagram](docs/workflow_diagram.md) - A detailed Mermaid diagram of the full pipeline architecture
 
 ## Pipeline Overview
 

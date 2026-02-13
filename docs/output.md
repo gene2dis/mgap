@@ -2,43 +2,268 @@
 
 ## Introduction
 
-This document describes the output produced by the pipeline. Most of the plots are taken from the MultiQC report, which summarises results at the end of the pipeline.
+This document describes the output produced by the pipeline.
 
 The directories listed below will be created in the results directory after the pipeline has finished. All paths are relative to the top-level results directory.
-
-<!-- TODO nf-core: Write this documentation describing your workflow's output -->
 
 ## Pipeline overview
 
 The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data using the following steps:
 
-- [FastQC](#fastqc) - Raw read QC
-- [GTDB-Tk](#gtdb-tk) - Taxonomic classification (optional)
-- [RGI](#rgi) - Antimicrobial resistance gene prediction (optional)
-- [Kleborate](#kleborate) - Klebsiella-specific analysis (when detected)
-- [MultiQC](#multiqc) - Aggregate report describing results and QC from the whole pipeline
-- [Pipeline information](#pipeline-information) - Report metrics generated during the workflow execution
+### Read Processing
 
-### FastQC
+- [FastP](#fastp) - Illumina read QC and trimming
+- [fastplong](#fastplong) - ONT read QC, filtering, and adapter trimming
+- [Kraken2 + Bracken](#kraken2--bracken) - Contamination detection *(optional)*
+- [Mash + Seqtk](#mash--seqtk) - Coverage estimation and read subsampling *(optional)*
+
+### Genome Assembly
+
+- [SPAdes](#spades) - Illumina *de novo* assembly
+- [Flye](#flye) - ONT *de novo* assembly (default ONT assembler)
+- [Medaka](#medaka) - ONT assembly polishing (Flye mode)
+- [Autocycler](#autocycler) - ONT consensus multi-assembler assembly *(optional)*
+- [Dnaapler](#dnaapler) - Contig reorientation *(optional, ONT only)*
+
+### Genome Annotation and Analysis
+
+- [QUAST](#quast) - Assembly quality metrics
+- [CheckM2](#checkm2) - Genome completeness and contamination assessment
+- [MLST](#mlst) - Multi-locus sequence typing
+- [Bakta](#bakta) - Genome annotation
+- [GTDB-Tk](#gtdb-tk) - Taxonomic classification *(optional)*
+- [AMRFinderPlus](#amrfinderplus) - Antimicrobial resistance detection
+- [geNomad](#genomad) - Mobile genetic element identification
+- [RGI](#rgi) - Resistance gene prediction *(optional)*
+
+### Species-Specific Analysis
+
+- [Kleborate](#kleborate) - *Klebsiella*-specific virulence and resistance scoring
+- [staphopia-sccmec](#staphopia-sccmec) - *S. aureus* SCCmec cassette typing
+
+### Reporting
+
+- [Pipeline information](#pipeline-information) - Report metrics generated during workflow execution
+
+---
+
+## Read Processing
+
+### FastP
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `fastqc/`
-  - `*_fastqc.html`: FastQC report containing quality metrics.
-  - `*_fastqc.zip`: Zip archive containing the FastQC report, tab-delimited data file and plot images.
+- `<sample_id>/read_processing/fastp/`
+  - `*.fastp.html`: Interactive HTML report with quality metrics before and after trimming.
+  - `*.fastp.json`: JSON report with detailed trimming and quality statistics.
+  - `*.fastq.gz`: Trimmed and filtered reads.
 
 </details>
 
-[FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) gives general quality metrics about your sequenced reads. It provides information about the quality score distribution across your reads, per base sequence content (%A/T/G/C), adapter contamination and overrepresented sequences. For further reading and documentation see the [FastQC help pages](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/).
+[FastP](https://github.com/OpenGene/fastp) performs quality trimming, adapter removal, and filtering of Illumina paired-end reads. The HTML report provides a visual summary of read quality before and after processing.
 
-![MultiQC - FastQC sequence counts plot](images/mqc_fastqc_counts.png)
+This step runs for `--seq_type illumina` only.
 
-![MultiQC - FastQC mean quality scores plot](images/mqc_fastqc_quality.png)
+### fastplong
 
-![MultiQC - FastQC adapter content plot](images/mqc_fastqc_adapter.png)
+<details markdown="1">
+<summary>Output files</summary>
 
-> **NB:** The FastQC plots displayed in the MultiQC report shows _untrimmed_ reads. They may contain adapter sequence and potentially regions with low quality.
+- `<sample_id>/read_processing/fastplong/`
+  - `*.html`: Interactive HTML report with quality metrics.
+  - `*.json`: JSON report with detailed filtering statistics.
+  - `*.fastq.gz`: Filtered and trimmed long reads.
+
+</details>
+
+[fastplong](https://github.com/OpenGene/fastplong) performs quality filtering and adapter trimming of Oxford Nanopore long reads. It replaces the need for separate tools for quality filtering and adapter removal.
+
+This step runs for `--seq_type ont` only.
+
+### Kraken2 + Bracken
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/read_processing/kraken2/`
+  - `*.report.txt`: Kraken2 classification report with taxonomic abundance.
+  - `*.classifiedreads.fastq.gz`: Reads classified by Kraken2.
+  - `*.unclassifiedreads.fastq.gz`: Reads not classified by Kraken2.
+- `<sample_id>/read_processing/bracken/`
+  - `*.tsv`: Bracken abundance re-estimation at a specified taxonomic level.
+
+</details>
+
+[Kraken2](https://ccb.jhu.edu/software/kraken2/) classifies reads against a reference database for contamination detection. [Bracken](https://ccb.jhu.edu/software/bracken/) refines Kraken2 abundance estimates at a specified taxonomic level.
+
+This step is optional and runs when `--run_kraken2` is enabled and `--kraken2db` is provided.
+
+### Mash + Seqtk
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/read_processing/mash/`
+  - `*.msh`: Mash sketch file.
+  - `*.mash_stats`: Mash sketch statistics.
+  - `*.mash_coverage`: Estimated genome coverage.
+- `<sample_id>/read_processing/subsampled/`
+  - `*.fastq.gz`: Subsampled reads (only present when coverage exceeded `--max_coverage`).
+
+</details>
+
+[Mash](https://mash.readthedocs.io/en/latest/) estimates genome coverage from read sketches. If coverage exceeds the `--max_coverage` threshold (default: 110x), [Seqtk](https://github.com/lh3/seqtk) subsamples reads to the target coverage.
+
+This step is optional and runs when `--adjust_coverage` is enabled (default: true). It is skipped when using `--ont_assembler autocycler`, as Autocycler handles its own read subsampling.
+
+---
+
+## Genome Assembly
+
+### SPAdes
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/assemblies/`
+  - `*.scaffolds.fa.gz`: Gzipped scaffold sequences (primary assembly output).
+  - `*.contigs.fa.gz`: Gzipped contig sequences.
+  - `*.assembly.gfa.gz`: Gzipped assembly graph in GFA format.
+  - `*.spades.log`: SPAdes log file.
+
+</details>
+
+[SPAdes](https://github.com/ablab/spades) performs *de novo* genome assembly from Illumina short reads using the `--isolate` mode optimized for bacterial isolate genomes.
+
+This step runs for `--seq_type illumina` only.
+
+### Flye
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/assemblies/flye/`
+  - `*.fasta`: Assembled genome contigs.
+  - `*.gfa`: Assembly graph in GFA format.
+  - `*.log`: Flye log file.
+  - `*.txt`: Assembly info with contig statistics.
+
+</details>
+
+[Flye](https://github.com/fenderglass/Flye) performs *de novo* assembly of long reads. The assembly mode is controlled by `--flye_mode` (default: `nano-hq`).
+
+This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
+
+### Medaka
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/assemblies/medaka/`
+  - `*.fasta`: Polished genome assembly.
+
+</details>
+
+[Medaka](https://github.com/nanoporetech/medaka) polishes the Flye assembly using the original long reads to improve consensus accuracy.
+
+This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
+
+### Autocycler
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/assemblies/autocycler/`
+  - `genome_size/*_genome_size.txt`: Estimated genome size.
+  - `autocycler_out/`: Autocycler working directory with clustering, trimming, and resolution results (excludes intermediate `input_assemblies/` and `subsampled_reads/` subdirectories).
+  - `*.fasta`: Final consensus assembly in FASTA format.
+  - `*.gfa`: Final consensus assembly in GFA format.
+
+</details>
+
+[Autocycler](https://github.com/rrwick/Autocycler) generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results. The pipeline runs the full Autocycler workflow: genome size estimation, subsampling, multi-assembler assembly, compression, clustering, trim/resolve, and combine.
+
+This step runs for `--seq_type ont` with `--ont_assembler autocycler`.
+
+### Dnaapler
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/assemblies/dnaapler/`
+  - `*_reoriented.fasta`: Reoriented genome assembly in FASTA format (Flye mode).
+  - `*_reoriented.gfa`: Reoriented genome assembly in GFA format (Autocycler mode).
+  - `*.fasta`: Final FASTA assembly converted from reoriented GFA (Autocycler mode, via `autocycler gfa2fasta`).
+
+</details>
+
+[Dnaapler](https://github.com/gbouras13/dnaapler) reorients complete circular microbial genome assemblies so that each sequence starts at a consistent location, typically at a gene like *dnaA* (chromosomes), *repA* (plasmids), or *terL* (phages).
+
+- **Flye mode:** Operates on FASTA input from Medaka, reorienting all contigs.
+- **Autocycler mode:** Operates on GFA input from `autocycler combine`, reorienting only circular contigs. The reoriented GFA is then converted to FASTA via `autocycler gfa2fasta`.
+
+This step is optional and enabled by default (`--run_dnaapler true`). It only applies to ONT assemblies.
+
+---
+
+## Genome Annotation and Analysis
+
+### QUAST
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/qc/quast/`
+  - `*.tsv`: Tab-separated assembly quality metrics.
+
+</details>
+
+[QUAST](https://github.com/ablab/quast) evaluates genome assembly quality by computing metrics such as total length, number of contigs, N50, GC content, and largest contig size.
+
+### CheckM2
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/checkm2/`
+  - `*.tsv`: Tab-separated completeness and contamination assessment.
+
+</details>
+
+[CheckM2](https://github.com/chklovski/CheckM2) assesses genome quality by estimating completeness and contamination using machine learning models. The output reports completeness percentage, contamination percentage, and overall quality assessment for each genome.
+
+### MLST
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/mlst/`
+  - `*.tsv`: Tab-separated MLST typing results including scheme, sequence type, and allele profiles.
+
+</details>
+
+[MLST](https://github.com/tseemann/mlst) scans genome assemblies against PubMLST schemes to determine sequence types. The MLST result is also used internally to identify species for AMRFinderPlus organism-specific analysis and to trigger species-specific tools (Kleborate, staphopia-sccmec).
+
+### Bakta
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/bakta/`
+  - `*.gff3`: Annotation in GFF3 format.
+  - `*.gbff`: Annotation in GenBank format.
+  - `*.fna`: Annotated nucleotide sequences.
+  - `*.faa`: Annotated protein sequences.
+  - `*.tsv`: Tab-separated annotation summary.
+  - `*.txt`: Human-readable annotation summary.
+  - `*.embl`: Annotation in EMBL format.
+  - `*.hypotheticals.tsv`: Hypothetical protein details.
+  - `*.hypotheticals.faa`: Hypothetical protein sequences.
+
+</details>
+
+[Bakta](https://github.com/oschwengers/bakta) provides rapid and standardized annotation of bacterial genomes. It identifies CDSs, tRNAs, rRNAs, ncRNAs, CRISPR arrays, and other genomic features. The Bakta outputs (nucleotide FASTA, protein FASTA, GFF3) are used as input for downstream AMRFinderPlus and geNomad analyses.
 
 ### GTDB-Tk
 
@@ -46,14 +271,14 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 <summary>Output files</summary>
 
 - `gtdbtk/`
-  - `gtdbtk.batch.*.summary.tsv`: Taxonomic classification summary for all bacterial and archaeal genomes in the batch
-  - `gtdbtk.batch.*.classify.tree.gz`: Phylogenetic tree with genome placement (optional)
-  - `gtdbtk.batch.*.markers_summary.tsv`: Summary of identified marker genes (optional)
-  - `gtdbtk.batch.*.msa.fasta.gz`: Multiple sequence alignment of marker genes (optional)
-  - `gtdbtk.batch.*.filtered.tsv`: Genomes filtered during classification (optional)
-  - `gtdbtk.batch.failed_genomes.tsv`: Genomes that failed classification (optional)
-  - `gtdbtk.batch.log`: GTDB-Tk execution log
-  - `gtdbtk.batch.warnings.log`: Warnings generated during classification
+  - `gtdbtk.batch.*.summary.tsv`: Taxonomic classification summary for all bacterial and archaeal genomes in the batch.
+  - `gtdbtk.batch.*.classify.tree.gz`: Phylogenetic tree with genome placement *(optional)*.
+  - `gtdbtk.batch.*.markers_summary.tsv`: Summary of identified marker genes *(optional)*.
+  - `gtdbtk.batch.*.msa.fasta.gz`: Multiple sequence alignment of marker genes *(optional)*.
+  - `gtdbtk.batch.*.filtered.tsv`: Genomes filtered during classification *(optional)*.
+  - `gtdbtk.batch.failed_genomes.tsv`: Genomes that failed classification *(optional)*.
+  - `gtdbtk.batch.log`: GTDB-Tk execution log.
+  - `gtdbtk.batch.warnings.log`: Warnings generated during classification.
 
 </details>
 
@@ -71,14 +296,48 @@ The main output file is the `summary.tsv` which contains:
 
 This step is optional and only runs when `--run_gtdbtk` is enabled. The GTDB-Tk database must be provided via `--gtdbtk_db`.
 
+### AMRFinderPlus
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/amrfinder/`
+  - `*.tsv`: Tab-separated AMR detection results.
+
+</details>
+
+[AMRFinderPlus](https://github.com/ncbi/amr) identifies antimicrobial resistance genes, stress response genes, and virulence factors in assembled genomes. It uses the Bakta-annotated nucleotide sequences, protein sequences, and GFF3 annotations alongside species information derived from MLST to perform organism-specific point mutation analysis for supported species.
+
+The output TSV contains:
+- Gene symbol and name
+- Protein/nucleotide accession
+- Sequence identity and coverage
+- AMR gene family and subclass
+- Element type (AMR, STRESS, VIRULENCE)
+- Method of detection (BLAST, HMM, or point mutation)
+
+### geNomad
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/genomad/`
+  - `*_summary/`: Summary directory with classification results.
+  - `*_annotate/`: Annotation details for identified mobile elements.
+  - `*_find_proviruses/`: Provirus detection results.
+
+</details>
+
+[geNomad](https://github.com/apcamargo/genomad) identifies mobile genetic elements (prophages and plasmids) in genome assemblies. It uses the Bakta-annotated nucleotide sequences as input and classifies contigs as chromosome, plasmid, or virus based on gene content and genomic signatures.
+
 ### RGI
 
 <details markdown="1">
 <summary>Output files</summary>
 
 - `<sample_id>/annotation/rgi/`
-  - `<sample_id>.txt`: Tab-separated file containing RGI predictions with detailed information about detected resistance genes
-  - `<sample_id>.json`: JSON file containing comprehensive RGI results including gene sequences and additional metadata
+  - `<sample_id>.txt`: Tab-separated file containing RGI predictions with detailed information about detected resistance genes.
+  - `<sample_id>.json`: JSON file containing comprehensive RGI results including gene sequences and additional metadata.
 
 </details>
 
@@ -102,33 +361,17 @@ The JSON output provides additional details including:
 
 This step is optional and only runs when `--run_rgi` is enabled. The CARD database must be provided via `--rgi_db`.
 
-### Dnaapler
+---
 
-<details markdown="1">
-<summary>Output files</summary>
-
-- `<sample_id>/assemblies/dnaapler/`
-  - `<sample_id>_reoriented.fasta`: Reoriented genome assembly in FASTA format (Flye mode)
-  - `<sample_id>_reoriented.gfa`: Reoriented genome assembly in GFA format (Autocycler mode)
-- `<sample_id>/assemblies/autocycler/`
-  - `<sample_id>.fasta`: Final FASTA assembly converted from reoriented GFA (Autocycler mode, via `autocycler gfa2fasta`)
-
-</details>
-
-[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.3.0) reorients complete circular microbial genome assemblies so that each sequence starts at a consistent location, typically at a gene like *dnaA* (chromosomes), *repA* (plasmids), or *terL* (phages).
-
-- **Flye mode:** Operates on FASTA input from Medaka, reorienting all contigs.
-- **Autocycler mode:** Operates on GFA input from `autocycler combine`, reorienting only circular contigs. The reoriented GFA is then converted to FASTA via `autocycler gfa2fasta`.
-
-This step is optional and enabled by default (`--run_dnaapler true`). It only applies to ONT assemblies.
+## Species-Specific Analysis
 
 ### Kleborate
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `kleborate/`
-  - `*.results.txt`: Kleborate analysis results for each Klebsiella sample
+- `<sample_id>/annotation/kleborate/`
+  - `*.txt`: Kleborate analysis results.
 
 </details>
 
@@ -141,25 +384,25 @@ This step is optional and enabled by default (`--run_dnaapler true`). It only ap
 - Antimicrobial resistance determinants: acquired genes, SNPs, gene truncations and intrinsic β-lactamases
 - K (capsule) and O antigen (LPS) serotype prediction
 
-**Automatic detection:** Kleborate analysis is automatically triggered when _Klebsiella_ species are detected based on MLST results. The analysis runs on a per-sample basis, generating detailed reports for each identified Klebsiella genome.
+**Automatic detection:** Kleborate analysis is automatically triggered when _Klebsiella_ species are detected based on MLST results.
 
-The output file contains comprehensive typing and screening information that helps characterize the virulence and resistance profiles of Klebsiella isolates.
-
-### MultiQC
+### staphopia-sccmec
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `multiqc/`
-  - `multiqc_report.html`: a standalone HTML file that can be viewed in your web browser.
-  - `multiqc_data/`: directory containing parsed statistics from the different tools used in the pipeline.
-  - `multiqc_plots/`: directory containing static images from the report in various formats.
+- `<sample_id>/annotation/sccmec/`
+  - `*.tsv`: SCCmec cassette typing results.
 
 </details>
 
-[MultiQC](http://multiqc.info) is a visualization tool that generates a single HTML report summarising all samples in your project. Most of the pipeline QC results are visualised in the report and further statistics are available in the report data directory.
+[staphopia-sccmec](https://github.com/staphopia/staphopia-sccmec) classifies the SCCmec cassette type in *Staphylococcus aureus* genome assemblies. SCCmec (Staphylococcal Cassette Chromosome *mec*) is a mobile genetic element that carries the *mecA* gene responsible for methicillin resistance (MRSA).
 
-Results generated by MultiQC collate pipeline QC from supported tools e.g. FastQC. The pipeline has special steps which also allow the software versions to be reported in the MultiQC output for future traceability. For more information about how to use MultiQC reports, see <http://multiqc.info>.
+**Automatic detection:** This analysis is automatically triggered when *S. aureus* is detected based on MLST results.
+
+---
+
+## Reporting
 
 ### Pipeline information
 
@@ -167,9 +410,8 @@ Results generated by MultiQC collate pipeline QC from supported tools e.g. FastQ
 <summary>Output files</summary>
 
 - `pipeline_info/`
-  - Reports generated by Nextflow: `execution_report.html`, `execution_timeline.html`, `execution_trace.txt` and `pipeline_dag.dot`/`pipeline_dag.svg`.
-  - Reports generated by the pipeline: `pipeline_report.html`, `pipeline_report.txt` and `software_versions.yml`. The `pipeline_report*` files will only be present if the `--email` / `--email_on_fail` parameter's are used when running the pipeline.
-  - Reformatted samplesheet files used as input to the pipeline: `samplesheet.valid.csv`.
+  - Reports generated by Nextflow: `execution_report.html`, `execution_timeline.html`, `execution_trace.txt` and `pipeline_dag.html`.
+  - `software_versions.yml`: Software versions used in the pipeline run.
 
 </details>
 
