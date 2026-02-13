@@ -116,7 +116,10 @@ workflow MGAP {
         // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
         //
         ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
-            .map { meta, fastq_1, _fastq_2, _fasta -> [ meta, [ fastq_1 ] ] }
+            .map { meta, fastq_1, _fastq_2, _fasta ->
+                meta.single_end = true
+                [ meta, [ fastq_1 ] ]
+            }
 
         ONT ( ch_input )
         genome_assembly = ONT.out.assembly

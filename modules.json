@@ -40,6 +40,11 @@
                         "git_sha": "b8f1de0ac853ae5b56c63450d47438f899c553d0",
                         "installed_by": ["modules"]
                     },
+                    "fastplong": {
+                        "branch": "master",
+                        "git_sha": "a331ecfd1aa48b2b2298aab23bb4516c800e410b",
+                        "installed_by": ["modules"]
+                    },
                     "flye": {
                         "branch": "master",
                         "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
@@ -78,16 +83,6 @@
                     "multiqc": {
                         "branch": "master",
                         "git_sha": "5bdb098216aaf5df9c3b6343e6204cd932503c16",
-                        "installed_by": ["modules"]
-                    },
-                    "nanoq": {
-                        "branch": "master",
-                        "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
-                        "installed_by": ["modules"]
-                    },
-                    "porechop/abi": {
-                        "branch": "master",
-                        "git_sha": "10d3ce839d4c87bbff4da434e155a3c8a112ea05",
                         "installed_by": ["modules"]
                     },
                     "quast": {

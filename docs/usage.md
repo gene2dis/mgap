@@ -7,7 +7,7 @@
 gene2dis/mgap is a Nextflow pipeline for microbial genome analysis. It supports:
 
 - **Illumina short-read assembly** (FastP → SPAdes)
-- **Oxford Nanopore long-read assembly** (Nanoq → Porechop → Flye → Medaka)
+- **Oxford Nanopore long-read assembly** (fastplong → Flye → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
 - **Pre-assembled contigs** (direct annotation)
 
 The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), resistome analysis (RGI, optional), mobile element detection (geNomad), and species-specific analyses.
@@ -144,6 +144,108 @@ nextflow run gene2dis/mgap \
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
+
+### Autocycler Consensus Assembly (ONT)
+
+For ONT data, the pipeline supports an alternative assembler: [Autocycler](https://github.com/rrwick/Autocycler) (v0.6.0+). Autocycler generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results, producing higher-quality assemblies than any single assembler alone.
+
+**Basic usage:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --ont_assembler autocycler \
+    -profile docker
+```
+
+**With custom assembler set (including slow assemblers):**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --ont_assembler autocycler \
+    --autocycler_assemblers 'raven,miniasm,flye,metamdbg,necat,nextdenovo,canu,myloasm' \
+    -profile docker
+```
+
+**With Plassembler (requires database):**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --ont_assembler autocycler \
+    --autocycler_assemblers 'raven,miniasm,flye,metamdbg,necat,nextdenovo,plassembler' \
+    --plassembler_db /path/to/plassembler_db \
+    -profile docker
+```
+
+**Autocycler parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--ont_assembler` | `flye` | ONT assembler: `flye` (Flye + Medaka) or `autocycler` (consensus multi-assembler) |
+| `--autocycler_assemblers` | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler |
+| `--autocycler_read_type` | `ont_r10` | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi` |
+| `--plassembler_db` | `null` | Path to Plassembler database. Plassembler is skipped if not provided |
+
+**Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
+
+> **Note:** The default assembler set excludes slow assemblers (Canu) and those requiring external databases (Plassembler). Add them explicitly via `--autocycler_assemblers` if needed.
+
+> **Note:** When using `--ont_assembler autocycler`, the coverage adjustment step (Mash + Seqtk) is automatically skipped, as Autocycler handles its own read subsampling internally.
+
+#### Autocycler Docker image
+
+The Autocycler modules require a Docker image containing Autocycler and all supported assemblers. A pre-built image is available on Docker Hub and will be pulled automatically:
+
+```
+microds/autocycler:0.6.0
+```
+
+A Dockerfile is also provided in the repository if you need to build a custom image:
+
+```bash
+cd docker/autocycler-suite
+docker build -t microds/autocycler:0.6.0 .
+```
+
+For Singularity users, the image is pulled automatically via `docker://microds/autocycler:0.6.0`. To build manually:
+
+```bash
+singularity build autocycler.sif docker://microds/autocycler:0.6.0
+```
+
+### Dnaapler Contig Reorientation (ONT)
+
+[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.3.0) reorients assembled microbial sequences so that each contig starts at a consistent location (e.g., at the *dnaA*, *repA*, or *terL* gene). This is an optional step enabled by default (`--run_dnaapler true`).
+
+The behavior differs depending on the assembler:
+
+- **Flye mode:** Dnaapler runs on the polished FASTA output from Medaka. All contigs are candidates for reorientation.
+- **Autocycler mode:** Dnaapler runs on the consensus GFA from `autocycler combine`. Only circular contigs are reoriented (GFA-aware mode). The reoriented GFA is then converted back to FASTA via `autocycler gfa2fasta`. This follows the [recommended Autocycler workflow](https://github.com/rrwick/Autocycler/wiki/Reorienting-with-Dnaapler).
+
+**Dnaapler parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--run_dnaapler` | `true` | Enable contig reorientation with Dnaapler |
+
+**To disable Dnaapler:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --run_dnaapler false \
+    -profile docker
+```
 
 ### GTDB-Tk Taxonomic Classification
 

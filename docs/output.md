@@ -102,6 +102,26 @@ The JSON output provides additional details including:
 
 This step is optional and only runs when `--run_rgi` is enabled. The CARD database must be provided via `--rgi_db`.
 
+### Dnaapler
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/assemblies/dnaapler/`
+  - `<sample_id>_reoriented.fasta`: Reoriented genome assembly in FASTA format (Flye mode)
+  - `<sample_id>_reoriented.gfa`: Reoriented genome assembly in GFA format (Autocycler mode)
+- `<sample_id>/assemblies/autocycler/`
+  - `<sample_id>.fasta`: Final FASTA assembly converted from reoriented GFA (Autocycler mode, via `autocycler gfa2fasta`)
+
+</details>
+
+[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.3.0) reorients complete circular microbial genome assemblies so that each sequence starts at a consistent location, typically at a gene like *dnaA* (chromosomes), *repA* (plasmids), or *terL* (phages).
+
+- **Flye mode:** Operates on FASTA input from Medaka, reorienting all contigs.
+- **Autocycler mode:** Operates on GFA input from `autocycler combine`, reorienting only circular contigs. The reoriented GFA is then converted to FASTA via `autocycler gfa2fasta`.
+
+This step is optional and enabled by default (`--run_dnaapler true`). It only applies to ONT assemblies.
+
 ### Kleborate
 
 <details markdown="1">

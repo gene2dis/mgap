@@ -10,6 +10,9 @@
 
 ## Pipeline tools
 
+- [Autocycler](https://doi.org/10.1093/bioinformatics/btaf474)
+  > Wick RR, Howden BP, Stinear TP. Autocycler: long-read consensus assembly for bacterial genomes. Bioinformatics. 2025. doi: 10.1093/bioinformatics/btaf474.
+
 - [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 
 - [GTDB-Tk](https://pubmed.ncbi.nlm.nih.gov/31730192/)

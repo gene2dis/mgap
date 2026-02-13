@@ -18,7 +18,7 @@ The gene2dis/mgap documentation is available in the [docs](docs/) folder:
 This pipeline supports three input modes:
 
 - **Illumina short-read assembly** (FastP → SPAdes)
-- **Oxford Nanopore long-read assembly** (Nanoq → Porechop → Flye → Medaka)
+- **Oxford Nanopore long-read assembly** (fastplong → Flye → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
 - **Pre-assembled contigs** (direct annotation) 
 
 ### Genome Assembly
@@ -31,12 +31,17 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 3. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
 4. Genome assembly ([`SPAdes`](https://github.com/ablab/spades))
 
-#### ONT Assembly
-1. Read QC ([`Nanoq`](https://github.com/esteinig/nanoq))
-2. Adapter removal ([`Porechop_ABI`](https://github.com/bonsai-team/Porechop_ABI))
-3. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
-4. Genome assembly ([`Flye`](https://github.com/fenderglass/Flye))
-5. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
+#### ONT Assembly (Flye mode, default)
+1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
+2. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
+3. Genome assembly ([`Flye`](https://github.com/fenderglass/Flye))
+4. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
+5. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
+
+#### ONT Assembly (Autocycler mode)
+1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
+2. Consensus multi-assembler assembly ([`Autocycler`](https://github.com/rrwick/Autocycler))
+3. Optional contig reorientation on GFA ([`Dnaapler`](https://github.com/gbouras13/dnaapler)) + GFA-to-FASTA conversion ([`Autocycler gfa2fasta`](https://github.com/rrwick/Autocycler/wiki/Autocycler-gfa2fasta))
 
 #### Pre-assembled Contigs
 - Direct annotation workflow (skips assembly steps)
@@ -146,6 +151,7 @@ nextflow run gene2dis/mgap \
 | `--checkm2_db` | Path to CheckM2 database |
 | `--run_gtdbtk` | Enable GTDB-Tk taxonomic classification (default: false) |
 | `--gtdbtk_db` | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled) |
+| `--run_dnaapler` | Enable contig reorientation with Dnaapler (default: true, ONT only) |
 | `--run_rgi` | Enable RGI antimicrobial resistance gene prediction (default: false) |
 | `--rgi_db` | Path to RGI/CARD database (required if `--run_rgi` is enabled) |
 

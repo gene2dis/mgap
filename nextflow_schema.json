@@ -450,6 +450,32 @@
             "fa_icon": "fas fa-dna",
             "description": "Parameters for Oxford Nanopore long-read processing.",
             "properties": {
+                "ont_assembler": {
+                    "type": "string",
+                    "default": "flye",
+                    "description": "ONT assembler to use. 'flye' uses Flye + Medaka (default). 'autocycler' uses a consensus multi-assembler approach.",
+                    "enum": ["flye", "autocycler"],
+                    "fa_icon": "fas fa-cogs"
+                },
+                "autocycler_assemblers": {
+                    "type": "string",
+                    "default": "raven,miniasm,flye,metamdbg,necat,nextdenovo",
+                    "description": "Comma-separated list of assemblers for Autocycler. Supported: raven, miniasm, flye, metamdbg, necat, nextdenovo, canu, myloasm, plassembler.",
+                    "fa_icon": "fas fa-layer-group"
+                },
+                "autocycler_read_type": {
+                    "type": "string",
+                    "default": "ont_r10",
+                    "description": "Read type for Autocycler assembler helper.",
+                    "enum": ["ont_r9", "ont_r10", "pacbio_clr", "pacbio_hifi"],
+                    "fa_icon": "fas fa-dna"
+                },
+                "plassembler_db": {
+                    "type": "string",
+                    "description": "Path to Plassembler database directory. Required only if 'plassembler' is included in autocycler_assemblers.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
                 "flye_mode": {
                     "type": "string",
                     "default": "nano-hq",
@@ -457,17 +483,23 @@
                     "enum": ["pacbio-raw", "pacbio-corr", "pacbio-hifi", "nano-raw", "nano-corr", "nano-hq"],
                     "fa_icon": "fas fa-cogs"
                 },
-                "nanoq_min_length": {
+                "fastplong_qualified_quality": {
+                    "type": "integer",
+                    "default": 15,
+                    "description": "Minimum base quality score for fastplong (phred quality >= this value is qualified).",
+                    "fa_icon": "fas fa-sliders-h"
+                },
+                "fastplong_unqualified_percent_limit": {
+                    "type": "integer",
+                    "default": 40,
+                    "description": "Maximum percentage of unqualified bases allowed per read (0-100).",
+                    "fa_icon": "fas fa-sliders-h"
+                },
+                "fastplong_min_read_length": {
                     "type": "integer",
                     "default": 1000,
-                    "description": "Minimum read length for Nanoq filtering.",
+                    "description": "Minimum read length for fastplong filtering.",
                     "fa_icon": "fas fa-ruler"
-                },
-                "nanoq_min_quality": {
-                    "type": "integer",
-                    "default": 10,
-                    "description": "Minimum quality score for Nanoq filtering.",
-                    "fa_icon": "fas fa-star"
                 }
             }
         },
