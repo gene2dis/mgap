@@ -211,10 +211,9 @@ workflow ONT {
         // MODULE: Assemble with Flye
         // nf-core flye expects mode with -- prefix (e.g., --nano-hq)
         //
-        def flye_mode_full = "--${params.flye_mode}"
         FLYE (
             ch_reads_for_assembly,
-            flye_mode_full
+            "--${params.flye_mode}"
         )
         ch_versions = ch_versions.mix(FLYE.out.versions.first())
 
