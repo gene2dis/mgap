@@ -38,7 +38,7 @@ process FLYE {
         $task.cpus \\
         $args
 
-    gzip -c assembly.fasta > ${prefix}.assembly.fasta.gz
+    bgzip -c assembly.fasta > ${prefix}.assembly.fasta.gz
     gzip -c assembly_graph.gfa > ${prefix}.assembly_graph.gfa.gz
     gzip -c assembly_graph.gv > ${prefix}.assembly_graph.gv.gz
     mv assembly_info.txt ${prefix}.assembly_info.txt
