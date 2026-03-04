@@ -22,13 +22,13 @@ process MEDAKA {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def is_compressed = assembly.getName().endsWith(".gz")
     """
-    ${is_compressed ? "gzip -cd ${assembly} > assembly_uncompressed.fasta" : ""}
+    ${is_compressed ? "gzip -cd ${assembly} > assembly_uncompressed.fa" : ""}
 
     medaka_consensus \\
         -t $task.cpus \\
         $args \\
         -i $reads \\
-        -d ${is_compressed ? "assembly_uncompressed.fasta" : assembly} \\
+        -d ${is_compressed ? "assembly_uncompressed.fa" : assembly} \\
         -o ./
 
     mv consensus.fasta ${prefix}_polished.fasta
