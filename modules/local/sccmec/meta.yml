@@ -1,16 +1,16 @@
-name: staphopiasccmec
-description: Predicts Staphylococcus aureus SCCmec type based on primers.
+name: sccmec
+description: Types SCCmec cassettes in Staphylococcus aureus assemblies using camlhmp-based BLAST.
 keywords:
   - amr
   - fasta
   - sccmec
+  - staphylococcus
 tools:
-  - staphopiasccmec:
-      description: Predicts Staphylococcus aureus SCCmec type based on primers.
-      homepage: https://staphopia.emory.edu
-      documentation: https://github.com/staphopia/staphopia-sccmec
-      tool_dev_url: https://github.com/staphopia/staphopia-sccmec
-      doi: 10.7717/peerj.5261
+  - sccmec:
+      description: A tool for typing SCCmec cassettes in assemblies.
+      homepage: https://github.com/rpetit3/sccmec
+      documentation: https://github.com/rpetit3/sccmec
+      tool_dev_url: https://github.com/rpetit3/sccmec
       licence: ["MIT"]
       identifier: ""
 input:
@@ -33,7 +33,13 @@ output:
             e.g. [ id:'test', single_end:false ]
       - "*.tsv":
           type: file
-          description: Tab-delimited results
+          description: |
+            Tab-delimited results. Includes five files:
+            {prefix}.tsv (final typing result),
+            {prefix}.targets.details.tsv,
+            {prefix}.targets.blastn.tsv,
+            {prefix}.regions.details.tsv,
+            {prefix}.regions.blastn.tsv
           pattern: "*.{tsv}"
           ontologies:
             - edam: http://edamontology.org/format_3475 # TSV

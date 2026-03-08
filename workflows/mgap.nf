@@ -74,7 +74,7 @@ include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoen
 include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
-include { STAPHOPIASCCMEC } from '../modules/nf-core/staphopiasccmec/main'
+include { SCCMEC } from '../modules/local/sccmec/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
 include { ANTISMASH_ANTISMASHLITE } from '../modules/nf-core/antismash/antismashlite/main'
 include { MACREL_CONTIGS } from '../modules/nf-core/macrel/contigs/main'
@@ -275,10 +275,11 @@ workflow MGAP {
     )
     ch_versions = ch_versions.mix(KLEBSIELLA.out.versions)
 
-    // nf-core staphopiasccmec expects tuple val(meta), path(fasta) - no species parameter
-    STAPHOPIASCCMEC(
+    // Run sccmec for S. aureus SCCmec typing
+    SCCMEC(
         taxa_genome_process.saureus
     )
+    ch_versions = ch_versions.mix(SCCMEC.out.versions)
     
     //
     // MODULE: Run FastQC

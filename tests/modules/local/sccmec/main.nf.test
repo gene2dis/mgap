@@ -1,0 +1,32 @@
+nextflow_process {
+
+    name "Test Process SCCMEC"
+    script "modules/local/sccmec/main.nf"
+    process "SCCMEC"
+
+    tag "modules"
+    tag "modules_local"
+    tag "sccmec"
+
+    test("staphylococcus_aureus - fasta") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file(params.modules_testdata_base_path + 'genomics/prokaryotes/staphylococcus_aureus/genome/genome.fasta.gz', checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(process.out).match() }
+            )
+        }
+    }
+
+}

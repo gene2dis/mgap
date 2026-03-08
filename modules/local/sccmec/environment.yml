@@ -4,4 +4,4 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - bioconda::staphopia-sccmec=1.0.0
+  - bioconda::sccmec=1.2.0
