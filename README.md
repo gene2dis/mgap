@@ -142,19 +142,27 @@ nextflow run gene2dis/mgap \
 
 ### Key Parameters
 
-| Parameter | Description |
-|-----------|-------------|
-| `--input` | Path to samplesheet CSV file |
-| `--outdir` | Output directory for results |
-| `--seq_type` | Sequencing type: `illumina`, `ont`, or `contig` |
-| `-profile` | Configuration profile: `docker`, `singularity`, `conda` |
-| `--bakta_db` | Path to Bakta database |
-| `--checkm2_db` | Path to CheckM2 database |
-| `--run_gtdbtk` | Enable GTDB-Tk taxonomic classification (default: false) |
-| `--gtdbtk_db` | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled) |
-| `--run_dnaapler` | Enable contig reorientation with Dnaapler (default: true, ONT only) |
-| `--run_rgi` | Enable RGI antimicrobial resistance gene prediction (default: false) |
-| `--rgi_db` | Path to RGI/CARD database (required if `--run_rgi` is enabled) |
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--input` | required | Path to samplesheet CSV file |
+| `--outdir` | required | Output directory for results |
+| `--seq_type` | required | Sequencing type: `illumina`, `ont`, or `contig` |
+| `-profile` | — | Configuration profile: `docker`, `singularity`, `conda` |
+| `--bakta_db` | `null` | Path to Bakta database |
+| `--checkm2_db` | `null` | Path to CheckM2 database |
+| `--amrfinder_db` | `null` | Path to AMRFinderPlus database |
+| `--genomad_db` | `null` | Path to geNomad database |
+| `--run_kraken2` | `true` | Enable Kraken2 contamination detection |
+| `--kraken2db` | `null` | Path to Kraken2 database (required to run contamination detection) |
+| `--brackendb` | `null` | Path to Bracken database (Illumina only, alongside `--kraken2db`) |
+| `--adjust_coverage` | `true` | Enable coverage estimation and read subsampling |
+| `--max_coverage` | `110` | Target maximum coverage (x) for subsampling |
+| `--min_contig_length` | `1000` | Minimum contig length (bp) for Bakta annotation |
+| `--run_gtdbtk` | `false` | Enable GTDB-Tk taxonomic classification |
+| `--gtdbtk_db` | `null` | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled) |
+| `--run_dnaapler` | `true` | Enable contig reorientation with Dnaapler (ONT only) |
+| `--run_rgi` | `false` | Enable RGI antimicrobial resistance gene prediction |
+| `--rgi_db` | `null` | Path to RGI/CARD database (required if `--run_rgi` is enabled) |
 
 > **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
 

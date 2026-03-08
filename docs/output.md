@@ -6,6 +6,70 @@ This document describes the output produced by the pipeline.
 
 The directories listed below will be created in the results directory after the pipeline has finished. All paths are relative to the top-level results directory.
 
+## Output Folder Structure
+
+All results are written to the directory specified with `--outdir`. The layout below shows the full directory tree; conditional directories are annotated with the flag that controls them.
+
+```
+<outdir>/
+├── <sample_id>/                         # One subdirectory per sample
+│   ├── read_processing/
+│   │   ├── fastp/                       # Illumina QC: *.html, *.json, *.fastq.gz
+│   │   ├── fastplong/                   # ONT QC: *.html, *.json, *.fastq.gz
+│   │   ├── kraken2/                     # Contamination detection: *.report.txt, *.fastq.gz
+│   │   │                                #   (requires --run_kraken2 true and --kraken2db)
+│   │   ├── bracken/                     # Abundance re-estimation: *.tsv
+│   │   │                                #   (Illumina only; requires --brackendb)
+│   │   └── subsampled/                  # Subsampled reads: *.fastq.gz
+│   │                                    #   (only when coverage > --max_coverage)
+│   ├── assemblies/
+│   │   ├── *.scaffolds.fa.gz            # SPAdes output (--seq_type illumina)
+│   │   ├── flye/                        # Flye assembly: *.fasta, *.gfa, *.txt, *.log
+│   │   │                                #   (ONT, --ont_assembler flye)
+│   │   ├── medaka/                      # Medaka-polished assembly: *.fasta
+│   │   │                                #   (ONT, --ont_assembler flye)
+│   │   ├── autocycler/                  # Autocycler consensus assembly
+│   │   │   ├── genome_size/             #   Genome size estimate: *_genome_size.txt
+│   │   │   ├── autocycler_out/          #   Cluster/trim/resolve working directory
+│   │   │   ├── *.fasta                  #   Final consensus assembly
+│   │   │   └── *.gfa                    #   Final consensus assembly graph
+│   │   │                                #   (ONT, --ont_assembler autocycler)
+│   │   └── dnaapler/                    # Reoriented assembly: *_reoriented.fasta / *.gfa / *.fasta
+│   │                                    #   (ONT only, --run_dnaapler true [default])
+│   ├── qc/
+│   │   └── quast/                       # Assembly quality metrics: *.tsv
+│   └── annotation/
+│       ├── checkm2/                     # Genome completeness/contamination: *.tsv
+│       ├── mlst/                        # Multi-locus sequence typing: *.tsv
+│       ├── bakta/                       # Genome annotation: *.gff3, *.gbff, *.fna, *.faa, *.tsv, ...
+│       ├── amrfinder/                   # AMR detection: *.tsv
+│       ├── genomad/                     # Mobile genetic elements: *_summary/, *_annotate/, *_find_proviruses/
+│       ├── rgi/                         # Resistance gene prediction: *.txt, *.json
+│       │                                #   (requires --run_rgi true)
+│       ├── kleborate/                   # Klebsiella virulence/resistance: *.txt
+│       │                                #   (auto-triggered when Klebsiella is detected by MLST)
+│       └── sccmec/                      # S. aureus SCCmec typing: *.tsv
+│                                        #   (auto-triggered when S. aureus is detected by MLST)
+├── gtdbtk/                              # GTDB-Tk taxonomic classification (batch, all samples)
+│   ├── gtdbtk.batch.*.summary.tsv       #   (requires --run_gtdbtk true and --gtdbtk_db)
+│   └── gtdbtk.batch.log
+└── pipeline_info/                       # Nextflow execution reports and software versions
+    ├── execution_report_*.html
+    ├── execution_timeline_*.html
+    ├── execution_trace_*.txt
+    ├── pipeline_dag_*.html
+    └── software_versions.yml
+```
+
+> **Notes:**
+> - `<sample_id>` directories are created for each sample. `gtdbtk/` is a single shared directory processed in batch mode across all samples.
+> - `bracken/` only appears for `--seq_type illumina`; ONT mode runs Kraken2 only.
+> - `subsampled/` only appears when reads exceed `--max_coverage` and `--adjust_coverage true` (default).
+> - `dnaapler/` also receives `autocycler gfa2fasta` output when using Autocycler mode.
+> - `rgi/`, `kleborate/`, and `sccmec/` are conditional and only appear when triggered.
+
+---
+
 ## Pipeline overview
 
 The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data using the following steps:

@@ -344,6 +344,12 @@
                     "format": "directory-path",
                     "fa_icon": "fas fa-database"
                 },
+                "brackendb": {
+                    "type": "string",
+                    "description": "Path to Bracken database directory. Required alongside --kraken2db for Bracken abundance re-estimation (Illumina only).",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
                 "genomad_db": {
                     "type": "string",
                     "description": "Path to geNomad database directory.",
@@ -476,6 +482,12 @@
                     "format": "directory-path",
                     "fa_icon": "fas fa-database"
                 },
+                "autocycler_max_contigs": {
+                    "type": "integer",
+                    "default": 50,
+                    "description": "Maximum number of contigs to retain per sample during Autocycler compress and cluster steps.",
+                    "fa_icon": "fas fa-filter"
+                },
                 "flye_mode": {
                     "type": "string",
                     "default": "nano-hq",
@@ -499,6 +511,20 @@
                     "type": "integer",
                     "default": 1000,
                     "description": "Minimum read length for fastplong filtering.",
+                    "fa_icon": "fas fa-ruler"
+                }
+            }
+        },
+        "annotation_options": {
+            "title": "Annotation options",
+            "type": "object",
+            "fa_icon": "fas fa-tags",
+            "description": "Parameters controlling genome annotation behaviour.",
+            "properties": {
+                "min_contig_length": {
+                    "type": "integer",
+                    "default": 1000,
+                    "description": "Minimum contig length (bp) passed to Bakta for annotation. Contigs shorter than this value are skipped.",
                     "fa_icon": "fas fa-ruler"
                 }
             }
@@ -551,6 +577,7 @@
         { "$ref": "#/$defs/database_options" },
         { "$ref": "#/$defs/illumina_options" },
         { "$ref": "#/$defs/ont_options" },
+        { "$ref": "#/$defs/annotation_options" },
         { "$ref": "#/$defs/cloud_options" },
         { "$ref": "#/$defs/institutional_config_options" },
         { "$ref": "#/$defs/max_job_request_options" },

@@ -192,6 +192,7 @@ nextflow run gene2dis/mgap \
 | `--ont_assembler` | `flye` | ONT assembler: `flye` (Flye + Medaka) or `autocycler` (consensus multi-assembler) |
 | `--autocycler_assemblers` | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler |
 | `--autocycler_read_type` | `ont_r10` | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi` |
+| `--autocycler_max_contigs` | `50` | Maximum number of contigs to retain per sample during compress and cluster steps |
 | `--plassembler_db` | `null` | Path to Plassembler database. Plassembler is skipped if not provided |
 
 **Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
@@ -220,6 +221,39 @@ For Singularity users, the image is pulled automatically via `docker://microds/a
 ```bash
 singularity build autocycler.sif docker://microds/autocycler:0.6.0
 ```
+
+### Read QC Parameters
+
+#### Illumina (FastP)
+
+[FastP](https://github.com/OpenGene/fastp) performs quality trimming, adapter removal, and filtering of Illumina paired-end reads. The following parameters control its behaviour:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--fastp_qualified_quality` | `15` | Minimum base quality score (phred). Bases below this are considered unqualified |
+| `--fastp_unqualified_percent_limit` | `40` | Maximum percentage of unqualified bases allowed per read (0–100) |
+| `--fastp_cut_front_window_size` | `4` | Sliding window size for 5′ end trimming |
+| `--fastp_cut_front_mean_quality` | `20` | Mean quality threshold for 5′ end sliding window trimming |
+| `--fastp_cut_right_window_size` | `4` | Sliding window size for 3′ end trimming |
+| `--fastp_cut_right_mean_quality` | `20` | Mean quality threshold for 3′ end sliding window trimming |
+| `--fastp_reads_minlength` | `50` | Minimum read length after trimming. Shorter reads are discarded |
+| `--fastp_n_base_limit` | `5` | Maximum number of N bases allowed per read |
+
+#### ONT (fastplong)
+
+[fastplong](https://github.com/OpenGene/fastplong) performs quality filtering and adapter trimming of Oxford Nanopore long reads.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--fastplong_qualified_quality` | `15` | Minimum base quality score (phred). Bases below this are considered unqualified |
+| `--fastplong_unqualified_percent_limit` | `40` | Maximum percentage of unqualified bases allowed per read (0–100) |
+| `--fastplong_min_read_length` | `1000` | Minimum read length after filtering. Shorter reads are discarded |
+
+### Annotation Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--min_contig_length` | `1000` | Minimum contig length (bp) for Bakta annotation. Contigs shorter than this are skipped |
 
 ### Dnaapler Contig Reorientation (ONT)
 
@@ -382,6 +416,80 @@ rgi load --card_json card.json --local
 ```
 
 Then provide the path to the database directory (containing the loaded database files) via `--rgi_db`.
+
+### Kraken2 Contamination Detection
+
+[Kraken2](https://ccb.jhu.edu/software/kraken2/) classifies reads against a reference database to detect contamination. For Illumina data, [Bracken](https://ccb.jhu.edu/software/bracken/) is also run to refine abundance estimates. For ONT data, Kraken2 runs alone (no Bracken step).
+
+This step is **enabled by default** but requires a database (`--kraken2db`). If `--kraken2db` is not provided, the step is silently skipped even if `--run_kraken2` is `true`.
+
+**Kraken2/Bracken parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--run_kraken2` | `true` | Enable Kraken2 contamination detection |
+| `--kraken2db` | `null` | Path to Kraken2 database directory (required to run) |
+| `--brackendb` | `null` | Path to Bracken database directory (Illumina only; uses same DB as Kraken2 if built with Bracken) |
+
+**Basic usage with contamination detection:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --kraken2db /path/to/kraken2_db \
+    --brackendb /path/to/kraken2_db \
+    -profile docker
+```
+
+**Disable contamination detection:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_kraken2 false \
+    -profile docker
+```
+
+> **Note:** Bracken runs only for `--seq_type illumina`. ONT mode runs Kraken2 only (no Bracken re-estimation).
+
+### Coverage Adjustment
+
+The pipeline estimates genome coverage using [Mash](https://mash.readthedocs.io/en/latest/) and subsamples reads with [Seqtk](https://github.com/lh3/seqtk) if coverage exceeds the target threshold. This prevents over-assembly and reduces runtime for high-coverage datasets.
+
+This step is **enabled by default** and applies to both Illumina (after FastP) and ONT Flye mode (after fastplong). It is automatically **skipped** for `--ont_assembler autocycler`, as Autocycler handles its own read subsampling internally.
+
+**Coverage adjustment parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--adjust_coverage` | `true` | Enable coverage estimation and subsampling |
+| `--max_coverage` | `110` | Target maximum coverage (x). Reads are subsampled if coverage exceeds this value |
+
+**Disable coverage adjustment:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --adjust_coverage false \
+    -profile docker
+```
+
+**Use a lower coverage target:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --max_coverage 60 \
+    -profile docker
+```
 
 ### Cloud execution
 
@@ -592,6 +700,15 @@ In most cases, you will only need to create a custom config as a one-off but if 
 See the main [Nextflow documentation](https://www.nextflow.io/docs/latest/config.html) for more information about creating your own configuration files.
 
 If you have any questions or issues please send us a message on [Slack](https://nf-co.re/join/slack) on the [`#configs` channel](https://nfcore.slack.com/channels/configs).
+
+## Legacy / Inactive Parameters
+
+The following parameters exist in `nextflow.config` but correspond to tools that are currently **not active** in the pipeline. They are reserved for future use and have no effect on pipeline runs.
+
+| Parameter group | Tools | Status |
+|-----------------|-------|--------|
+| `unicycler_*` (`unicycler_min_fasta_length`, `unicycler_mode`) | Unicycler | Not used; Unicycler is not part of the current assembly workflow |
+| `antismash_*` (11 params: `antismash_db`, `antismash_install`, `antismash_cbgeneral`, etc.) | antiSMASH | Module present but commented out; not executed |
 
 ## Azure Resource Requests
 

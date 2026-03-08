@@ -14,7 +14,7 @@ flowchart TD
     %% ── Illumina subworkflow ──
     SEQ_TYPE -- "illumina" --> FASTP["Fastp<br>(quality trimming)"]
     FASTP --> KR2_ILL{"run_kraken2?"}
-    KR2_ILL -- yes --> KRAKEN2_ILL["Kraken2"] --> BRACKEN["Bracken"]
+    KR2_ILL -- yes --> KRAKEN2_ILL["Kraken2"] --> BRACKEN["Bracken<br>(Illumina only)"]
     KR2_ILL -- no --> COV_ILL
     BRACKEN --> COV_ILL{"adjust_coverage?"}
     FASTP --> COV_ILL
@@ -26,7 +26,7 @@ flowchart TD
     %% ── ONT subworkflow ──
     SEQ_TYPE -- "ont" --> FASTPLONG["fastplong<br>(QC + adapter trimming)"]
     FASTPLONG --> KR2_ONT{"run_kraken2?"}
-    KR2_ONT -- yes --> KRAKEN2_ONT["Kraken2"]
+    KR2_ONT -- yes --> KRAKEN2_ONT["Kraken2<br>(ONT: no Bracken)"]
     KR2_ONT -- no --> ASM_ONT
     KRAKEN2_ONT --> ASM_ONT
     FASTPLONG --> ASM_ONT{"ont_assembler?"}
@@ -117,9 +117,10 @@ flowchart TD
 | Step | Tool | Description |
 |------|------|-------------|
 | 1 | **Fastp** | Quality trimming of paired-end reads |
-| 2 | **Kraken2 + Bracken** | Contamination detection *(optional)* |
-| 3 | **Mash Sketch** | Coverage estimation *(optional, if `adjust_coverage`)* |
-| 4 | **Seqtk Sample** | Read subsampling when coverage exceeds `max_coverage` |
+| 2 | **Kraken2** | Contamination detection *(optional, requires `--kraken2db`)* |
+| 2b | **Bracken** | Abundance re-estimation *(Illumina only; requires `--brackendb`)* |
+| 3 | **Mash Sketch** | Coverage estimation *(optional, if `--adjust_coverage`)* |
+| 4 | **Seqtk Sample** | Read subsampling when coverage exceeds `--max_coverage` |
 | 5 | **SPAdes** | *De novo* genome assembly |
 
 ### ONT Subworkflow (Flye mode, default)
@@ -127,19 +128,19 @@ flowchart TD
 | Step | Tool | Description |
 |------|------|-------------|
 | 1 | **fastplong** | Quality filtering and adapter trimming of long reads |
-| 2 | **Kraken2** | Contamination detection *(optional)* |
-| 3 | **Mash Sketch** | Coverage estimation *(optional, if `adjust_coverage`)* |
-| 4 | **Seqtk Sample** | Read subsampling when coverage exceeds `max_coverage` |
+| 2 | **Kraken2** | Contamination detection *(optional, requires `--kraken2db`; Bracken not run for ONT)* |
+| 3 | **Mash Sketch** | Coverage estimation *(optional, if `--adjust_coverage`)* |
+| 4 | **Seqtk Sample** | Read subsampling when coverage exceeds `--max_coverage` |
 | 5 | **Flye** | *De novo* long-read assembly |
 | 6 | **Medaka** | Assembly polishing |
-| 7 | **Dnaapler** | Contig reorientation using FASTA input *(optional, `run_dnaapler`)* |
+| 7 | **Dnaapler** | Contig reorientation using FASTA input *(optional, `--run_dnaapler`)* |
 
 ### ONT Subworkflow (Autocycler mode)
 
 | Step | Tool | Description |
 |------|------|-------------|
 | 1 | **fastplong** | Quality filtering and adapter trimming of long reads |
-| 2 | **Kraken2** | Contamination detection *(optional)* |
+| 2 | **Kraken2** | Contamination detection *(optional, requires `--kraken2db`; Bracken not run for ONT)* |
 | 3 | **Autocycler genome_size** | Genome size estimation via Raven |
 | 4 | **Autocycler subsample** | Subsample reads into independent subsets |
 | 5 | **Autocycler assembly** | Fan-out assembly across multiple assemblers × subsamples |
