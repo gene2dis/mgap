@@ -29,7 +29,7 @@ process SCCMEC {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        sccmec: \$(sccmec --version 2>&1 | sed 's/^.*sccmec //')
+        sccmec: \$(sccmec --version 2>&1 | head -n 1 | sed 's/^.*sccmec //')
     END_VERSIONS
     """
 }
