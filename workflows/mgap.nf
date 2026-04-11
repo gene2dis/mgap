@@ -239,7 +239,8 @@ workflow MGAP {
     // RUN MOB-suite for plasmid detection and reconstruction
     if (params.run_mobsuite) {
         MOBSUITE_RECON(
-            BAKTA.out.fna
+            BAKTA.out.fna,
+            params.mobsuite_db ? file(params.mobsuite_db) : []
         )
         ch_versions = ch_versions.mix(MOBSUITE_RECON.out.versions.first())
     }

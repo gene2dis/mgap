@@ -9,6 +9,7 @@ process MOBSUITE_RECON {
 
     input:
     tuple val(meta), path(fasta)
+    path mobsuite_db
 
     output:
     tuple val(meta), path("results/chromosome.fasta")    , emit: chromosome
@@ -25,6 +26,7 @@ process MOBSUITE_RECON {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def is_compressed = fasta.getName().endsWith(".gz") ? true : false
     def fasta_name = fasta.getName().replace(".gz", "")
+    def db_arg = mobsuite_db ? "--database_directory ${mobsuite_db}" : ''
     """
     if [ "$is_compressed" == "true" ]; then
         gzip -c -d $fasta > $fasta_name
@@ -32,6 +34,7 @@ process MOBSUITE_RECON {
 
     mob_recon \\
         --infile $fasta_name \\
+        $db_arg \\
         $args \\
         --num_threads $task.cpus \\
         --outdir results \\
