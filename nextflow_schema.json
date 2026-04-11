@@ -334,8 +334,8 @@
                 },
                 "mlst_blastdb": {
                     "type": "string",
-                    "description": "Path to an alternative MLST BLAST database (fasta). Forwarded to `mlst --blastdb`. Optional: if unset, the database bundled with the mlst container is used.",
-                    "format": "file-path",
+                    "description": "Path to an alternative MLST BLAST database directory containing `mlst.fa` and its BLAST index siblings (`mlst.fa.n*`). The module appends `/mlst.fa` when forwarding to `mlst --blastdb`. Optional: if unset, the database bundled with the mlst container is used.",
+                    "format": "directory-path",
                     "fa_icon": "fas fa-database"
                 },
                 "mlst_datadir": {

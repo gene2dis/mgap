@@ -502,7 +502,7 @@ This step is optional and only runs when `--run_mobsuite` is enabled. A pre-buil
 
 [SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serovars and subtypes from _Salmonella enterica_ assemblies using antigen gene detection and cgMLST. The pipeline pins SISTR to **v1.1.3**.
 
-**Automatic detection:** SISTR analysis is automatically triggered when MLST assigns the `senterica_achtman_2` scheme to a sample.
+**Automatic detection:** SISTR analysis is automatically triggered when MLST assigns the `salmonella` scheme to a sample.
 
 ---
 

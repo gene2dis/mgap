@@ -23,12 +23,13 @@ input:
         pattern: "*.{fasta,fa,fna}"
         ontologies: []
   - - blastdb:
-        type: file
+        type: directory
         description: |
-          Optional alternative BLAST database (fasta) to use instead of the
-          one bundled with mlst. Forwarded to `mlst --blastdb`. Pass `[]` to
-          use the default database.
-        pattern: "*.{fasta,fa,fna}"
+          Optional alternative BLAST database directory containing
+          `mlst.fa` and its BLAST index sibling files (`mlst.fa.n*`).
+          The module appends `/mlst.fa` when building `mlst --blastdb`.
+          Passing the `.fa` file directly would leave the index files
+          unstaged. Pass `[]` to use the default database bundled with mlst.
         ontologies: []
   - - datadir:
         type: directory

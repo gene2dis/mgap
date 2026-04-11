@@ -22,7 +22,11 @@ process MLST {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def blastdb_arg = blastdb ? "--blastdb ${blastdb}" : ''
+    // `blastdb` must be the DIRECTORY containing mlst.fa and its sibling
+    // BLAST index files (mlst.fa.n*). Staging a single file would leave the
+    // index files behind and blastn would fail with a misleading
+    // "Database memory map file error".
+    def blastdb_arg = blastdb ? "--blastdb ${blastdb}/mlst.fa" : ''
     def datadir_arg = datadir ? "--datadir ${datadir}" : ''
     """
     mlst \\

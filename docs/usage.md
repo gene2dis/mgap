@@ -477,13 +477,13 @@ nextflow run gene2dis/mgap \
 
 ### MLST Typing
 
-[MLST](https://github.com/tseemann/mlst) (Torsten Seemann's classic MLST) scans assemblies against PubMLST typing schemes and is run automatically on every sample. The scheme it reports also drives downstream logic in the pipeline (for example, a `senterica_achtman_2` call triggers SISTR).
+[MLST](https://github.com/tseemann/mlst) (Torsten Seemann's classic MLST) scans assemblies against PubMLST typing schemes and is run automatically on every sample. The scheme it reports also drives downstream logic in the pipeline (for example, a `salmonella` call triggers SISTR).
 
 The tool ships with its own bundled BLAST database and PubMLST data directory inside the container, so no databases are required by default. If you need to run against an updated or custom set of schemes, you can override either one:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `--mlst_blastdb` | `null` | Path to an alternative MLST BLAST database fasta file. Forwarded to `mlst --blastdb`. |
+| `--mlst_blastdb` | `null` | Path to an alternative MLST BLAST database **directory** containing `mlst.fa` and its BLAST index siblings (`mlst.fa.n*`). The pipeline appends `/mlst.fa` when forwarding to `mlst --blastdb`. |
 | `--mlst_datadir` | `null` | Path to an alternative MLST PubMLST data directory. Forwarded to `mlst --datadir`. |
 
 Both parameters are optional and independent — set either, both, or neither. When unset, `mlst` uses the database and data directory bundled with its container.
@@ -495,7 +495,7 @@ nextflow run gene2dis/mgap \
     --input samplesheet.csv \
     --outdir results \
     --seq_type illumina \
-    --mlst_blastdb /path/to/mlst/blast/mlst.fa \
+    --mlst_blastdb /path/to/mlst/blast \
     --mlst_datadir /path/to/mlst/pubmlst \
     -profile docker
 ```
@@ -504,7 +504,7 @@ See the [mlst documentation](https://github.com/tseemann/mlst#updating-the-datab
 
 ### SISTR Salmonella Serotyping
 
-[SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serotypes and cgMLST subtypes directly from assemblies. The pipeline runs SISTR **v1.1.3** automatically whenever MLST detects a _Salmonella enterica_ assembly (MLST scheme `senterica_achtman_2`). No additional flags or databases are required — SISTR bundles its own reference data in the container.
+[SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serotypes and cgMLST subtypes directly from assemblies. The pipeline runs SISTR **v1.1.3** automatically whenever MLST detects a _Salmonella enterica_ assembly (MLST scheme `salmonella`). No additional flags or databases are required — SISTR bundles its own reference data in the container.
 
 SISTR is skipped for any other species and adds no runtime cost to non-Salmonella samples.
 

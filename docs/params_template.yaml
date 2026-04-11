@@ -54,7 +54,7 @@ rgi_db:          null   # RGI / CARD database directory
 plassembler_db:  null   # Plassembler database (only if using plassembler in Autocycler)
 
 # MLST custom databases (optional — if unset, bundled databases are used)
-mlst_blastdb:    null   # Alternative MLST BLAST database (fasta)
+mlst_blastdb:    null   # Alternative MLST BLAST database directory (containing mlst.fa + index files)
 mlst_datadir:    null   # Alternative MLST PubMLST data directory
 
 

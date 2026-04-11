@@ -3,7 +3,7 @@
     ORGANISM MAPPING
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     MLST scheme to AMRFinderPlus organism mapping.
-    TODO: Add missing neisserias, salmonella
+    TODO: Add missing neisserias
 ----------------------------------------------------------------------------------------
 */
 
@@ -33,7 +33,7 @@ def getTaxaNames() {
         "koxytoca": "Klebsiella_oxytoca",
         "klebsiella": "Klebsiella_pneumoniae",
         "paeruginosa": "Pseudomonas_aeruginosa",
-        "senterica_achtman_2": "Salmonella",
+        "salmonella": "Salmonella",
         "saureus": "Staphylococcus_aureus",
         "spseudintermedius": "Staphylococcus_pseudintermedius",
         "sagalactiae": "Streptococcus_agalactiae",
