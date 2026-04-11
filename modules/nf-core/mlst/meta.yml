@@ -22,6 +22,20 @@ input:
         description: Assembly fasta file
         pattern: "*.{fasta,fa,fna}"
         ontologies: []
+  - - blastdb:
+        type: file
+        description: |
+          Optional alternative BLAST database (fasta) to use instead of the
+          one bundled with mlst. Forwarded to `mlst --blastdb`. Pass `[]` to
+          use the default database.
+        pattern: "*.{fasta,fa,fna}"
+        ontologies: []
+  - - datadir:
+        type: directory
+        description: |
+          Optional alternative PubMLST data directory to use instead of the
+          one bundled with mlst. Forwarded to `mlst --datadir`. Pass `[]` to
+          use the default directory.
 output:
   tsv:
     - - meta:

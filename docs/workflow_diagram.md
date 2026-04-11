@@ -86,15 +86,20 @@ flowchart TD
     ASSEMBLY --> RGI_CHK{"run_rgi?"}
     RGI_CHK -- yes --> RGI["RGI<br>(AMR gene prediction)"]
 
+    %% ── MOB-suite (optional) ──
+    BAKTA --> MOBSUITE_CHK{"run_mobsuite?"}
+    MOBSUITE_CHK -- yes --> MOBSUITE["MOB-suite<br>(plasmid reconstruction)"]
+
     %% ── Taxa-specific tools ──
     SPECIES --> TAXA_BRANCH{"Species?"}
     BAKTA --> TAXA_BRANCH
     TAXA_BRANCH -- "K. pneumoniae" --> KLEBORATE["Kleborate"]
-    TAXA_BRANCH -- "S. aureus" --> STAPHOPIASCCMEC["staphopia-sccmec"]
+    TAXA_BRANCH -- "S. aureus" --> SCCMEC["sccmec"]
+    TAXA_BRANCH -- "Salmonella" --> SISTR["SISTR<br>(serotype prediction)"]
 
     %% ── Software versions ──
     QUAST & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD --> VERSIONS["CUSTOM_DUMPSOFTWAREVERSIONS<br>(collect versions)"]
-    KLEBORATE & STAPHOPIASCCMEC --> VERSIONS
+    KLEBORATE & SCCMEC & SISTR & MOBSUITE --> VERSIONS
 
     %% ── Styling ──
     classDef decision fill:#ffd966,stroke:#333,color:#000
@@ -103,9 +108,9 @@ flowchart TD
     classDef input fill:#f8cecc,stroke:#b85450,color:#000
     classDef merge fill:#e1d5e7,stroke:#9673a6,color:#000
 
-    class SEQ_TYPE,KR2_ILL,KR2_ONT,COV_ILL,COV_ONT,ASM_ONT,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,TAXA_BRANCH decision
-    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,MASH_ONT,SEQTK_ONT,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI optional
-    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,STAPHOPIASCCMEC,VERSIONS,SPECIES,AMR_JOIN process
+    class SEQ_TYPE,KR2_ILL,KR2_ONT,COV_ILL,COV_ONT,ASM_ONT,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,TAXA_BRANCH decision
+    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,MASH_ONT,SEQTK_ONT,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI,MOBSUITE optional
+    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,VERSIONS,SPECIES,AMR_JOIN process
     class INPUT input
     class ASSEMBLY merge
 ```
@@ -163,10 +168,12 @@ flowchart TD
 | 6 | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta + MLST outputs) |
 | 7 | **geNomad** | Mobile genetic element identification |
 | 8 | **RGI** | Resistance gene prediction *(optional)* |
+| 9 | **MOB-suite** | Plasmid detection and reconstruction *(optional)* |
 
 ### Taxa-Specific Analysis
 
 | Species | Tool | Description |
 |---------|------|-------------|
 | *Klebsiella pneumoniae* | **Kleborate** | Virulence and resistance scoring |
-| *Staphylococcus aureus* | **staphopia-sccmec** | SCCmec cassette typing |
+| *Staphylococcus aureus* | **sccmec** | SCCmec cassette typing |
+| *Salmonella enterica* | **SISTR** | Serovar and cgMLST subtype prediction |

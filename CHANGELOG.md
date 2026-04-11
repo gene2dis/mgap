@@ -19,6 +19,9 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Added stub sections to key modules for fast testing
 - Added pre-commit hooks configuration
 - Added issue templates for bug reports and feature requests
+- Added `mobsuite/recon` (nf-core module) for optional plasmid detection and reconstruction, gated by `--run_mobsuite`
+- Added local `sistr` module (v1.1.3) for automatic Salmonella serotype prediction, triggered when MLST scheme is `senterica_achtman_2`
+- Added `SALMONELLA` local subworkflow wrapping SISTR, following the existing `KLEBSIELLA` / `SCCMEC` taxa-specific pattern
 
 ### `Changed`
 

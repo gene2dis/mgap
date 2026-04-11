@@ -80,6 +80,11 @@
                         "git_sha": "49bdeefb70a2611393065e2b8dc269edef19b7d5",
                         "installed_by": ["modules"]
                     },
+                    "mobsuite/recon": {
+                        "branch": "master",
+                        "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
+                        "installed_by": ["modules"]
+                    },
                     "multiqc": {
                         "branch": "master",
                         "git_sha": "5bdb098216aaf5df9c3b6343e6204cd932503c16",

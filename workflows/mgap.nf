@@ -33,7 +33,7 @@ def getTaxaNames() {
         "koxytoca": "Klebsiella_oxytoca",
         "klebsiella": "Klebsiella_pneumoniae",
         "paeruginosa": "Pseudomonas_aeruginosa",
-        "senterica": "Salmonella",
+        "senterica_achtman_2": "Salmonella",
         "saureus": "Staphylococcus_aureus",
         "spseudintermedius": "Staphylococcus_pseudintermedius",
         "sagalactiae": "Streptococcus_agalactiae",
@@ -57,10 +57,12 @@ include { samplesheetToList } from 'plugin/nf-schema'
 include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
 include { KLEBSIELLA } from '../subworkflows/local/klebsiella'
+include { SALMONELLA } from '../subworkflows/local/salmonella'
 include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/run/main'
 include { RGI_MAIN } from '../modules/local/rgi/main/main'
 include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoend/main'
+include { MOBSUITE_RECON } from '../modules/nf-core/mobsuite/recon/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -157,8 +159,12 @@ workflow MGAP {
     )
 
     // RUN MLST
+    ch_mlst_blastdb = params.mlst_blastdb ? file(params.mlst_blastdb, checkIfExists: true) : []
+    ch_mlst_datadir = params.mlst_datadir ? file(params.mlst_datadir, checkIfExists: true) : []
     MLST(
-        genome_assembly
+        genome_assembly,
+        ch_mlst_blastdb,
+        ch_mlst_datadir
     )
 
     // RUN ANNOTATION
@@ -230,6 +236,15 @@ workflow MGAP {
         params.genomad_db
     )
 
+    // RUN MOB-suite for plasmid detection and reconstruction
+    if (params.run_mobsuite) {
+        MOBSUITE_RECON(
+            BAKTA.out.fna,
+            params.mobsuite_db ? file(params.mobsuite_db) : []
+        )
+        ch_versions = ch_versions.mix(MOBSUITE_RECON.out.versions.first())
+    }
+
     // RUN RGI for antimicrobial resistance gene prediction
     if (params.run_rgi) {
         RGI_MAIN(
@@ -264,6 +279,8 @@ workflow MGAP {
                 return [ meta, fasta ]
             saureus: species == "Staphylococcus_aureus"
                 return [ meta, fasta ]
+            salmonella: species == "Salmonella"
+                return [ meta, fasta ]
             other: true
                 return [ meta, fasta ]
         }
@@ -280,6 +297,12 @@ workflow MGAP {
         taxa_genome_process.saureus
     )
     ch_versions = ch_versions.mix(SCCMEC.out.versions)
+
+    // Run SISTR for Salmonella serotype prediction
+    SALMONELLA(
+        taxa_genome_process.salmonella
+    )
+    ch_versions = ch_versions.mix(SALMONELLA.out.versions)
     
     //
     // MODULE: Run FastQC

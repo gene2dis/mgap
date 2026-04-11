@@ -1,0 +1,139 @@
+# ============================================================================
+# gene2dis/mgap — parameters template
+# ============================================================================
+#
+# Use this file as a starting point for running the pipeline with
+# `nextflow run gene2dis/mgap -params-file params.yaml`.
+#
+# - Fields marked "REQUIRED" must be set.
+# - All other fields show the pipeline default. Leave them as-is to accept
+#   the default, change the value to override, or set to `null` to unset
+#   (where supported).
+# - Database path fields default to `null` — provide them to enable the
+#   corresponding step (see docs/usage.md for each tool's requirements).
+# ============================================================================
+
+
+# ----------------------------------------------------------------------------
+# Input / output (REQUIRED)
+# ----------------------------------------------------------------------------
+
+input:     null   # REQUIRED — path to the samplesheet CSV
+outdir:    null   # REQUIRED — output directory
+seq_type:  null   # REQUIRED — one of: illumina | ont | contig
+
+
+# ----------------------------------------------------------------------------
+# Core pipeline toggles
+# ----------------------------------------------------------------------------
+
+run_kraken2:     true    # Run Kraken2 contamination detection (requires kraken2db)
+run_gtdbtk:      false   # Run GTDB-Tk taxonomic classification (requires gtdbtk_db)
+run_rgi:         false   # Run RGI / CARD AMR prediction (requires rgi_db)
+run_mobsuite:    false   # Run MOB-suite plasmid detection
+run_dnaapler:    true    # Reorient ONT contigs with dnaapler
+
+adjust_coverage: true    # Subsample reads to target coverage (Illumina / ONT)
+max_coverage:    110     # Target maximum coverage for subsampling
+
+
+# ----------------------------------------------------------------------------
+# Databases (all optional — set to enable the corresponding step)
+# ----------------------------------------------------------------------------
+
+bakta_db:        null   # Bakta database directory
+checkm2_db:      null   # CheckM2 database file
+kraken2db:       null   # Kraken2 database directory
+brackendb:       null   # Bracken database directory (Illumina only)
+amrfinder_db:    null   # AMRFinderPlus database directory
+genomad_db:      null   # geNomad database directory
+mobsuite_db:     null   # MOB-suite database directory (optional)
+gtdbtk_db:       null   # GTDB-Tk database directory
+gtdbtk_mash_db:  null   # GTDB-Tk Mash database file (optional, ANI screening)
+rgi_db:          null   # RGI / CARD database directory
+plassembler_db:  null   # Plassembler database (only if using plassembler in Autocycler)
+
+# MLST custom databases (optional — if unset, bundled databases are used)
+mlst_blastdb:    null   # Alternative MLST BLAST database (fasta)
+mlst_datadir:    null   # Alternative MLST PubMLST data directory
+
+
+# ----------------------------------------------------------------------------
+# RGI options
+# ----------------------------------------------------------------------------
+
+rgi_include_loose:  false      # Include loose hits below detection cut-off
+rgi_include_nudge:  false      # Include hits nudged loose -> strict
+rgi_low_quality:    false      # Allow low-quality / partial-gene predictions
+rgi_alignment_tool: DIAMOND    # BLAST | DIAMOND
+
+
+# ----------------------------------------------------------------------------
+# GTDB-Tk options
+# ----------------------------------------------------------------------------
+
+gtdbtk_min_perc_aa:      10       # Minimum % amino acids in MSA
+gtdbtk_min_af:           0.65     # Minimum alignment fraction
+gtdbtk_pplacer_scratch:  true     # Use scratch dir for pplacer (reduces RAM)
+gtdbtk_extension:        gz       # 'gz' for Illumina (SPAdes .gz), 'fasta' for ONT
+
+
+# ----------------------------------------------------------------------------
+# Annotation options
+# ----------------------------------------------------------------------------
+
+min_contig_length: 1000   # Minimum contig length (bp) passed to Bakta
+
+
+# ----------------------------------------------------------------------------
+# Illumina preprocessing (fastp)
+# ----------------------------------------------------------------------------
+
+fastp_qualified_quality:          15
+fastp_unqualified_percent_limit:  40
+fastp_cut_front_window_size:      4
+fastp_cut_front_mean_quality:     20
+fastp_cut_right_window_size:      4
+fastp_cut_right_mean_quality:     20
+fastp_reads_minlength:            50
+fastp_n_base_limit:               5
+
+
+# ----------------------------------------------------------------------------
+# ONT preprocessing (fastplong)
+# ----------------------------------------------------------------------------
+
+fastplong_qualified_quality:          15
+fastplong_unqualified_percent_limit:  40
+fastplong_min_read_length:            1000
+
+
+# ----------------------------------------------------------------------------
+# ONT assembly
+# ----------------------------------------------------------------------------
+
+ont_assembler:          flye                                      # flye | autocycler
+flye_mode:              nano-hq                                   # pacbio-raw | pacbio-corr | pacbio-hifi | nano-raw | nano-corr | nano-hq
+
+# Autocycler (only used when ont_assembler == 'autocycler')
+autocycler_assemblers:  raven,miniasm,flye,metamdbg,necat,nextdenovo
+autocycler_read_type:   ont_r10                                   # ont_r9 | ont_r10 | pacbio_clr | pacbio_hifi
+autocycler_max_contigs: 50
+
+
+# ----------------------------------------------------------------------------
+# MultiQC
+# ----------------------------------------------------------------------------
+
+multiqc_config: null
+multiqc_title:  null
+multiqc_logo:   null
+
+
+# ----------------------------------------------------------------------------
+# Email / notifications (optional)
+# ----------------------------------------------------------------------------
+
+email:         null
+email_on_fail: null
+hook_url:      null    # MS Teams / Slack incoming webhook

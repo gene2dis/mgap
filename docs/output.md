@@ -44,12 +44,16 @@ All results are written to the directory specified with `--outdir`. The layout b
 │       ├── bakta/                       # Genome annotation: *.gff3, *.gbff, *.fna, *.faa, *.tsv, ...
 │       ├── amrfinder/                   # AMR detection: *.tsv
 │       ├── genomad/                     # Mobile genetic elements: *_summary/, *_annotate/, *_find_proviruses/
+│       ├── mobsuite/                    # Plasmid detection: chromosome.fasta, contig_report.txt, plasmid_*.fasta, mobtyper_results.txt
+│       │                                #   (requires --run_mobsuite true)
 │       ├── rgi/                         # Resistance gene prediction: *.txt, *.json
 │       │                                #   (requires --run_rgi true)
 │       ├── kleborate/                   # Klebsiella virulence/resistance: *.txt
 │       │                                #   (auto-triggered when Klebsiella is detected by MLST)
-│       └── sccmec/                      # S. aureus SCCmec typing: *.tsv
-│                                        #   (auto-triggered when S. aureus is detected by MLST)
+│       ├── sccmec/                      # S. aureus SCCmec typing: *.tsv
+│       │                                #   (auto-triggered when S. aureus is detected by MLST)
+│       └── sistr/                       # Salmonella serotype prediction: *.tab, *-allele.{json,fasta}, *-cgmlst.csv
+│                                        #   (auto-triggered when Salmonella is detected by MLST)
 ├── gtdbtk/                              # GTDB-Tk taxonomic classification (batch, all samples)
 │   ├── gtdbtk.batch.*.summary.tsv       #   (requires --run_gtdbtk true and --gtdbtk_db)
 │   └── gtdbtk.batch.log
@@ -66,7 +70,7 @@ All results are written to the directory specified with `--outdir`. The layout b
 > - `bracken/` only appears for `--seq_type illumina`; ONT mode runs Kraken2 only.
 > - `subsampled/` only appears when reads exceed `--max_coverage` and `--adjust_coverage true` (default).
 > - `dnaapler/` also receives `autocycler gfa2fasta` output when using Autocycler mode.
-> - `rgi/`, `kleborate/`, and `sccmec/` are conditional and only appear when triggered.
+> - `rgi/`, `mobsuite/`, `kleborate/`, `sccmec/`, and `sistr/` are conditional and only appear when triggered.
 
 ---
 
@@ -99,11 +103,13 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - [AMRFinderPlus](#amrfinderplus) - Antimicrobial resistance detection
 - [geNomad](#genomad) - Mobile genetic element identification
 - [RGI](#rgi) - Resistance gene prediction *(optional)*
+- [MOB-suite](#mob-suite) - Plasmid detection and reconstruction *(optional)*
 
 ### Species-Specific Analysis
 
 - [Kleborate](#kleborate) - *Klebsiella*-specific virulence and resistance scoring
-- [staphopia-sccmec](#staphopia-sccmec) - *S. aureus* SCCmec cassette typing
+- [sccmec](#sccmec) - *S. aureus* SCCmec cassette typing
+- [SISTR](#sistr) - *Salmonella* serotype prediction
 
 ### Reporting
 
@@ -307,7 +313,7 @@ This step is optional and enabled by default (`--run_dnaapler true`). It only ap
 
 </details>
 
-[MLST](https://github.com/tseemann/mlst) scans genome assemblies against PubMLST schemes to determine sequence types. The MLST result is also used internally to identify species for AMRFinderPlus organism-specific analysis and to trigger species-specific tools (Kleborate, staphopia-sccmec).
+[MLST](https://github.com/tseemann/mlst) scans genome assemblies against PubMLST schemes to determine sequence types. The MLST result is also used internally to identify species for AMRFinderPlus organism-specific analysis and to trigger species-specific tools (Kleborate, sccmec, SISTR).
 
 ### Bakta
 
@@ -425,6 +431,23 @@ The JSON output provides additional details including:
 
 This step is optional and only runs when `--run_rgi` is enabled. The CARD database must be provided via `--rgi_db`.
 
+### MOB-suite
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/mobsuite/`
+  - `chromosome.fasta`: All contigs assigned to the chromosome.
+  - `contig_report.txt`: Per-contig chromosome/plasmid assignment table.
+  - `plasmid_*.fasta`: Reconstructed plasmid sequences, one FASTA per plasmid group.
+  - `mobtyper_results.txt`: Plasmid typing results (replicon, MOB-typer predictions).
+
+</details>
+
+[MOB-suite](https://github.com/phac-nml/mob-suite) reconstructs and types plasmids in draft bacterial assemblies using the `mob_recon` workflow. It clusters contigs into plasmid groups, assigns replicon and relaxase types, and produces one FASTA per reconstructed plasmid together with a contig-level chromosome/plasmid assignment report.
+
+This step is optional and only runs when `--run_mobsuite` is enabled. A pre-built database can be supplied via `--mobsuite_db`; otherwise MOB-suite uses the database bundled with the container.
+
 ---
 
 ## Species-Specific Analysis
@@ -450,7 +473,7 @@ This step is optional and only runs when `--run_rgi` is enabled. The CARD databa
 
 **Automatic detection:** Kleborate analysis is automatically triggered when _Klebsiella_ species are detected based on MLST results.
 
-### staphopia-sccmec
+### sccmec
 
 <details markdown="1">
 <summary>Output files</summary>
@@ -460,9 +483,26 @@ This step is optional and only runs when `--run_rgi` is enabled. The CARD databa
 
 </details>
 
-[staphopia-sccmec](https://github.com/staphopia/staphopia-sccmec) classifies the SCCmec cassette type in *Staphylococcus aureus* genome assemblies. SCCmec (Staphylococcal Cassette Chromosome *mec*) is a mobile genetic element that carries the *mecA* gene responsible for methicillin resistance (MRSA).
+[sccmec](https://github.com/rpetit3/sccmec) classifies the SCCmec cassette type in *Staphylococcus aureus* genome assemblies. SCCmec (Staphylococcal Cassette Chromosome *mec*) is a mobile genetic element that carries the *mecA* gene responsible for methicillin resistance (MRSA).
 
 **Automatic detection:** This analysis is automatically triggered when *S. aureus* is detected based on MLST results.
+
+### SISTR
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/sistr/`
+  - `<sample_id>.tab`: Tab-separated serovar prediction including serogroup, H1/H2 antigens, and cgMLST-based subtype.
+  - `<sample_id>-allele.json`: Novel allele annotations in JSON format.
+  - `<sample_id>-allele.fasta`: Novel allele sequences.
+  - `<sample_id>-cgmlst.csv`: cgMLST profile.
+
+</details>
+
+[SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serovars and subtypes from _Salmonella enterica_ assemblies using antigen gene detection and cgMLST. The pipeline pins SISTR to **v1.1.3**.
+
+**Automatic detection:** SISTR analysis is automatically triggered when MLST assigns the `senterica_achtman_2` scheme to a sample.
 
 ---
 
