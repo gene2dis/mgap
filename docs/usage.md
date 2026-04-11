@@ -10,7 +10,7 @@ gene2dis/mgap is a Nextflow pipeline for microbial genome analysis. It supports:
 - **Oxford Nanopore long-read assembly** (fastplong → Flye → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
 - **Pre-assembled contigs** (direct annotation)
 
-The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), resistome analysis (RGI, optional), mobile element detection (geNomad), and species-specific analyses.
+The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), resistome analysis (RGI, optional), mobile element detection (geNomad), plasmid reconstruction (MOB-suite, optional), and species-specific analyses (Kleborate for _Klebsiella_, SCCmec typing for _S. aureus_, SISTR serotyping for _Salmonella_).
 
 ## Samplesheet input
 
@@ -144,6 +144,24 @@ nextflow run gene2dis/mgap \
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
+
+### Using a parameters file
+
+Instead of passing every option on the command line, you can collect them in a YAML (or JSON) file and pass it to Nextflow with `-params-file`:
+
+```bash
+nextflow run gene2dis/mgap -params-file params.yaml -profile docker
+```
+
+A ready-to-edit template is provided at [`docs/params_template.yaml`](params_template.yaml). Copy it, fill in the required fields (`input`, `outdir`, `seq_type`) and any database paths you need, and leave everything else at its default:
+
+```bash
+cp docs/params_template.yaml my_run_params.yaml
+# edit my_run_params.yaml to set input, outdir, seq_type, databases, etc.
+nextflow run gene2dis/mgap -params-file my_run_params.yaml -profile docker
+```
+
+Any parameters you leave out of the YAML file fall back to the pipeline defaults defined in `nextflow.config`. Values passed on the command line (e.g. `--outdir results_v2`) override values in the params file.
 
 ### Autocycler Consensus Assembly (ONT)
 
@@ -416,6 +434,79 @@ rgi load --card_json card.json --local
 ```
 
 Then provide the path to the database directory (containing the loaded database files) via `--rgi_db`.
+
+### MOB-suite Plasmid Detection
+
+[MOB-suite](https://github.com/phac-nml/mob-suite) performs plasmid identification, typing, and reconstruction from bacterial assemblies. This is an optional step that can be enabled with the `--run_mobsuite` flag. It consumes the Bakta-annotated nucleotide sequences (`.fna`).
+
+**Basic usage:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_mobsuite \
+    -profile docker
+```
+
+**MOB-suite parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--run_mobsuite` | `false` | Enable MOB-suite plasmid detection and reconstruction |
+| `--mobsuite_db` | `null` | Path to a pre-built MOB-suite database directory (optional) |
+
+**Database handling:**
+
+MOB-suite ships its reference databases with the container/conda environment and can also download them on first execution. For air-gapped or repeated runs, pre-download the database and pass it via `--mobsuite_db` — the pipeline forwards it to `mob_recon --database_directory` through `ext.args`:
+
+```bash
+# One-time database initialisation (inside the mob_suite conda env or container)
+mob_init -d /path/to/mobsuite_db
+
+# Use the pre-built database
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --run_mobsuite \
+    --mobsuite_db /path/to/mobsuite_db \
+    -profile docker
+```
+
+### MLST Typing
+
+[MLST](https://github.com/tseemann/mlst) (Torsten Seemann's classic MLST) scans assemblies against PubMLST typing schemes and is run automatically on every sample. The scheme it reports also drives downstream logic in the pipeline (for example, a `senterica_achtman_2` call triggers SISTR).
+
+The tool ships with its own bundled BLAST database and PubMLST data directory inside the container, so no databases are required by default. If you need to run against an updated or custom set of schemes, you can override either one:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--mlst_blastdb` | `null` | Path to an alternative MLST BLAST database fasta file. Forwarded to `mlst --blastdb`. |
+| `--mlst_datadir` | `null` | Path to an alternative MLST PubMLST data directory. Forwarded to `mlst --datadir`. |
+
+Both parameters are optional and independent — set either, both, or neither. When unset, `mlst` uses the database and data directory bundled with its container.
+
+**Example — using a custom MLST database:**
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type illumina \
+    --mlst_blastdb /path/to/mlst/blast/mlst.fa \
+    --mlst_datadir /path/to/mlst/pubmlst \
+    -profile docker
+```
+
+See the [mlst documentation](https://github.com/tseemann/mlst#updating-the-database) for instructions on building or updating these databases.
+
+### SISTR Salmonella Serotyping
+
+[SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serotypes and cgMLST subtypes directly from assemblies. The pipeline runs SISTR **v1.1.3** automatically whenever MLST detects a _Salmonella enterica_ assembly (MLST scheme `senterica_achtman_2`). No additional flags or databases are required — SISTR bundles its own reference data in the container.
+
+SISTR is skipped for any other species and adds no runtime cost to non-Salmonella samples.
 
 ### Kraken2 Contamination Detection
 

@@ -272,6 +272,12 @@
                     "default": false,
                     "description": "Run RGI for antimicrobial resistance gene prediction using CARD database.",
                     "fa_icon": "fas fa-shield-virus"
+                },
+                "run_mobsuite": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run MOB-suite for plasmid detection and reconstruction.",
+                    "fa_icon": "fas fa-circle-nodes"
                 }
             }
         },
@@ -326,6 +332,18 @@
                     "format": "directory-path",
                     "fa_icon": "fas fa-database"
                 },
+                "mlst_blastdb": {
+                    "type": "string",
+                    "description": "Path to an alternative MLST BLAST database (fasta). Forwarded to `mlst --blastdb`. Optional: if unset, the database bundled with the mlst container is used.",
+                    "format": "file-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "mlst_datadir": {
+                    "type": "string",
+                    "description": "Path to an alternative MLST PubMLST data directory. Forwarded to `mlst --datadir`. Optional: if unset, the directory bundled with the mlst container is used.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
                 "checkm2_db": {
                     "type": "string",
                     "description": "Path to CheckM2 database file.",
@@ -353,6 +371,12 @@
                 "genomad_db": {
                     "type": "string",
                     "description": "Path to geNomad database directory.",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-database"
+                },
+                "mobsuite_db": {
+                    "type": "string",
+                    "description": "Path to a pre-built MOB-suite database directory. Optional: if unset, MOB-suite uses the database bundled with its container.",
                     "format": "directory-path",
                     "fa_icon": "fas fa-database"
                 },

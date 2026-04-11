@@ -58,9 +58,11 @@ With the assembled genome (or provided contigs), the annotation steps include:
 5. Antibiotic resistance prediction ([`AMRFinderPlus`](https://github.com/ncbi/amr)) - includes point mutation analysis for supported organisms
 6. Antibiotic resistance gene prediction ([`RGI`](https://github.com/arpcard/rgi)) - optional, uses CARD database for resistome analysis
 7. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
-8. Species-specific analyses:
+8. Plasmid detection, typing, and reconstruction ([`MOB-suite`](https://github.com/phac-nml/mob-suite)) - optional
+9. Species-specific analyses:
    - _Klebsiella_: [`Kleborate`](https://github.com/klebgenomics/Kleborate)
-   - _S. aureus_: SCCmec classification using [`staphopia-sccmec`](https://github.com/staphopia/staphopia-sccmec)
+   - _S. aureus_: SCCmec classification using [`sccmec`](https://github.com/rpetit3/sccmec)
+   - _Salmonella_: Serotype prediction using [`SISTR`](https://github.com/phac-nml/sistr_cmd)
 
 
 ## Quick Start
@@ -163,6 +165,8 @@ nextflow run gene2dis/mgap \
 | `--run_dnaapler` | `true` | Enable contig reorientation with Dnaapler (ONT only) |
 | `--run_rgi` | `false` | Enable RGI antimicrobial resistance gene prediction |
 | `--rgi_db` | `null` | Path to RGI/CARD database (required if `--run_rgi` is enabled) |
+| `--run_mobsuite` | `false` | Enable MOB-suite plasmid detection and reconstruction |
+| `--mobsuite_db` | `null` | Path to pre-built MOB-suite database (optional; uses bundled DB if unset) |
 
 > **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
 

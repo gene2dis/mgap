@@ -9,6 +9,8 @@ process MLST {
 
     input:
     tuple val(meta), path(fasta)
+    path blastdb
+    path datadir
 
     output:
     tuple val(meta), path("*.tsv"), emit: tsv
@@ -20,9 +22,13 @@ process MLST {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
+    def blastdb_arg = blastdb ? "--blastdb ${blastdb}" : ''
+    def datadir_arg = datadir ? "--datadir ${datadir}" : ''
     """
     mlst \\
         $args \\
+        $blastdb_arg \\
+        $datadir_arg \\
         --threads $task.cpus \\
         $fasta \\
         > ${prefix}.tsv

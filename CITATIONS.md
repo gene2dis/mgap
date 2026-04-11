@@ -18,8 +18,14 @@
 - [GTDB-Tk](https://pubmed.ncbi.nlm.nih.gov/31730192/)
   > Chaumeil PA, Mussig AJ, Hugenholtz P, Parks DH. GTDB-Tk: a toolkit to classify genomes with the Genome Taxonomy Database. Bioinformatics. 2020 Mar 15;36(6):1925-1927. doi: 10.1093/bioinformatics/btz848. PubMed PMID: 31730192; PubMed Central PMCID: PMC7703759.
 
+- [MOB-suite](https://pubmed.ncbi.nlm.nih.gov/30052170/)
+  > Robertson J, Nash JHE. MOB-suite: software tools for clustering, reconstruction and typing of plasmids from draft assemblies. Microb Genom. 2018 Aug;4(8):e000206. doi: 10.1099/mgen.0.000206. PubMed PMID: 30052170; PubMed Central PMCID: PMC6159552.
+
 - [MultiQC](https://pubmed.ncbi.nlm.nih.gov/27312411/)
   > Ewels P, Magnusson M, Lundin S, Käller M. MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics. 2016 Oct 1;32(19):3047-8. doi: 10.1093/bioinformatics/btw354. Epub 2016 Jun 16. PubMed PMID: 27312411; PubMed Central PMCID: PMC5039924.
+
+- [SISTR](https://pubmed.ncbi.nlm.nih.gov/26800248/)
+  > Yoshida CE, Kruczkiewicz P, Laing CR, Lingohr EJ, Gannon VPJ, Nash JHE, Taboada EN. The Salmonella In Silico Typing Resource (SISTR): an open web-accessible tool for rapidly typing and subtyping draft Salmonella genome assemblies. PLoS One. 2016 Jan 22;11(1):e0147101. doi: 10.1371/journal.pone.0147101. PubMed PMID: 26800248; PubMed Central PMCID: PMC4723339.
 
 ## Software packaging/containerisation tools
 

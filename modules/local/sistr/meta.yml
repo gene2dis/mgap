@@ -1,0 +1,77 @@
+name: sistr
+description: Serovar prediction of draft Salmonella assemblies using SISTR.
+keywords:
+  - salmonella
+  - serotyping
+  - cgmlst
+  - serovar
+  - typing
+tools:
+  - sistr:
+      description: Salmonella In Silico Typing Resource (SISTR) command-line tool for serovar prediction from draft assemblies.
+      homepage: https://github.com/phac-nml/sistr_cmd
+      documentation: https://github.com/phac-nml/sistr_cmd
+      tool_dev_url: https://github.com/phac-nml/sistr_cmd
+      doi: "10.1371/journal.pone.0147101"
+      licence: ["Apache-2.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test', single_end:false ]
+    - fasta:
+        type: file
+        description: A Salmonella genome assembly in FASTA format (optionally gzipped)
+        pattern: "*.{fasta,fa,fna,fasta.gz,fa.gz,fna.gz}"
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - "*.tab":
+          type: file
+          description: Tab-separated serovar prediction (serogroup, H1/H2 antigens, cgMLST subtype).
+          pattern: "*.tab"
+  allele_fasta:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - "*-allele.fasta":
+          type: file
+          description: Novel allele sequences detected by SISTR.
+          pattern: "*-allele.fasta"
+  allele_json:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - "*-allele.json":
+          type: file
+          description: Novel allele annotations in JSON format.
+          pattern: "*-allele.json"
+  cgmlst_csv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - "*-cgmlst.csv":
+          type: file
+          description: cgMLST profile in CSV format.
+          pattern: "*-cgmlst.csv"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"
