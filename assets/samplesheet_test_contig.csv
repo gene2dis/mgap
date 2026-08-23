@@ -1,0 +1,2 @@
+sample,fasta
+TEST_BFRAGILIS_CONTIG,https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/genome/genome.fna.gz

@@ -61,6 +61,63 @@ nextflow_pipeline {
 
     }
 
+    test("Run pipeline with ONT data - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test_ont.csv"
+                seq_type        = "ont"
+                run_kraken2     = false
+                adjust_coverage = false
+                run_dnaapler    = false  // dnaapler has no stub yet (MGAP-13)
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('FASTPLONG') } },
+                { assert succeeded.any { it.contains('FLYE') } },
+                { assert succeeded.any { it.contains('MEDAKA') } },
+                { assert succeeded.any { it.contains('MLST') } }
+            )
+        }
+
+    }
+
+    test("Run pipeline with contig data - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input    = "${projectDir}/assets/samplesheet_test_contig.csv"
+                seq_type = "contig"
+                outdir   = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('QUAST') } },
+                { assert succeeded.any { it.contains('MLST') } }
+            )
+        }
+
+    }
+
     test("Run pipeline with test data") {
 
         tag "pipeline"
@@ -78,12 +135,16 @@ nextflow_pipeline {
 
         then {
             def succeeded = workflow.trace.succeeded().collect { it.name }
+            def versions = path("$outputDir/pipeline_info/software_versions.yml").yaml
             assertAll(
                 { assert workflow.success },
                 { assert succeeded.any { it.contains('FASTP') } },
                 { assert succeeded.any { it.contains('SPADES') } },
                 { assert succeeded.any { it.contains('QUAST') } },
-                { assert succeeded.any { it.contains('MLST') } }
+                { assert succeeded.any { it.contains('MLST') } },
+                { assert versions instanceof Map },
+                { assert versions.keySet().any { it.contains('MLST') } },
+                { assert versions.containsKey('Workflow') }
             )
         }
 

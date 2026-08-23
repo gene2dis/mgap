@@ -363,10 +363,18 @@ workflow MGAP {
     //)
     // ch_versions = ch_versions.mix(FASTQC.out.versions.first())
 
-    // Collate and publish software versions
+    // Collate and publish software versions.
+    // Dedupe on file CONTENT (each process emits one versions.yml per task,
+    // all with distinct paths) and prepend workflow-level versions, so the
+    // aggregate is valid YAML with each process listed once.
+    def workflow_versions = "\"Workflow\":\n" +
+        "    ${workflow.manifest.name}: ${workflow.manifest.version}\n" +
+        "    Nextflow: ${nextflow.version}\n"
     ch_versions
+        .map { it.text }
         .unique()
-        .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info")
+        .mix(channel.of(workflow_versions))
+        .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info", sort: true)
 
     //
     // MODULE: MultiQC
