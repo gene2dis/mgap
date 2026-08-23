@@ -380,12 +380,6 @@
                     "default": true,
                     "description": "Use scratch directory for pplacer to reduce memory usage.",
                     "fa_icon": "fas fa-memory"
-                },
-                "gtdbtk_extension": {
-                    "type": "string",
-                    "default": "gz",
-                    "description": "File extension for genome files (e.g., 'fa', 'fasta', 'fna').",
-                    "fa_icon": "fas fa-file"
                 }
             }
         },

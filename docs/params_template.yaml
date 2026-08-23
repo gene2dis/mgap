@@ -70,7 +70,6 @@ rgi_alignment_tool: DIAMOND # BLAST | DIAMOND
 gtdbtk_min_perc_aa: 10 # Minimum % amino acids in MSA
 gtdbtk_min_af: 0.65 # Minimum alignment fraction
 gtdbtk_pplacer_scratch: true # Use scratch dir for pplacer (reduces RAM)
-gtdbtk_extension: gz # 'gz' for Illumina (SPAdes .gz), 'fasta' for ONT
 
 # ----------------------------------------------------------------------------
 # Annotation options

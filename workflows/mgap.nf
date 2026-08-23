@@ -241,7 +241,7 @@ workflow MGAP {
             .set { ch_gtdbtk_input }
 
         // Prepare database channel
-        ch_gtdbtk_db = channel.value([ "gtdbtk_db", file(params.gtdbtk_db) ])
+        ch_gtdbtk_db = channel.value([ "gtdbtk_db", file(params.gtdbtk_db, checkIfExists: true) ])
 
         GTDBTK(
             ch_gtdbtk_input,

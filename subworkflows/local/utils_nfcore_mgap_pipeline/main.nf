@@ -72,6 +72,13 @@ workflow PIPELINE_INITIALISATION {
         error("Output directory not specified. Please provide it via --outdir.")
     }
 
+    if (params.run_gtdbtk && !params.gtdbtk_db) {
+        error("--run_gtdbtk is set but no GTDB-Tk database was provided. Please provide it via --gtdbtk_db.")
+    }
+    if (params.run_rgi && !params.rgi_db) {
+        error("--run_rgi is set but no CARD database was provided. Please provide it via --rgi_db.")
+    }
+
     //
     // Warn about annotation steps skipped because their database is not provided
     //

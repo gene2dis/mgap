@@ -324,22 +324,13 @@ nextflow run gene2dis/mgap \
 | `--run_gtdbtk`             | `false` | Enable GTDB-Tk taxonomic classification                                       |
 | `--gtdbtk_db`              | `null`  | Path to GTDB-Tk reference database (required if enabled)                      |
 | `--gtdbtk_mash_db`         | `null`  | Path to Mash database for ANI screening (optional, skips ANI if not provided) |
-| `--gtdbtk_extension`       | `gz`    | File extension for genome files (see table below)                             |
 | `--gtdbtk_min_perc_aa`     | `10`    | Minimum percentage of amino acids in MSA                                      |
 | `--gtdbtk_min_af`          | `0.65`  | Minimum alignment fraction                                                    |
 | `--gtdbtk_pplacer_scratch` | `true`  | Use scratch directory for pplacer to reduce memory usage                      |
 
-**Important: File extension by sequencing type**
+Assembled genomes are passed to GTDB-Tk via a batchfile, so it works for all `--seq_type` modes regardless of the assembly file extension.
 
-The `--gtdbtk_extension` parameter must match the file extension of your assembled genomes:
-
-| `--seq_type` | Assembler | Output extension   | `--gtdbtk_extension`   |
-| ------------ | --------- | ------------------ | ---------------------- |
-| `illumina`   | SPAdes    | `.scaffolds.fa.gz` | `gz` (default)         |
-| `ont`        | Medaka    | `.fasta`           | `fasta`                |
-| `contig`     | N/A       | varies             | match your input files |
-
-**Example with ONT data (requires extension override):**
+**Example with ONT data:**
 
 ```bash
 nextflow run gene2dis/mgap \
@@ -348,11 +339,10 @@ nextflow run gene2dis/mgap \
     --seq_type ont \
     --run_gtdbtk \
     --gtdbtk_db /path/to/gtdbtk_db \
-    --gtdbtk_extension fasta \
     -profile docker
 ```
 
-**Example with Illumina data (uses default extension):**
+**Example with Illumina data:**
 
 ```bash
 nextflow run gene2dis/mgap \
