@@ -58,9 +58,11 @@ workflow ILLUMINA {
         )
         ch_versions = ch_versions.mix(KRAKEN2.out.versions.first())
 
+        // Bracken uses its own database if provided; otherwise falls back to
+        // the Kraken2 DB directory (which must then contain Bracken kmer files)
         BRACKEN (
             KRAKEN2.out.report,
-            params.kraken2db
+            params.brackendb ?: params.kraken2db
         )
         ch_versions = ch_versions.mix(BRACKEN.out.versions.first())
     }

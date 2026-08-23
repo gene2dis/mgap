@@ -520,7 +520,7 @@ This step is **enabled by default** but requires a database (`--kraken2db`). If 
 | --------------- | ------- | ------------------------------------------------------------------------------------------------- |
 | `--run_kraken2` | `true`  | Enable Kraken2 contamination detection                                                            |
 | `--kraken2db`   | `null`  | Path to Kraken2 database directory (required to run)                                              |
-| `--brackendb`   | `null`  | Path to Bracken database directory (Illumina only; uses same DB as Kraken2 if built with Bracken) |
+| `--brackendb`   | `null`  | Path to Bracken database directory (Illumina only). Falls back to `--kraken2db` if unset, which then must contain Bracken kmer distribution files |
 
 **Basic usage with contamination detection:**
 

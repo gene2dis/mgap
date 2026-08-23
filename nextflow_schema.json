@@ -335,7 +335,7 @@
                 },
                 "brackendb": {
                     "type": "string",
-                    "description": "Path to Bracken database directory. Required alongside --kraken2db for Bracken abundance re-estimation (Illumina only).",
+                    "description": "Path to Bracken database directory (Illumina only). Falls back to --kraken2db if unset, which then must contain Bracken kmer distribution files.",
                     "format": "directory-path",
                     "fa_icon": "fas fa-database"
                 },

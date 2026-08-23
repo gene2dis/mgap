@@ -163,7 +163,7 @@ nextflow run gene2dis/mgap \
 | `--genomad_db`        | `null`   | Path to geNomad database (geNomad is skipped if unset)                    |
 | `--run_kraken2`       | `true`   | Enable Kraken2 contamination detection                                    |
 | `--kraken2db`         | `null`   | Path to Kraken2 database (required to run contamination detection)        |
-| `--brackendb`         | `null`   | Path to Bracken database (Illumina only, alongside `--kraken2db`)         |
+| `--brackendb`         | `null`   | Path to Bracken database (Illumina only; falls back to `--kraken2db`)     |
 | `--adjust_coverage`   | `true`   | Enable coverage estimation and read subsampling                           |
 | `--max_coverage`      | `110`    | Target maximum coverage (x) for subsampling                               |
 | `--min_contig_length` | `1000`   | Minimum contig length (bp) for Bakta annotation                           |
