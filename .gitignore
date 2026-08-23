@@ -1,5 +1,8 @@
 .nextflow
 .vscode
-.claude
 
+
+# Development files
 CLAUDE.md
+internal_docs
+.claude
