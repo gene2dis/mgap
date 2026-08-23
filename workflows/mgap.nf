@@ -201,10 +201,23 @@ workflow MGAP {
     def taxa_map = getTaxaNames()
     MLST.out.tsv
         .map { meta, tsv ->
-            def mlst_scheme = tsv.splitCsv(header: false, sep: "\t").flatten()[1]
+            // mlst output is a headerless TSV: FILE, SCHEME, ST, alleles...
+            // Guard against empty/malformed output, and treat the '-'
+            // no-scheme marker as no scheme.
+            def rows = tsv.splitCsv(header: false, sep: "\t")
+            def mlst_scheme = (rows && rows[0].size() > 1) ? rows[0][1] : null
+            if (mlst_scheme == '-') {
+                mlst_scheme = null
+            }
             [ meta, mlst_scheme ]
         }
-        .map { meta, taxa -> [ meta, taxa_map[taxa] ] }
+        .map { meta, taxa ->
+            def organism = taxa ? taxa_map[taxa] : null
+            if (!organism) {
+                log.warn("Sample '${meta.id}': MLST scheme '${taxa ?: 'none'}' has no AMRFinderPlus organism mapping - organism-specific AMR/point-mutation analysis will be skipped.")
+            }
+            [ meta, organism ]
+        }
         .set { species_code_ch }
 
     // RUN ANNOTATION (only when --bakta_db is provided)
