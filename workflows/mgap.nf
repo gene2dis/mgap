@@ -116,7 +116,10 @@ workflow MGAP {
         // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
         //
         ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
-            .map { meta, fastq_1, fastq_2, _fasta -> [ meta, [ fastq_1, fastq_2 ] ] }
+            .map { meta, fastq_1, fastq_2, _fasta ->
+                def single_end = !fastq_2
+                [ meta + [single_end: single_end], single_end ? [ fastq_1 ] : [ fastq_1, fastq_2 ] ]
+            }
 
         ILLUMINA ( ch_input )
         genome_assembly = ILLUMINA.out.assembly

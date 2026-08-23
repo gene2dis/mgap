@@ -33,6 +33,34 @@ nextflow_pipeline {
 
     }
 
+    test("Run pipeline with single-end Illumina data - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test_se.csv"
+                seq_type        = "illumina"
+                run_kraken2     = false
+                adjust_coverage = false
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('FASTP') } },
+                { assert succeeded.any { it.contains('SPADES') } }
+            )
+        }
+
+    }
+
     test("Run pipeline with test data") {
 
         tag "pipeline"
