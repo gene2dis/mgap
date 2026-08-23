@@ -117,6 +117,9 @@ workflow MGAP {
         //
         ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
             .map { meta, fastq_1, fastq_2, _fasta ->
+                if (!fastq_1) {
+                    error("Sample '${meta.id}': no fastq_1 given but --seq_type is 'illumina'. This looks like a contig samplesheet - did you mean --seq_type contig?")
+                }
                 def single_end = !fastq_2
                 [ meta + [single_end: single_end], single_end ? [ fastq_1 ] : [ fastq_1, fastq_2 ] ]
             }
@@ -132,8 +135,10 @@ workflow MGAP {
         //
         ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
             .map { meta, fastq_1, _fastq_2, _fasta ->
-                meta.single_end = true
-                [ meta, [ fastq_1 ] ]
+                if (!fastq_1) {
+                    error("Sample '${meta.id}': no fastq_1 given but --seq_type is 'ont'. This looks like a contig samplesheet - did you mean --seq_type contig?")
+                }
+                [ meta + [single_end: true], [ fastq_1 ] ]
             }
 
         ONT ( ch_input )
@@ -146,7 +151,12 @@ workflow MGAP {
         // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
         //
         ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
-            .map { meta, _fastq_1, _fastq_2, fasta -> [ meta, fasta ] }
+            .map { meta, _fastq_1, _fastq_2, fasta ->
+                if (!fasta) {
+                    error("Sample '${meta.id}': no fasta given but --seq_type is 'contig'. This looks like a reads samplesheet - did you mean --seq_type illumina or ont?")
+                }
+                [ meta, fasta ]
+            }
 
         genome_assembly = ch_input
 
