@@ -13,17 +13,16 @@
 include { FASTP                      } from '../../modules/nf-core/fastp/main'
 include { KRAKEN2_KRAKEN2 as KRAKEN2 } from '../../modules/nf-core/kraken2/kraken2/main'
 include { BRACKEN_BRACKEN as BRACKEN } from '../../modules/nf-core/bracken/bracken/main'
-include { SEQTK_SAMPLE               } from '../../modules/nf-core/seqtk/sample/main'
 
 //
 // MODULE: nf-core modules
 //
-include { SPADES      } from '../../modules/nf-core/spades/main'
+include { SPADES } from '../../modules/nf-core/spades/main'
 
 //
-// MODULE: Local modules (no nf-core equivalent yet)
+// SUBWORKFLOW: Local subworkflows
 //
-include { MASH_SKETCH } from '../../modules/local/mash/sketch/main'
+include { COVERAGE_ADJUST } from './coverage_adjust'
 
 workflow ILLUMINA {
 
@@ -68,43 +67,12 @@ workflow ILLUMINA {
     }
 
     //
-    // Coverage adjustment (optional)
+    // SUBWORKFLOW: Coverage adjustment (optional)
     //
     if (params.adjust_coverage) {
-        //
-        // MODULE: Estimate coverage with Mash
-        //
-        MASH_SKETCH ( FASTP.out.reads )
-        ch_versions = ch_versions.mix(MASH_SKETCH.out.versions.first())
-
-        //
-        // Calculate coverage ratio and branch
-        //
-        MASH_SKETCH.out.coverage
-            .map { meta, reads, coverage ->
-                def ratio = params.max_coverage / coverage.text.trim().toFloat()
-                [ meta, reads, ratio ]
-            }
-            .branch { meta, reads, ratio ->
-                reduce_coverage: ratio < 1
-                    return [ meta, reads, ratio ]
-                keep_coverage: ratio >= 1
-                    return [ meta, reads ]
-            }
-            .set { coverage_status }
-
-        //
-        // MODULE: Subsample reads if coverage is too high
-        //
-        SEQTK_SAMPLE ( coverage_status.reduce_coverage )
-        ch_versions = ch_versions.mix(SEQTK_SAMPLE.out.versions.first())
-
-        //
-        // Combine subsampled and non-subsampled reads
-        //
-        ch_reads_for_assembly = coverage_status.keep_coverage
-            .mix(SEQTK_SAMPLE.out.reads)
-
+        COVERAGE_ADJUST ( FASTP.out.reads )
+        ch_versions = ch_versions.mix(COVERAGE_ADJUST.out.versions)
+        ch_reads_for_assembly = COVERAGE_ADJUST.out.reads
     } else {
         ch_reads_for_assembly = FASTP.out.reads
     }
