@@ -4,8 +4,8 @@ process MEDAKA {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/medaka:1.11.3--py310h87e71ce_0 ' :
-        'biocontainers/medaka:1.11.3--py310h87e71ce_0 ' }"
+        'https://depot.galaxyproject.org/singularity/medaka:1.11.3--py310h87e71ce_0' :
+        'biocontainers/medaka:1.11.3--py310h87e71ce_0' }"
 
     input:
     tuple val(meta), path(reads), path(assembly)
@@ -36,6 +36,17 @@ process MEDAKA {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         medaka: \$( medaka --version 2>&1 | sed 's/medaka //g' )
+    END_VERSIONS
+    """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    """
+    touch ${prefix}_polished.fasta
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        medaka: 1.11.3
     END_VERSIONS
     """
 }

@@ -157,10 +157,10 @@ nextflow run gene2dis/mgap \
 | `--outdir`            | required | Output directory for results                                              |
 | `--seq_type`          | required | Sequencing type: `illumina`, `ont`, or `contig`                           |
 | `-profile`            | —        | Configuration profile: `docker`, `singularity`, `conda`                   |
-| `--bakta_db`          | `null`   | Path to Bakta database                                                    |
-| `--checkm2_db`        | `null`   | Path to CheckM2 database                                                  |
-| `--amrfinder_db`      | `null`   | Path to AMRFinderPlus database                                            |
-| `--genomad_db`        | `null`   | Path to geNomad database                                                  |
+| `--bakta_db`          | `null`   | Path to Bakta database (Bakta and AMRFinderPlus are skipped if unset)     |
+| `--checkm2_db`        | `null`   | Path to CheckM2 database (CheckM2 is skipped if unset)                    |
+| `--amrfinder_db`      | `null`   | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset)        |
+| `--genomad_db`        | `null`   | Path to geNomad database (geNomad is skipped if unset)                    |
 | `--run_kraken2`       | `true`   | Enable Kraken2 contamination detection                                    |
 | `--kraken2db`         | `null`   | Path to Kraken2 database (required to run contamination detection)        |
 | `--brackendb`         | `null`   | Path to Bracken database (Illumina only, alongside `--kraken2db`)         |

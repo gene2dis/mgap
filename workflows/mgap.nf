@@ -133,14 +133,14 @@ workflow MGAP {
         //
         ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
             .map { meta, _fastq_1, _fastq_2, fasta -> [ meta, fasta ] }
-        
+
         genome_assembly = ch_input
 
     } else {
         error("Invalid seq_type: '${params.seq_type}'. Must be 'illumina', 'ont', or 'contig'.")
     }
 
-    
+
     // Check assemblies with QUAST
     // nf-core quast expects 3 inputs: consensus, reference (optional), gff (optional)
     QUAST(
@@ -148,14 +148,18 @@ workflow MGAP {
         [ [:], [] ],  // no reference
         [ [:], [] ]   // no gff
     )
+    ch_versions = ch_versions.mix(QUAST.out.versions.first())
 
-    // RUN Checkm2
-    // nf-core checkm2/predict expects tuple val(dbmeta), path(db) for database
-    ch_checkm2_db = channel.value([ [id: 'checkm2_db'], file(params.checkm2_db) ])
-    CHECKM2(
-        genome_assembly,
-        ch_checkm2_db
-    )
+    // RUN Checkm2 (only when --checkm2_db is provided)
+    if (params.checkm2_db) {
+        // nf-core checkm2/predict expects tuple val(dbmeta), path(db) for database
+        ch_checkm2_db = channel.value([ [id: 'checkm2_db'], file(params.checkm2_db, checkIfExists: true) ])
+        CHECKM2(
+            genome_assembly,
+            ch_checkm2_db
+        )
+        ch_versions = ch_versions.mix(CHECKM2.out.versions.first())
+    }
 
     // RUN MLST
     ch_mlst_blastdb = params.mlst_blastdb ? file(params.mlst_blastdb, checkIfExists: true) : []
@@ -165,20 +169,10 @@ workflow MGAP {
         ch_mlst_blastdb,
         ch_mlst_datadir
     )
-
-    // RUN ANNOTATION
-    // nf-core bakta expects 6 inputs: fasta, db, proteins, prodigal_tf, regions, hmms
-    BAKTA(
-        genome_assembly,
-        params.bakta_db,
-        [],  // proteins
-        [],  // prodigal_tf
-        [],  // regions
-        []   // hmms
-    )
+    ch_versions = ch_versions.mix(MLST.out.versions.first())
 
     //
-    // Process MLST to get species name for AMRFinderPlus
+    // Process MLST to get species name for AMRFinderPlus and species-specific tools
     //
     def taxa_map = getTaxaNames()
     MLST.out.tsv
@@ -188,6 +182,41 @@ workflow MGAP {
         }
         .map { meta, taxa -> [ meta, taxa_map[taxa] ] }
         .set { species_code_ch }
+
+    // RUN ANNOTATION (only when --bakta_db is provided)
+    // Downstream steps that need annotated sequences fall back to the raw
+    // assembly when Bakta is skipped; AMRFinderPlus requires Bakta outputs.
+    if (params.bakta_db) {
+        // nf-core bakta expects 6 inputs: fasta, db, proteins, prodigal_tf, regions, hmms
+        BAKTA(
+            genome_assembly,
+            file(params.bakta_db, checkIfExists: true),
+            [],  // proteins
+            [],  // prodigal_tf
+            [],  // regions
+            []   // hmms
+        )
+        ch_versions = ch_versions.mix(BAKTA.out.versions.first())
+        ch_annotation_fasta = BAKTA.out.fna
+
+        // RUN AMRFINDERPLUS (needs Bakta fna/faa/gff; only when --amrfinder_db is provided)
+        // Local amrfinderplus/run expects tuple val(meta), path(fasta_nuc), path(fasta_prot), path(gff3), val(species)
+        if (params.amrfinder_db) {
+            BAKTA.out.fna
+                .join(BAKTA.out.faa)
+                .join(BAKTA.out.gff)
+                .join(species_code_ch)
+                .set { amrfinder_ch }
+
+            AMRFINDERPLUS_RUN(
+                amrfinder_ch,
+                file(params.amrfinder_db, checkIfExists: true)
+            )
+            ch_versions = ch_versions.mix(AMRFINDERPLUS_RUN.out.versions.first())
+        }
+    } else {
+        ch_annotation_fasta = genome_assembly
+    }
 
 
     // Run GTDB-Tk for taxonomic classification (batch mode)
@@ -199,7 +228,7 @@ workflow MGAP {
             .collect()
             .map { fastas -> [ [id: 'gtdbtk_batch'], fastas ] }
             .set { ch_gtdbtk_input }
-        
+
         // Prepare database channel
         ch_gtdbtk_db = channel.value([ "gtdbtk_db", file(params.gtdbtk_db) ])
 
@@ -212,33 +241,19 @@ workflow MGAP {
     }
 
 
-    // RUN AMRFINDERPLUS 
-    // Local amrfinderplus/run expects tuple val(meta), path(fasta_nuc), path(fasta_prot), path(gff3), val(species)
-    // Join Bakta outputs (fna, faa, gff3) with species code
-    BAKTA.out.fna
-        .join(BAKTA.out.faa)
-        .join(BAKTA.out.gff)
-        .join(species_code_ch)
-        .map { meta, fasta_nuc, fasta_prot, gff3, species -> 
-            [ meta, fasta_nuc, fasta_prot, gff3, species ]
-        }
-        .set { amrfinder_ch }
-
-    AMRFINDERPLUS_RUN(
-        amrfinder_ch,
-        params.amrfinder_db
-    )
-
-    // RUN GENOMAD
-    GENOMAD(
-        BAKTA.out.fna,
-        params.genomad_db
-    )
+    // RUN GENOMAD (only when --genomad_db is provided)
+    if (params.genomad_db) {
+        GENOMAD(
+            ch_annotation_fasta,
+            file(params.genomad_db, checkIfExists: true)
+        )
+        ch_versions = ch_versions.mix(GENOMAD.out.versions.first())
+    }
 
     // RUN MOB-suite for plasmid detection and reconstruction
     if (params.run_mobsuite) {
         MOBSUITE_RECON(
-            BAKTA.out.fna,
+            ch_annotation_fasta,
             params.mobsuite_db ? file(params.mobsuite_db) : []
         )
         ch_versions = ch_versions.mix(MOBSUITE_RECON.out.versions.first())
@@ -272,7 +287,7 @@ workflow MGAP {
     // TODO: Move to dedicated subworkflow
     //
     species_code_ch
-        .join(BAKTA.out.fna)
+        .join(ch_annotation_fasta)
         .branch { meta, species, fasta ->
             klebsiella: species == "Klebsiella_pneumoniae"
                 return [ meta, fasta ]
@@ -302,7 +317,7 @@ workflow MGAP {
         taxa_genome_process.salmonella
     )
     ch_versions = ch_versions.mix(SALMONELLA.out.versions)
-    
+
     //
     // MODULE: Run FastQC
     //

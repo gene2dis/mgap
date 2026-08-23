@@ -72,6 +72,25 @@ workflow PIPELINE_INITIALISATION {
         error("Output directory not specified. Please provide it via --outdir.")
     }
 
+    //
+    // Warn about annotation steps skipped because their database is not provided
+    //
+    if (!params.checkm2_db) {
+        log.warn("--checkm2_db not provided: skipping CheckM2 quality assessment.")
+    }
+    if (!params.bakta_db) {
+        log.warn("--bakta_db not provided: skipping Bakta annotation and AMRFinderPlus (which requires Bakta outputs).")
+        if (params.amrfinder_db) {
+            log.warn("--amrfinder_db is set but has no effect without --bakta_db.")
+        }
+    }
+    else if (!params.amrfinder_db) {
+        log.warn("--amrfinder_db not provided: skipping AMRFinderPlus AMR detection.")
+    }
+    if (!params.genomad_db) {
+        log.warn("--genomad_db not provided: skipping geNomad mobile-element detection.")
+    }
+
 }
 
 /*

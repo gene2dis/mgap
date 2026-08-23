@@ -1,7 +1,7 @@
 nextflow_process {
 
     name "Test AMRFINDERPLUS_RUN module"
-    script "../../../modules/local/amrfinderplus/main.nf"
+    script "../../../modules/local/amrfinderplus/run/main.nf"
     process "AMRFINDERPLUS_RUN"
 
     tag "modules"
