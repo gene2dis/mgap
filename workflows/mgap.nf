@@ -3,7 +3,11 @@
     ORGANISM MAPPING
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     MLST scheme to AMRFinderPlus organism mapping.
-    TODO: Add missing neisserias
+    Keys are mlst scheme names (mlst --longlist); values are AMRFinderPlus
+    --organism values (amrfinder --list_organisms).
+    Note: the shared 'neisseria' scheme covers both N. gonorrhoeae and
+    N. meningitidis, but AMRFinderPlus needs a species-level organism —
+    so Neisseria is intentionally left unmapped.
 ----------------------------------------------------------------------------------------
 */
 
@@ -12,7 +16,8 @@ def getTaxaNames() {
         "abaumannii": "Acinetobacter_baumannii",
         "abaumannii_2": "Acinetobacter_baumannii",
         "bcc": "Burkholderia_cepacia",
-        "bseudomallei": "Burhkholderia_pesudomallei",
+        "bordetella_3": "Bordetella_pertussis",
+        "bpseudomallei": "Burkholderia_pseudomallei",
         "campylobacter": "Campylobacter",
         "campylobacter_nonjejuni": "Campylobacter",
         "campylobacter_nonjejuni_2": "Campylobacter",
@@ -25,21 +30,27 @@ def getTaxaNames() {
         "campylobacter_nonjejuni_9": "Campylobacter",
         "cdifficile": "Clostridioides_difficile",
         "cdiphtheriae": "Corynebacterium_diphtheriae",
+        "cfreundii": "Citrobacter_freundii",
+        "ecloacae": "Enterobacter_cloacae",
         "efaecalis": "Enterococcus_faecalis",
         "efaecium": "Enterococcus_faecium",
         "ecoli": "Escherichia",
         "ecoli_achtman_4": "Escherichia",
         "ecoli_2": "Escherichia",
+        "hinfluenzae": "Haemophilus_influenzae",
         "koxytoca": "Klebsiella_oxytoca",
         "klebsiella": "Klebsiella_pneumoniae",
         "paeruginosa": "Pseudomonas_aeruginosa",
         "salmonella": "Salmonella",
         "saureus": "Staphylococcus_aureus",
+        "sepidermidis": "Staphylococcus_epidermidis",
         "spseudintermedius": "Staphylococcus_pseudintermedius",
         "sagalactiae": "Streptococcus_agalactiae",
         "spneumoniae": "Streptococcus_pneumoniae",
         "spyogenes": "Streptococcus_pyogenes",
-        "vcholerae": "Vibrio_cholerae"
+        "vcholerae": "Vibrio_cholerae",
+        "vparahaemolyticus": "Vibrio_parahaemolyticus",
+        "vvulnificus": "Vibrio_vulnificus"
     ]
 }
 
