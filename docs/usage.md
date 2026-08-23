@@ -52,7 +52,7 @@ TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
 | `fastq_1` | Full path to FastQ file for Illumina short reads 1 or ONT reads. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz". Leave empty for ONT single-end reads.                      |
+| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz". Leave empty for ONT single-end reads.                       |
 | `fasta`   | Full path to FASTA file for pre-assembled contigs. Supports `.fasta`, `.fa`, `.fna` extensions (with optional `.gz` compression). Used only for `--seq_type contig` mode.              |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
@@ -68,7 +68,7 @@ python accesory_scripts/CreateSampleSheet.py <input_directory> <output_sampleshe
 The script supports three types of sequencing data and can auto-detect the type. It automatically generates the correct column format based on the detected data type:
 
 - **Illumina paired-end reads**: Automatically pairs R1/R2 files → outputs `sample,fastq_1,fastq_2` columns
-- **Oxford Nanopore reads**: Single FASTQ files → outputs `sample,fastq_1` columns  
+- **Oxford Nanopore reads**: Single FASTQ files → outputs `sample,fastq_1` columns
 - **Pre-assembled contigs**: FASTA files → outputs `sample,fasta` columns
 
 The script intelligently detects the data type by examining file extensions and naming patterns, ensuring the samplesheet format matches the pipeline's requirements for each sequencing mode.
@@ -205,13 +205,13 @@ nextflow run gene2dis/mgap \
 
 **Autocycler parameters:**
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--ont_assembler` | `flye` | ONT assembler: `flye` (Flye + Medaka) or `autocycler` (consensus multi-assembler) |
-| `--autocycler_assemblers` | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler |
-| `--autocycler_read_type` | `ont_r10` | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi` |
-| `--autocycler_max_contigs` | `50` | Maximum number of contigs to retain per sample during compress and cluster steps |
-| `--plassembler_db` | `null` | Path to Plassembler database. Plassembler is skipped if not provided |
+| Parameter                  | Default                                        | Description                                                                       |
+| -------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------- |
+| `--ont_assembler`          | `flye`                                         | ONT assembler: `flye` (Flye + Medaka) or `autocycler` (consensus multi-assembler) |
+| `--autocycler_assemblers`  | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler                                 |
+| `--autocycler_read_type`   | `ont_r10`                                      | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`                       |
+| `--autocycler_max_contigs` | `50`                                           | Maximum number of contigs to retain per sample during compress and cluster steps  |
+| `--plassembler_db`         | `null`                                         | Path to Plassembler database. Plassembler is skipped if not provided              |
 
 **Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
 
@@ -246,36 +246,36 @@ singularity build autocycler.sif docker://microds/autocycler:0.6.0
 
 [FastP](https://github.com/OpenGene/fastp) performs quality trimming, adapter removal, and filtering of Illumina paired-end reads. The following parameters control its behaviour:
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--fastp_qualified_quality` | `15` | Minimum base quality score (phred). Bases below this are considered unqualified |
-| `--fastp_unqualified_percent_limit` | `40` | Maximum percentage of unqualified bases allowed per read (0–100) |
-| `--fastp_cut_front_window_size` | `4` | Sliding window size for 5′ end trimming |
-| `--fastp_cut_front_mean_quality` | `20` | Mean quality threshold for 5′ end sliding window trimming |
-| `--fastp_cut_right_window_size` | `4` | Sliding window size for 3′ end trimming |
-| `--fastp_cut_right_mean_quality` | `20` | Mean quality threshold for 3′ end sliding window trimming |
-| `--fastp_reads_minlength` | `50` | Minimum read length after trimming. Shorter reads are discarded |
-| `--fastp_n_base_limit` | `5` | Maximum number of N bases allowed per read |
+| Parameter                           | Default | Description                                                                     |
+| ----------------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `--fastp_qualified_quality`         | `15`    | Minimum base quality score (phred). Bases below this are considered unqualified |
+| `--fastp_unqualified_percent_limit` | `40`    | Maximum percentage of unqualified bases allowed per read (0–100)                |
+| `--fastp_cut_front_window_size`     | `4`     | Sliding window size for 5′ end trimming                                         |
+| `--fastp_cut_front_mean_quality`    | `20`    | Mean quality threshold for 5′ end sliding window trimming                       |
+| `--fastp_cut_right_window_size`     | `4`     | Sliding window size for 3′ end trimming                                         |
+| `--fastp_cut_right_mean_quality`    | `20`    | Mean quality threshold for 3′ end sliding window trimming                       |
+| `--fastp_reads_minlength`           | `50`    | Minimum read length after trimming. Shorter reads are discarded                 |
+| `--fastp_n_base_limit`              | `5`     | Maximum number of N bases allowed per read                                      |
 
 #### ONT (fastplong)
 
 [fastplong](https://github.com/OpenGene/fastplong) performs quality filtering and adapter trimming of Oxford Nanopore long reads.
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--fastplong_qualified_quality` | `15` | Minimum base quality score (phred). Bases below this are considered unqualified |
-| `--fastplong_unqualified_percent_limit` | `40` | Maximum percentage of unqualified bases allowed per read (0–100) |
-| `--fastplong_min_read_length` | `1000` | Minimum read length after filtering. Shorter reads are discarded |
+| Parameter                               | Default | Description                                                                     |
+| --------------------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `--fastplong_qualified_quality`         | `15`    | Minimum base quality score (phred). Bases below this are considered unqualified |
+| `--fastplong_unqualified_percent_limit` | `40`    | Maximum percentage of unqualified bases allowed per read (0–100)                |
+| `--fastplong_min_read_length`           | `1000`  | Minimum read length after filtering. Shorter reads are discarded                |
 
 ### Annotation Parameters
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--min_contig_length` | `1000` | Minimum contig length (bp) for Bakta annotation. Contigs shorter than this are skipped |
+| Parameter             | Default | Description                                                                            |
+| --------------------- | ------- | -------------------------------------------------------------------------------------- |
+| `--min_contig_length` | `1000`  | Minimum contig length (bp) for Bakta annotation. Contigs shorter than this are skipped |
 
 ### Dnaapler Contig Reorientation (ONT)
 
-[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.3.0) reorients assembled microbial sequences so that each contig starts at a consistent location (e.g., at the *dnaA*, *repA*, or *terL* gene). This is an optional step enabled by default (`--run_dnaapler true`).
+[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.3.0) reorients assembled microbial sequences so that each contig starts at a consistent location (e.g., at the _dnaA_, _repA_, or _terL_ gene). This is an optional step enabled by default (`--run_dnaapler true`).
 
 The behavior differs depending on the assembler:
 
@@ -284,9 +284,9 @@ The behavior differs depending on the assembler:
 
 **Dnaapler parameters:**
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--run_dnaapler` | `true` | Enable contig reorientation with Dnaapler |
+| Parameter        | Default | Description                               |
+| ---------------- | ------- | ----------------------------------------- |
+| `--run_dnaapler` | `true`  | Enable contig reorientation with Dnaapler |
 
 **To disable Dnaapler:**
 
@@ -319,25 +319,25 @@ nextflow run gene2dis/mgap \
 
 **Advanced GTDB-Tk parameters:**
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--run_gtdbtk` | `false` | Enable GTDB-Tk taxonomic classification |
-| `--gtdbtk_db` | `null` | Path to GTDB-Tk reference database (required if enabled) |
-| `--gtdbtk_mash_db` | `null` | Path to Mash database for ANI screening (optional, skips ANI if not provided) |
-| `--gtdbtk_extension` | `gz` | File extension for genome files (see table below) |
-| `--gtdbtk_min_perc_aa` | `10` | Minimum percentage of amino acids in MSA |
-| `--gtdbtk_min_af` | `0.65` | Minimum alignment fraction |
-| `--gtdbtk_pplacer_scratch` | `true` | Use scratch directory for pplacer to reduce memory usage |
+| Parameter                  | Default | Description                                                                   |
+| -------------------------- | ------- | ----------------------------------------------------------------------------- |
+| `--run_gtdbtk`             | `false` | Enable GTDB-Tk taxonomic classification                                       |
+| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk reference database (required if enabled)                      |
+| `--gtdbtk_mash_db`         | `null`  | Path to Mash database for ANI screening (optional, skips ANI if not provided) |
+| `--gtdbtk_extension`       | `gz`    | File extension for genome files (see table below)                             |
+| `--gtdbtk_min_perc_aa`     | `10`    | Minimum percentage of amino acids in MSA                                      |
+| `--gtdbtk_min_af`          | `0.65`  | Minimum alignment fraction                                                    |
+| `--gtdbtk_pplacer_scratch` | `true`  | Use scratch directory for pplacer to reduce memory usage                      |
 
 **Important: File extension by sequencing type**
 
 The `--gtdbtk_extension` parameter must match the file extension of your assembled genomes:
 
-| `--seq_type` | Assembler | Output extension | `--gtdbtk_extension` |
-|--------------|-----------|------------------|----------------------|
-| `illumina` | SPAdes | `.scaffolds.fa.gz` | `gz` (default) |
-| `ont` | Medaka | `.fasta` | `fasta` |
-| `contig` | N/A | varies | match your input files |
+| `--seq_type` | Assembler | Output extension   | `--gtdbtk_extension`   |
+| ------------ | --------- | ------------------ | ---------------------- |
+| `illumina`   | SPAdes    | `.scaffolds.fa.gz` | `gz` (default)         |
+| `ont`        | Medaka    | `.fasta`           | `fasta`                |
+| `contig`     | N/A       | varies             | match your input files |
 
 **Example with ONT data (requires extension override):**
 
@@ -384,14 +384,14 @@ nextflow run gene2dis/mgap \
 
 **RGI parameters:**
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--run_rgi` | `false` | Enable RGI antimicrobial resistance gene prediction |
-| `--rgi_db` | `null` | Path to RGI/CARD database directory (required if enabled) |
-| `--rgi_include_loose` | `false` | Include loose hits (below detection model cut-off) |
-| `--rgi_include_nudge` | `false` | Nudge loose hits to strict for partial gene sequences |
-| `--rgi_low_quality` | `false` | Use low quality mode for short contigs to predict partial genes |
-| `--rgi_alignment_tool` | `DIAMOND` | Alignment tool: `BLAST` or `DIAMOND` |
+| Parameter              | Default   | Description                                                     |
+| ---------------------- | --------- | --------------------------------------------------------------- |
+| `--run_rgi`            | `false`   | Enable RGI antimicrobial resistance gene prediction             |
+| `--rgi_db`             | `null`    | Path to RGI/CARD database directory (required if enabled)       |
+| `--rgi_include_loose`  | `false`   | Include loose hits (below detection model cut-off)              |
+| `--rgi_include_nudge`  | `false`   | Nudge loose hits to strict for partial gene sequences           |
+| `--rgi_low_quality`    | `false`   | Use low quality mode for short contigs to predict partial genes |
+| `--rgi_alignment_tool` | `DIAMOND` | Alignment tool: `BLAST` or `DIAMOND`                            |
 
 **Example with loose hits and low quality mode:**
 
@@ -452,10 +452,10 @@ nextflow run gene2dis/mgap \
 
 **MOB-suite parameters:**
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--run_mobsuite` | `false` | Enable MOB-suite plasmid detection and reconstruction |
-| `--mobsuite_db` | `null` | Path to a pre-built MOB-suite database directory (optional) |
+| Parameter        | Default | Description                                                 |
+| ---------------- | ------- | ----------------------------------------------------------- |
+| `--run_mobsuite` | `false` | Enable MOB-suite plasmid detection and reconstruction       |
+| `--mobsuite_db`  | `null`  | Path to a pre-built MOB-suite database directory (optional) |
 
 **Database handling:**
 
@@ -481,10 +481,10 @@ nextflow run gene2dis/mgap \
 
 The tool ships with its own bundled BLAST database and PubMLST data directory inside the container, so no databases are required by default. If you need to run against an updated or custom set of schemes, you can override either one:
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--mlst_blastdb` | `null` | Path to an alternative MLST BLAST database **directory** containing `mlst.fa` and its BLAST index siblings (`mlst.fa.n*`). The pipeline appends `/mlst.fa` when forwarding to `mlst --blastdb`. |
-| `--mlst_datadir` | `null` | Path to an alternative MLST PubMLST data directory. Forwarded to `mlst --datadir`. |
+| Parameter        | Default | Description                                                                                                                                                                                     |
+| ---------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--mlst_blastdb` | `null`  | Path to an alternative MLST BLAST database **directory** containing `mlst.fa` and its BLAST index siblings (`mlst.fa.n*`). The pipeline appends `/mlst.fa` when forwarding to `mlst --blastdb`. |
+| `--mlst_datadir` | `null`  | Path to an alternative MLST PubMLST data directory. Forwarded to `mlst --datadir`.                                                                                                              |
 
 Both parameters are optional and independent — set either, both, or neither. When unset, `mlst` uses the database and data directory bundled with its container.
 
@@ -516,11 +516,11 @@ This step is **enabled by default** but requires a database (`--kraken2db`). If 
 
 **Kraken2/Bracken parameters:**
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--run_kraken2` | `true` | Enable Kraken2 contamination detection |
-| `--kraken2db` | `null` | Path to Kraken2 database directory (required to run) |
-| `--brackendb` | `null` | Path to Bracken database directory (Illumina only; uses same DB as Kraken2 if built with Bracken) |
+| Parameter       | Default | Description                                                                                       |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `--run_kraken2` | `true`  | Enable Kraken2 contamination detection                                                            |
+| `--kraken2db`   | `null`  | Path to Kraken2 database directory (required to run)                                              |
+| `--brackendb`   | `null`  | Path to Bracken database directory (Illumina only; uses same DB as Kraken2 if built with Bracken) |
 
 **Basic usage with contamination detection:**
 
@@ -555,10 +555,10 @@ This step is **enabled by default** and applies to both Illumina (after FastP) a
 
 **Coverage adjustment parameters:**
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--adjust_coverage` | `true` | Enable coverage estimation and subsampling |
-| `--max_coverage` | `110` | Target maximum coverage (x). Reads are subsampled if coverage exceeds this value |
+| Parameter           | Default | Description                                                                      |
+| ------------------- | ------- | -------------------------------------------------------------------------------- |
+| `--adjust_coverage` | `true`  | Enable coverage estimation and subsampling                                       |
+| `--max_coverage`    | `110`   | Target maximum coverage (x). Reads are subsampled if coverage exceeds this value |
 
 **Disable coverage adjustment:**
 
@@ -584,7 +584,7 @@ nextflow run gene2dis/mgap \
 
 ### Cloud execution
 
-The pipeline supports execution on AWS, Google Cloud, and Azure:
+The pipeline supports execution on AWS and Google Cloud:
 
 ```bash
 # AWS Batch
@@ -796,18 +796,10 @@ If you have any questions or issues please send us a message on [Slack](https://
 
 The following parameters exist in `nextflow.config` but correspond to tools that are currently **not active** in the pipeline. They are reserved for future use and have no effect on pipeline runs.
 
-| Parameter group | Tools | Status |
-|-----------------|-------|--------|
-| `unicycler_*` (`unicycler_min_fasta_length`, `unicycler_mode`) | Unicycler | Not used; Unicycler is not part of the current assembly workflow |
-| `antismash_*` (11 params: `antismash_db`, `antismash_install`, `antismash_cbgeneral`, etc.) | antiSMASH | Module present but commented out; not executed |
-
-## Azure Resource Requests
-
-To be used with the `azurebatch` profile by specifying the `-profile azurebatch`.
-We recommend providing a compute `params.vm_type` of `Standard_D16_v3` VMs by default but these options can be changed if required.
-
-Note that the choice of VM size depends on your quota and the overall workload during the analysis.
-For a thorough list, please refer the [Azure Sizes for virtual machines in Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/sizes).
+| Parameter group                                                                             | Tools     | Status                                                           |
+| ------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------- |
+| `unicycler_*` (`unicycler_min_fasta_length`, `unicycler_mode`)                              | Unicycler | Not used; Unicycler is not part of the current assembly workflow |
+| `antismash_*` (11 params: `antismash_db`, `antismash_install`, `antismash_cbgeneral`, etc.) | antiSMASH | Module present but commented out; not executed                   |
 
 ## Running in the background
 
