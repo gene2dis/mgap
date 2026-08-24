@@ -104,6 +104,7 @@ fastplong_min_read_length: 1000
 
 ont_assembler: flye # flye | autocycler
 flye_mode: nano-hq # pacbio-raw | pacbio-corr | pacbio-hifi | nano-raw | nano-corr | nano-hq
+medaka_model: null # Medaka polishing model; should match the basecaller model (see `medaka tools list_models`). null = medaka default
 
 # Autocycler (only used when ont_assembler == 'autocycler')
 autocycler_assemblers: raven,miniasm,flye,metamdbg,necat,nextdenovo

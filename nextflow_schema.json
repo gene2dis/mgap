@@ -484,6 +484,11 @@
                     "enum": ["pacbio-raw", "pacbio-corr", "pacbio-hifi", "nano-raw", "nano-corr", "nano-hq"],
                     "fa_icon": "fas fa-cogs"
                 },
+                "medaka_model": {
+                    "type": "string",
+                    "description": "Medaka polishing model. Should match the basecaller model used for the reads; see `medaka tools list_models` (medaka 1.11.3). If unset, medaka uses its built-in default.",
+                    "fa_icon": "fas fa-brush"
+                },
                 "fastplong_qualified_quality": {
                     "type": "integer",
                     "default": 15,
