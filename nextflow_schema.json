@@ -143,6 +143,12 @@
                     "default": true,
                     "fa_icon": "fas fa-check-square",
                     "hidden": true
+                },
+                "trace_report_suffix": {
+                    "type": "string",
+                    "description": "Suffix (timestamp) appended to the trace/report/timeline/dag filenames.",
+                    "fa_icon": "far fa-clock",
+                    "hidden": true
                 }
             }
         },
@@ -487,6 +493,12 @@
                     "default": "us-central1",
                     "description": "Google Cloud region.",
                     "fa_icon": "fab fa-google",
+                    "hidden": true
+                },
+                "awscli": {
+                    "type": "string",
+                    "description": "Path to the AWS CLI on the Batch compute environment AMI.",
+                    "fa_icon": "fab fa-aws",
                     "hidden": true
                 }
             }
