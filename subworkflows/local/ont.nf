@@ -55,6 +55,7 @@ workflow ONT {
     //
     FASTPLONG ( ch_reads, [], false, false )
     ch_versions = ch_versions.mix(FASTPLONG.out.versions.first())
+    ch_reports = FASTPLONG.out.json.map { _meta, json -> json }
 
     //
     // MODULE: Run Kraken2 for contamination detection (optional)
@@ -67,6 +68,7 @@ workflow ONT {
             false
         )
         ch_versions = ch_versions.mix(KRAKEN2.out.versions.first())
+        ch_reports = ch_reports.mix(KRAKEN2.out.report.map { _meta, report -> report })
     }
 
     //
@@ -244,5 +246,6 @@ workflow ONT {
 
     emit:
     assembly = ch_assembly  // channel: [ val(meta), path(fasta) ]
+    reports  = ch_reports   // channel: [ path(report) ] for MultiQC
     versions = ch_versions  // channel: [ path(versions.yml) ]
 }

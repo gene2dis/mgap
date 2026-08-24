@@ -14,3 +14,4 @@ work/
 .nf-test.log
 test_results/
 null/
+__pycache__/

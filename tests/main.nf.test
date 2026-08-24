@@ -173,9 +173,11 @@ nextflow_pipeline {
                 { assert succeeded.any { it.contains('SPADES') } },
                 { assert succeeded.any { it.contains('QUAST') } },
                 { assert succeeded.any { it.contains('MLST') } },
+                { assert succeeded.any { it.contains('MULTIQC') } },
                 { assert versions instanceof Map },
                 { assert versions.keySet().any { it.contains('MLST') } },
-                { assert versions.containsKey('Workflow') }
+                { assert versions.containsKey('Workflow') },
+                { assert path("$outputDir/multiqc/multiqc_report.html").exists() }
             )
         }
 

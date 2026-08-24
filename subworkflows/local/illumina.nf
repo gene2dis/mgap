@@ -44,6 +44,7 @@ workflow ILLUMINA {
         false   // save_merged
     )
     ch_versions = ch_versions.mix(FASTP.out.versions.first())
+    ch_reports = FASTP.out.json.map { _meta, json -> json }
 
     //
     // MODULE: Run Kraken2/Bracken for contamination detection (optional)
@@ -56,6 +57,7 @@ workflow ILLUMINA {
             false
         )
         ch_versions = ch_versions.mix(KRAKEN2.out.versions.first())
+        ch_reports = ch_reports.mix(KRAKEN2.out.report.map { _meta, report -> report })
 
         // Bracken uses its own database if provided; otherwise falls back to
         // the Kraken2 DB directory (which must then contain Bracken kmer files)
@@ -93,5 +95,6 @@ workflow ILLUMINA {
     // nf-core spades outputs gzipped scaffolds (.fa.gz)
     // Downstream tools (QUAST, CheckM2, MLST, Bakta, GTDB-Tk) all support gzipped FASTA
     assembly = SPADES.out.scaffolds  // channel: [ val(meta), path(fasta.gz) ]
+    reports  = ch_reports             // channel: [ path(report) ] for MultiQC
     versions = ch_versions            // channel: [ path(versions.yml) ]
 }

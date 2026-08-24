@@ -91,8 +91,7 @@ include { SCCMEC } from '../modules/local/sccmec/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
 include { ANTISMASH_ANTISMASHLITE } from '../modules/nf-core/antismash/antismashlite/main'
 include { MACREL_CONTIGS } from '../modules/nf-core/macrel/contigs/main'
-//include { FASTQC                      } from '../modules/nf-core/fastqc/main'
-//include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
+include { MULTIQC } from '../modules/nf-core/multiqc/main'
 
 
 /*
@@ -104,6 +103,7 @@ include { MACREL_CONTIGS } from '../modules/nf-core/macrel/contigs/main'
 workflow MGAP {
 
     ch_versions = channel.empty()
+    ch_multiqc_files = channel.empty()
 
     //
     // Create input channel based on sequencing type
@@ -127,6 +127,7 @@ workflow MGAP {
         ILLUMINA ( ch_input )
         genome_assembly = ILLUMINA.out.assembly
         ch_versions = ch_versions.mix(ILLUMINA.out.versions)
+        ch_multiqc_files = ch_multiqc_files.mix(ILLUMINA.out.reports)
 
     } else if (params.seq_type == "ont") {
         //
@@ -144,6 +145,7 @@ workflow MGAP {
         ONT ( ch_input )
         genome_assembly = ONT.out.assembly
         ch_versions = ch_versions.mix(ONT.out.versions)
+        ch_multiqc_files = ch_multiqc_files.mix(ONT.out.reports)
 
     } else if (params.seq_type == "contig") {
         //
@@ -173,6 +175,7 @@ workflow MGAP {
         [ [:], [] ]   // no gff
     )
     ch_versions = ch_versions.mix(QUAST.out.versions.first())
+    ch_multiqc_files = ch_multiqc_files.mix(QUAST.out.tsv.map { _meta, tsv -> tsv })
 
     // RUN Checkm2 (only when --checkm2_db is provided)
     if (params.checkm2_db) {
@@ -234,6 +237,7 @@ workflow MGAP {
             []   // hmms
         )
         ch_versions = ch_versions.mix(BAKTA.out.versions.first())
+        ch_multiqc_files = ch_multiqc_files.mix(BAKTA.out.txt.map { _meta, txt -> txt })
         ch_annotation_fasta = BAKTA.out.fna
 
         // RUN AMRFINDERPLUS (needs Bakta fna/faa/gff; only when --amrfinder_db is provided)
@@ -377,26 +381,24 @@ workflow MGAP {
         .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info", sort: true)
 
     //
-    // MODULE: MultiQC
+    // MODULE: MultiQC - aggregate QC reports across all samples
+    // (fastp/fastplong json, Kraken2 reports, QUAST tsv, Bakta txt)
+    // Note: MULTIQC's version output is an eval tuple, not a versions.yml
+    // path, and must not be mixed into ch_versions (see the module).
     //
-   // workflow_summary    = WorkflowMgap.paramsSummaryMultiqc(workflow, summary_params)
-   // ch_workflow_summary = Channel.value(workflow_summary)
+    ch_multiqc_config = params.multiqc_config
+        ? file(params.multiqc_config, checkIfExists: true)
+        : file("${projectDir}/assets/multiqc_config.yml", checkIfExists: true)
+    ch_multiqc_logo = params.multiqc_logo ? file(params.multiqc_logo, checkIfExists: true) : []
 
-   //  methods_description    = WorkflowMgap.methodsDescriptionText(workflow, ch_multiqc_custom_methods_description)
-   // ch_methods_description = Channel.value(methods_description)
-
-   // ch_multiqc_files = Channel.empty()
-   // ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
-   // ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
-   // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
-
-    // MULTIQC (
-    //    ch_multiqc_files.collect(),
-    //    ch_multiqc_config.toList(),
-    //    ch_multiqc_custom_config.toList(),
-    //    ch_multiqc_logo.toList()
-    //)
-    //multiqc_report = MULTIQC.out.report.toList()
+    MULTIQC (
+        ch_multiqc_files.collect(),
+        ch_multiqc_config,
+        [],  // extra config
+        ch_multiqc_logo,
+        [],  // replace names
+        []   // sample names
+    )
 }
 
 /*
