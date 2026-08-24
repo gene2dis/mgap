@@ -191,14 +191,14 @@ nextflow run gene2dis/mgap \
 
 **Autocycler parameters:**
 
-| Parameter                  | Default                                        | Description                                                                       |
-| -------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------- |
-| `--ont_assembler`          | `flye`                                         | ONT assembler: `flye` (Flye + Medaka) or `autocycler` (consensus multi-assembler) |
+| Parameter                  | Default                                        | Description                                                                                                                   |
+| -------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `--ont_assembler`          | `flye`                                         | ONT assembler: `flye` (Flye + Medaka) or `autocycler` (consensus multi-assembler)                                             |
 | `--medaka_model`           | `null`                                         | Medaka polishing model (Flye mode); should match the basecaller model, see `medaka tools list_models`. Unset = medaka default |
-| `--autocycler_assemblers`  | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler                                 |
-| `--autocycler_read_type`   | `ont_r10`                                      | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`                       |
-| `--autocycler_max_contigs` | `50`                                           | Maximum number of contigs to retain per sample during compress and cluster steps  |
-| `--plassembler_db`         | `null`                                         | Path to Plassembler database. Plassembler is skipped if not provided              |
+| `--autocycler_assemblers`  | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler                                                                             |
+| `--autocycler_read_type`   | `ont_r10`                                      | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`                                                                   |
+| `--autocycler_max_contigs` | `50`                                           | Maximum number of contigs to retain per sample during compress and cluster steps                                              |
+| `--plassembler_db`         | `null`                                         | Path to Plassembler database. Plassembler is skipped if not provided                                                          |
 
 **Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
 
