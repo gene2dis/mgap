@@ -167,6 +167,7 @@ nextflow_pipeline {
         then {
             def succeeded = workflow.trace.succeeded().collect { it.name }
             def versions = path("$outputDir/pipeline_info/software_versions.yml").yaml
+            def sample = "TEST_BFRAGILIS"
             assertAll(
                 { assert workflow.success },
                 { assert succeeded.any { it.contains('FASTP') } },
@@ -177,6 +178,10 @@ nextflow_pipeline {
                 { assert versions instanceof Map },
                 { assert versions.keySet().any { it.contains('MLST') } },
                 { assert versions.containsKey('Workflow') },
+                // published outputs exist and the QUAST report has content
+                { assert path("$outputDir/${sample}/read_processing/fastp/${sample}.fastp.json").exists() },
+                { assert path("$outputDir/${sample}/qc/quast/${sample}.tsv").text.readLines().size() > 1 },
+                { assert path("$outputDir/${sample}/annotation/mlst/${sample}.tsv").exists() },
                 { assert path("$outputDir/multiqc/multiqc_report.html").exists() }
             )
         }

@@ -48,7 +48,7 @@ An [example samplesheet](../assets/samplesheet.csv) has been provided with the p
 For convenience, a helper script is provided to automatically generate samplesheets from a directory of sequencing files:
 
 ```bash
-python accesory_scripts/CreateSampleSheet.py <input_directory> <output_samplesheet.csv>
+python accessory_scripts/CreateSampleSheet.py <input_directory> <output_samplesheet.csv>
 ```
 
 The script supports three types of sequencing data and can auto-detect the type. It automatically generates the correct column format based on the detected data type:
@@ -63,16 +63,16 @@ The script intelligently detects the data type by examining file extensions and 
 
 ```bash
 # Auto-detect data type (recommended)
-python accesory_scripts/CreateSampleSheet.py /path/to/fastq_files samplesheet.csv
+python accessory_scripts/CreateSampleSheet.py /path/to/fastq_files samplesheet.csv
 
 # Explicitly specify Illumina paired-end data
-python accesory_scripts/CreateSampleSheet.py /path/to/fastq_files samplesheet.csv --type illumina
+python accessory_scripts/CreateSampleSheet.py /path/to/fastq_files samplesheet.csv --type illumina
 
 # Oxford Nanopore long reads
-python accesory_scripts/CreateSampleSheet.py /path/to/ont_reads samplesheet.csv --type ont
+python accessory_scripts/CreateSampleSheet.py /path/to/ont_reads samplesheet.csv --type ont
 
 # Pre-assembled contigs
-python accesory_scripts/CreateSampleSheet.py /path/to/contigs samplesheet.csv --type contig
+python accessory_scripts/CreateSampleSheet.py /path/to/contigs samplesheet.csv --type contig
 ```
 
 #### Sample name extraction
@@ -89,6 +89,16 @@ The script intelligently extracts sample names from filenames:
 - **FASTA files**: `.fasta`, `.fa`, `.fna` (all optionally gzipped: `.fasta.gz`, `.fa.gz`, `.fna.gz`)
 
 **Note:** The pipeline fully supports gzipped FASTA files for contig mode, allowing you to work with compressed assemblies directly without manual decompression.
+
+### Consolidating results across samples
+
+After a run, `accessory_scripts/ConsolidateResults.py` collects the per-sample outputs of an MGAP `--outdir` into per-tool TSV tables (fastp/fastplong, Mash, Bracken, QUAST, CheckM2, MLST, Bakta, AMRFinderPlus, geNomad, Kleborate, sccmec) for downstream analysis. Requires Python with pandas. Steps that were skipped (e.g. a database was not provided) are simply omitted from the output:
+
+```bash
+python accessory_scripts/ConsolidateResults.py -i results -o consolidated_tables -r Yes
+```
+
+Use `-r No` to append new samples to existing tables instead of replacing them. For an interactive per-run QC overview, see the MultiQC report at `results/multiqc/multiqc_report.html` instead.
 
 ## Running the pipeline
 
@@ -306,11 +316,11 @@ nextflow run gene2dis/mgap \
 
 **Advanced GTDB-Tk parameters:**
 
-| Parameter                  | Default | Description                                                                   |
-| -------------------------- | ------- | ----------------------------------------------------------------------------- |
-| `--run_gtdbtk`             | `false` | Enable GTDB-Tk taxonomic classification                                       |
-| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk reference database (required if enabled)                      |
-| `--gtdbtk_pplacer_scratch` | `true`  | Use scratch directory for pplacer to reduce memory usage                      |
+| Parameter                  | Default | Description                                              |
+| -------------------------- | ------- | -------------------------------------------------------- |
+| `--run_gtdbtk`             | `false` | Enable GTDB-Tk taxonomic classification                  |
+| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk reference database (required if enabled) |
+| `--gtdbtk_pplacer_scratch` | `true`  | Use scratch directory for pplacer to reduce memory usage |
 
 Assembled genomes are passed to GTDB-Tk via a batchfile, so it works for all `--seq_type` modes regardless of the assembly file extension.
 

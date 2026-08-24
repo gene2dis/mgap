@@ -168,15 +168,21 @@ def helpMessage() {
         --help              Show this help message and exit
         --version           Show pipeline version and exit
 
-    Database arguments (required for full analysis):
-        --kraken2db         Path to Kraken2 database
-        --brackendb         Path to Bracken database
+    Database arguments (all optional - the corresponding step is skipped when unset):
+        --kraken2db         Path to Kraken2 database (with --run_kraken2, default true)
+        --brackendb         Path to Bracken database (falls back to --kraken2db)
         --checkm2_db        Path to CheckM2 database
-        --bakta_db          Path to Bakta database
-        --gtdbtk_db         Path to GTDB-Tk database
+        --bakta_db          Path to Bakta database (also required for AMRFinderPlus)
         --amrfinder_db      Path to AMRFinderPlus database
         --genomad_db        Path to geNomad database
+        --gtdbtk_db         Path to GTDB-Tk database (required with --run_gtdbtk)
+        --rgi_db            Path to RGI/CARD database (required with --run_rgi)
+        --mobsuite_db       Path to MOB-suite database (optional with --run_mobsuite)
+        --plassembler_db    Path to Plassembler database (Autocycler mode only)
+        --mlst_blastdb      Alternative MLST BLAST database directory
+        --mlst_datadir      Alternative MLST PubMLST data directory
 
+    See docs/usage.md and nextflow_schema.json for the full parameter list.
     For more information, visit: ${workflow.manifest.homePage}
     """.stripIndent()
 }
@@ -214,4 +220,3 @@ def completionSummary(monochrome_logs) {
     log.info "Execution time: ${workflow.duration}"
     log.info ""
 }
-

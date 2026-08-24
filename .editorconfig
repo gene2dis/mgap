@@ -8,8 +8,17 @@ trim_trailing_whitespace = true
 indent_size = 4
 indent_style = space
 
-[*.{md,yml,yaml,html,css,scss,js,cff}]
+[*.{yml,yaml,html,css,scss,js,cff}]
 indent_size = 2
+
+# Markdown is formatted by prettier, whose ordered-list continuation indent
+# (3 spaces) conflicts with any fixed indent_size - leave it to prettier
+[*.md]
+indent_size = unset
+
+# Jupyter notebooks are machine-written JSON
+[*.ipynb]
+indent_size = unset
 
 # These files are edited and tested upstream in nf-core/modules
 [/modules/nf-core/**]

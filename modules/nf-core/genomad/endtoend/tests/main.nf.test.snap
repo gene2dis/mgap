@@ -2,7 +2,7 @@
     "sarscov2 - genome - fasta": {
         "content": [
             [
-                
+
             ],
             [
                 [
@@ -37,7 +37,7 @@
                 ]
             ],
             [
-                
+
             ],
             [
                 [
@@ -93,7 +93,7 @@
         "content": [
             {
                 "0": [
-                    
+
                 ],
                 "1": [
                     [
@@ -163,7 +163,7 @@
                     ]
                 ],
                 "5": [
-                    
+
                 ],
                 "6": [
                     [
@@ -198,10 +198,10 @@
                     ]
                 ],
                 "aggregated_classification": [
-                    
+
                 ],
                 "calibrated_classification": [
-                    
+
                 ],
                 "compositions": [
                     [

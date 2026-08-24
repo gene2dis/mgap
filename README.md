@@ -70,7 +70,7 @@ With the assembled genome (or provided contigs), the annotation steps include:
 
 ## Quick Start
 
-1. Install [`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=22.10.1`)
+1. Install [`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=23.04.0`)
 
 2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/), [`Podman`](https://podman.io/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility. Conda is also supported as a last resort.
 
@@ -113,7 +113,7 @@ An [example samplesheet](assets/samplesheet.csv) is provided with the pipeline.
 A helper script is available to automatically generate samplesheets from a directory of sequencing files:
 
 ```bash
-python accesory_scripts/CreateSampleSheet.py /path/to/data samplesheet.csv
+python accessory_scripts/CreateSampleSheet.py /path/to/data samplesheet.csv
 ```
 
 The script auto-detects the data type (Illumina/ONT/contigs) and intelligently extracts sample names from filenames. It automatically generates the correct column format based on the detected data type:
@@ -192,11 +192,6 @@ gene2dis/mgap was originally written by the Microbial Data Science Lab, Center f
 Work on short-lived feature branches off `main`. Before merging, run `pre-commit run --all-files` and the test profile (`nextflow run . -profile test,docker --outdir results`).
 
 ## Citations
-
-<!-- TODO nf-core: Add citation for pipeline after first release. Uncomment lines below and update Zenodo doi and badge at the top of this file. -->
-<!-- If you use  gene2dis/mgap for your analysis, please cite it using the following doi: [10.5281/zenodo.XXXXXX](https://doi.org/10.5281/zenodo.XXXXXX) -->
-
-<!-- TODO nf-core: Add bibliography of tools and data used in your pipeline -->
 
 An extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.
 
