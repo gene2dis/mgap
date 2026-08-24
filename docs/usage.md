@@ -211,14 +211,14 @@ nextflow run gene2dis/mgap \
 The Autocycler modules require a Docker image containing Autocycler and all supported assemblers. A pre-built image is available on Docker Hub and will be pulled automatically:
 
 ```
-microds/autocycler:0.6.0
+microds/autocycler:0.6.0@sha256:feb81239eac4ac7d660355be66efc9d8eabafbbca726a547d2443051f819369f
 ```
 
-A Dockerfile is also provided in the repository if you need to build a custom image:
+The pipeline pins this image by digest in `conf/ont.config`, so runs always use the exact image the pipeline was tested with. The image is built from `docker/autocycler-suite/Dockerfile`; because the Dockerfile installs assemblers from bioconda, a rebuild is not bit-identical — rebuilt images must be pushed under a **new tag** and the digest pin in `conf/ont.config` updated accordingly:
 
 ```bash
 cd docker/autocycler-suite
-docker build -t microds/autocycler:0.6.0 .
+docker build -t microds/autocycler:<new-tag> .
 ```
 
 For Singularity users, the image is pulled automatically via `docker://microds/autocycler:0.6.0`. To build manually:

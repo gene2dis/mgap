@@ -118,10 +118,25 @@ workflow ONT {
 
         //
         // Step 4: Collect all assemblies per sample and compress into unitig graph
+        // Assembler tasks run with errorStrategy 'ignore' (see conf/ont.config),
+        // so a sample can end up with zero assemblies - report it loudly
+        // instead of letting it vanish from groupTuple.
         //
         AUTOCYCLER_ASSEMBLY.out.assembly
             .groupTuple(by: 0)
             .map { meta, fasta_list -> [ meta, fasta_list.flatten() ] }
+            .set { ch_grouped_assemblies }
+
+        AUTOCYCLER_GENOME_SIZE.out.genome_size
+            .map { meta, _reads, _genome_size -> [ meta ] }
+            .join(ch_grouped_assemblies, remainder: true)
+            .map { meta, fasta_list ->
+                if (!fasta_list) {
+                    log.error("Sample '${meta.id}': all Autocycler assembler runs failed - the sample is excluded from all downstream analysis.")
+                }
+                [ meta, fasta_list ]
+            }
+            .filter { _meta, fasta_list -> fasta_list }
             .set { ch_assemblies_per_sample }
 
         AUTOCYCLER_COMPRESS ( ch_assemblies_per_sample )
@@ -157,7 +172,16 @@ workflow ONT {
             AUTOCYCLER_GFA2FASTA ( DNAAPLER.out.reoriented_gfa )
             ch_versions = ch_versions.mix(AUTOCYCLER_GFA2FASTA.out.versions.first())
 
-            ch_assembly = AUTOCYCLER_GFA2FASTA.out.fasta
+            // dnaapler's outputs are optional - fall back to the combined
+            // consensus assembly instead of silently dropping the sample
+            ch_assembly = AUTOCYCLER_COMBINE.out.fasta
+                .join(AUTOCYCLER_GFA2FASTA.out.fasta, remainder: true)
+                .map { meta, combined, reoriented ->
+                    if (!reoriented) {
+                        log.warn("Sample '${meta.id}': dnaapler produced no reoriented assembly - using the unoriented Autocycler consensus assembly.")
+                    }
+                    [ meta, reoriented ?: combined ]
+                }
         } else {
             ch_assembly = AUTOCYCLER_COMBINE.out.fasta
         }
@@ -203,7 +227,16 @@ workflow ONT {
             DNAAPLER ( MEDAKA.out.polished_fasta )
             ch_versions = ch_versions.mix(DNAAPLER.out.versions.first())
 
-            ch_assembly = DNAAPLER.out.reoriented_fasta
+            // dnaapler's outputs are optional - fall back to the unoriented
+            // polished assembly instead of silently dropping the sample
+            ch_assembly = MEDAKA.out.polished_fasta
+                .join(DNAAPLER.out.reoriented_fasta, remainder: true)
+                .map { meta, polished, reoriented ->
+                    if (!reoriented) {
+                        log.warn("Sample '${meta.id}': dnaapler produced no reoriented assembly - using the unoriented Medaka assembly.")
+                    }
+                    [ meta, reoriented ?: polished ]
+                }
         } else {
             ch_assembly = MEDAKA.out.polished_fasta
         }
