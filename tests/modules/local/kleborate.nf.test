@@ -1,0 +1,38 @@
+nextflow_process {
+
+    name "Test KLEBORATE module"
+    script "../../../modules/local/kleborate/main.nf"
+    process "KLEBORATE"
+
+    tag "modules"
+    tag "modules_local"
+    tag "kleborate"
+
+    test("KLEBORATE - typing - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('genome.fasta')
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.txt },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

@@ -1,0 +1,38 @@
+nextflow_process {
+
+    name "Test DNAAPLER module"
+    script "../../../modules/local/dnaapler/main.nf"
+    process "DNAAPLER"
+
+    tag "modules"
+    tag "modules_local"
+    tag "dnaapler"
+
+    test("DNAAPLER - contig reorientation - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('assembly.fasta')
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.reoriented_fasta },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

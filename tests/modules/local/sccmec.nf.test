@@ -1,0 +1,38 @@
+nextflow_process {
+
+    name "Test SCCMEC module"
+    script "../../../modules/local/sccmec/main.nf"
+    process "SCCMEC"
+
+    tag "modules"
+    tag "modules_local"
+    tag "sccmec"
+
+    test("SCCMEC - SCCmec typing - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('genome.fasta')
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.tsv },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

@@ -19,7 +19,6 @@ nextflow_workflow {
                 flye_mode       = "nano-hq"
                 run_kraken2     = false
                 adjust_coverage = false
-                run_dnaapler    = false  // dnaapler has no stub yet (MGAP-13)
                 outdir          = "$outputDir"
             }
             workflow {

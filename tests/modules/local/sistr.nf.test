@@ -1,0 +1,38 @@
+nextflow_process {
+
+    name "Test SISTR module"
+    script "../../../modules/local/sistr/main.nf"
+    process "SISTR"
+
+    tag "modules"
+    tag "modules_local"
+    tag "sistr"
+
+    test("SISTR - serotype prediction - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('genome.fasta')
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.tsv },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

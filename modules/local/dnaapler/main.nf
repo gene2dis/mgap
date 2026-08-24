@@ -41,4 +41,16 @@ process DNAAPLER {
         dnaapler: \$( dnaapler --version 2>&1 | sed 's/dnaapler, version //' )
     END_VERSIONS
     """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    """
+    touch ${prefix}_reoriented.fasta
+    touch ${prefix}_reoriented.gfa
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        dnaapler: 1.3.0
+    END_VERSIONS
+    """
 }

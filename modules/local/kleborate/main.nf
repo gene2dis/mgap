@@ -42,7 +42,7 @@ process KLEBORATE {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        kleborate: \$( echo \$(kleborate --version | sed 's/Kleborate v//;'))
+        kleborate: 3.2.4
     END_VERSIONS
     """
 }

@@ -31,4 +31,14 @@ process AUTOCYCLER_TRIM_RESOLVE {
         autocycler: \$( autocycler --version 2>&1 | sed 's/autocycler //' )
     END_VERSIONS
     """
+
+    stub:
+    """
+    mkdir -p autocycler_out
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        autocycler: 0.6.0
+    END_VERSIONS
+    """
 }
