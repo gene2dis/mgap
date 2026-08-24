@@ -191,6 +191,8 @@ gene2dis/mgap was originally written by the Microbial Data Science Lab, Center f
 
 Work on short-lived feature branches off `main`. Before merging, run `pre-commit run --all-files` and the test profile (`nextflow run . -profile test,docker --outdir results`).
 
+Test-profile runs clean up their `work/` task directories automatically. To remove all remaining run/test scratch (all gitignored): `rm -rf work .nextflow .nextflow.log* .nf-test .nf-test.log`.
+
 ## Citations
 
 An extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.
