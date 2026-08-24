@@ -310,9 +310,6 @@ nextflow run gene2dis/mgap \
 | -------------------------- | ------- | ----------------------------------------------------------------------------- |
 | `--run_gtdbtk`             | `false` | Enable GTDB-Tk taxonomic classification                                       |
 | `--gtdbtk_db`              | `null`  | Path to GTDB-Tk reference database (required if enabled)                      |
-| `--gtdbtk_mash_db`         | `null`  | Path to Mash database for ANI screening (optional, skips ANI if not provided) |
-| `--gtdbtk_min_perc_aa`     | `10`    | Minimum percentage of amino acids in MSA                                      |
-| `--gtdbtk_min_af`          | `0.65`  | Minimum alignment fraction                                                    |
 | `--gtdbtk_pplacer_scratch` | `true`  | Use scratch directory for pplacer to reduce memory usage                      |
 
 Assembled genomes are passed to GTDB-Tk via a batchfile, so it works for all `--seq_type` modes regardless of the assembly file extension.
@@ -768,15 +765,6 @@ In most cases, you will only need to create a custom config as a one-off but if 
 See the main [Nextflow documentation](https://www.nextflow.io/docs/latest/config.html) for more information about creating your own configuration files.
 
 If you have any questions or issues please send us a message on [Slack](https://nf-co.re/join/slack) on the [`#configs` channel](https://nfcore.slack.com/channels/configs).
-
-## Legacy / Inactive Parameters
-
-The following parameters exist in `nextflow.config` but correspond to tools that are currently **not active** in the pipeline. They are reserved for future use and have no effect on pipeline runs.
-
-| Parameter group                                                                             | Tools     | Status                                                           |
-| ------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------- |
-| `unicycler_*` (`unicycler_min_fasta_length`, `unicycler_mode`)                              | Unicycler | Not used; Unicycler is not part of the current assembly workflow |
-| `antismash_*` (11 params: `antismash_db`, `antismash_install`, `antismash_cbgeneral`, etc.) | antiSMASH | Module present but commented out; not executed                   |
 
 ## Running in the background
 

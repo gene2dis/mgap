@@ -46,7 +46,6 @@ amrfinder_db: null # AMRFinderPlus database directory (also needs bakta_db — A
 genomad_db: null # geNomad database directory
 mobsuite_db: null # MOB-suite database directory (optional)
 gtdbtk_db: null # GTDB-Tk database directory
-gtdbtk_mash_db: null # GTDB-Tk Mash database file (optional, ANI screening)
 rgi_db: null # RGI / CARD database directory
 plassembler_db: null # Plassembler database (only if using plassembler in Autocycler)
 
@@ -67,8 +66,6 @@ rgi_alignment_tool: DIAMOND # BLAST | DIAMOND
 # GTDB-Tk options
 # ----------------------------------------------------------------------------
 
-gtdbtk_min_perc_aa: 10 # Minimum % amino acids in MSA
-gtdbtk_min_af: 0.65 # Minimum alignment fraction
 gtdbtk_pplacer_scratch: true # Use scratch dir for pplacer (reduces RAM)
 
 # ----------------------------------------------------------------------------
@@ -115,14 +112,6 @@ autocycler_max_contigs: 50
 # MultiQC
 # ----------------------------------------------------------------------------
 
-multiqc_config: null
-multiqc_title: null
-multiqc_logo: null
-
-# ----------------------------------------------------------------------------
-# Email / notifications (optional)
-# ----------------------------------------------------------------------------
-
-email: null
-email_on_fail: null
-hook_url: null # MS Teams / Slack incoming webhook
+multiqc_config: null # Custom MultiQC config file (default: bundled assets/multiqc_config.yml)
+multiqc_title: null # Custom MultiQC report title
+multiqc_logo: null # Custom logo for the MultiQC report

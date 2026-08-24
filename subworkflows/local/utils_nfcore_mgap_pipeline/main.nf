@@ -9,7 +9,6 @@
 
 include { paramsSummaryLog       } from 'plugin/nf-schema'
 include { validateParameters     } from 'plugin/nf-schema'
-include { paramsSummaryMap       } from 'plugin/nf-schema'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,38 +108,12 @@ workflow PIPELINE_INITIALISATION {
 workflow PIPELINE_COMPLETION {
 
     take:
-    email             // string: Email address
-    email_on_fail     // string: Email address for pipeline failure
-    plaintext_email   // boolean: Send plain-text email
-    outdir            // string: Output directory
     monochrome_logs   // boolean: Disable coloured log outputs
-    hook_url          // string: Webhook URL for notifications
 
     main:
 
-    //
-    // Completion email and summary
-    //
     workflow.onComplete {
-        if (email || email_on_fail) {
-            completionEmail(
-                summary_params: paramsSummaryMap(workflow),
-                email: email,
-                email_on_fail: email_on_fail,
-                plaintext_email: plaintext_email,
-                outdir: outdir,
-                monochrome_logs: monochrome_logs
-            )
-        }
-
         completionSummary(monochrome_logs)
-
-        if (hook_url) {
-            notifyWebhook(
-                summary_params: paramsSummaryMap(workflow),
-                hook_url: hook_url
-            )
-        }
     }
 
     workflow.onError {
@@ -203,7 +176,6 @@ def helpMessage() {
         --gtdbtk_db         Path to GTDB-Tk database
         --amrfinder_db      Path to AMRFinderPlus database
         --genomad_db        Path to geNomad database
-        --antismash_db      Path to antiSMASH database
 
     For more information, visit: ${workflow.manifest.homePage}
     """.stripIndent()
@@ -243,19 +215,3 @@ def completionSummary(monochrome_logs) {
     log.info ""
 }
 
-//
-// Send completion email
-//
-def completionEmail(Map args) {
-    // Email functionality - simplified version
-    // Full implementation would use sendMail directive
-    log.info "Pipeline completion notification would be sent to: ${args.email}"
-}
-
-//
-// Notify webhook
-//
-def notifyWebhook(Map args) {
-    // Webhook notification - simplified version
-    log.info "Webhook notification would be sent to: ${args.hook_url}"
-}
