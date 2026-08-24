@@ -64,7 +64,6 @@ include { samplesheetToList } from 'plugin/nf-schema'
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-//include { INPUT_CHECK } from '../subworkflows/local/input_check'
 include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
 include { KLEBSIELLA } from '../subworkflows/local/klebsiella'
@@ -89,8 +88,6 @@ include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
 include { SCCMEC } from '../modules/local/sccmec/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
-include { ANTISMASH_ANTISMASHLITE } from '../modules/nf-core/antismash/antismashlite/main'
-include { MACREL_CONTIGS } from '../modules/nf-core/macrel/contigs/main'
 include { MULTIQC } from '../modules/nf-core/multiqc/main'
 
 
@@ -309,20 +306,6 @@ workflow MGAP {
         ch_versions = ch_versions.mix(RGI_MAIN.out.versions.first())
     }
 
-    // RUN ANTISMASH
-    // Currently using a local installation
-    //ANTISMASH_ANTISMASHLITE(
-    //    BAKTA.out.fna.join(BAKTA.out.gff),
-    //    params.antismash_db,
-    //    params.antismash_install
-        //BAKTA.out.gff
-   // )
-
-    // RUN MACREL
-    // MACREL_CONTIGS(
-    //    BAKTA.out.fna
-    // )
-
     //
     // Run taxa-specific tools
     // TODO: Move to dedicated subworkflow
@@ -358,14 +341,6 @@ workflow MGAP {
         taxa_genome_process.salmonella
     )
     ch_versions = ch_versions.mix(SALMONELLA.out.versions)
-
-    //
-    // MODULE: Run FastQC
-    //
-    //FASTQC (
-    //    INPUT_CHECK.out.reads
-    //)
-    // ch_versions = ch_versions.mix(FASTQC.out.versions.first())
 
     // Collate and publish software versions.
     // Dedupe on file CONTENT (each process emits one versions.yml per task,

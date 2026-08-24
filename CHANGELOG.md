@@ -88,8 +88,12 @@ Initial release of gene2dis/mgap, created with the [nf-core](https://nf-co.re/) 
 
 ### `Added`
 
+- Support for ONT data (December 2023)
+
 ### `Fixed`
 
 ### `Dependencies`
+
+- Bakta 1.8.2, MLST 2.23, MultiQC 1.18, AMRFinderPlus 3.11.18, geNomad 1.5.2 (December 2023)
 
 ### `Deprecated`
