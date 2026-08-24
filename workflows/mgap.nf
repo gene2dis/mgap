@@ -262,7 +262,7 @@ workflow MGAP {
         // nf-core gtdbtk/classifywf expects: tuple(meta, bins), tuple(db_name, db), use_pplacer_scratch_dir
         // Collect all genome assemblies for batch processing
         genome_assembly
-            .map { meta, fasta -> fasta }
+            .map { _meta, fasta -> fasta }
             .collect()
             .map { fastas -> [ [id: 'gtdbtk_batch'], fastas ] }
             .set { ch_gtdbtk_input }
@@ -350,7 +350,7 @@ workflow MGAP {
         "    ${workflow.manifest.name}: ${workflow.manifest.version}\n" +
         "    Nextflow: ${nextflow.version}\n"
     ch_versions
-        .map { it.text }
+        .map { versions_file -> versions_file.text }
         .unique()
         .mix(channel.of(workflow_versions))
         .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info", sort: true)
