@@ -35,4 +35,17 @@ process AUTOCYCLER_COMBINE {
         autocycler: \$( autocycler --version 2>&1 | sed 's/autocycler //' )
     END_VERSIONS
     """
+
+    stub:
+    // bare prefix (no def) - it is referenced in the output block
+    prefix = task.ext.prefix ?: "${meta.id}"
+    """
+    touch ${prefix}.fasta
+    touch ${prefix}.gfa
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        autocycler: 0.6.0
+    END_VERSIONS
+    """
 }

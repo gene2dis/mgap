@@ -39,9 +39,19 @@ process GTDBTK_CLASSIFYWF {
         mkdir pplacer_tmp
     fi
 
+    # Local customization (MGAP-05): use a batchfile instead of
+    # --genome_dir/--extension so genomes are found regardless of their
+    # file extension (.fa.gz, .fasta, mixed contig-mode inputs, ...).
+    for f in bins/*; do
+        name="\$(basename "\$f")"
+        name="\${name%.gz}"
+        name="\${name%.*}"
+        printf '%s\\t%s\\n' "\$f" "\$name" >> genomes_batchfile.tsv
+    done
+
     gtdbtk classify_wf \\
         ${args} \\
-        --genome_dir bins \\
+        --batchfile genomes_batchfile.tsv \\
         --prefix "${prefix}" \\
         --out_dir ${prefix} \\
         --cpus ${task.cpus} \\

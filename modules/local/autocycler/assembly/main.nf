@@ -7,8 +7,8 @@ process AUTOCYCLER_ASSEMBLY {
         'docker://microds/autocycler:0.6.0' :
         'docker.io/microds/autocycler:0.6.0' }"
 
-    // Allow failures from individual assembler runs without stopping the pipeline
-    errorStrategy 'ignore'
+    // Note: errorStrategy 'ignore' for this process is set in conf/ont.config
+    // (individual assembler failures are tolerated by the consensus step)
 
     input:
     tuple val(meta), path(subsample_reads), val(subsample_id), path(genome_size), val(assembler)
@@ -39,6 +39,17 @@ process AUTOCYCLER_ASSEMBLY {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         autocycler: \$( autocycler --version 2>&1 | sed 's/autocycler //' )
+    END_VERSIONS
+    """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.id}_${assembler}_${subsample_id}"
+    """
+    touch ${prefix}.fasta
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        autocycler: 0.6.0
     END_VERSIONS
     """
 }

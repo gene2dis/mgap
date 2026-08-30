@@ -29,11 +29,28 @@ process MASH_SKETCH {
         -o ${prefix} \\
         -r $reads \\
         2> ${prefix}.mash_stats
-        awk '/Estimated coverage/ {print \$3}' ${prefix}.mash_stats > ${prefix}.mash_coverage
+
+    # Mash reports one 'Estimated coverage' line per input file (two for
+    # paired-end reads); sum them into a single number. Emits 0 when no
+    # coverage line was found so downstream can detect the failure.
+    awk '/Estimated coverage/ {s+=\$3} END {print s+0}' ${prefix}.mash_stats > ${prefix}.mash_coverage
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         mash: \$(mash --version 2>&1)
+    END_VERSIONS
+    """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    """
+    touch ${prefix}.msh
+    touch ${prefix}.mash_stats
+    echo 100 > ${prefix}.mash_coverage
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        mash: 2.3
     END_VERSIONS
     """
 }

@@ -9,7 +9,6 @@
 
 include { paramsSummaryLog       } from 'plugin/nf-schema'
 include { validateParameters     } from 'plugin/nf-schema'
-include { paramsSummaryMap       } from 'plugin/nf-schema'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,6 +71,32 @@ workflow PIPELINE_INITIALISATION {
         error("Output directory not specified. Please provide it via --outdir.")
     }
 
+    if (params.run_gtdbtk && !params.gtdbtk_db) {
+        error("--run_gtdbtk is set but no GTDB-Tk database was provided. Please provide it via --gtdbtk_db.")
+    }
+    if (params.run_rgi && !params.rgi_db) {
+        error("--run_rgi is set but no CARD database was provided. Please provide it via --rgi_db.")
+    }
+
+    //
+    // Warn about annotation steps skipped because their database is not provided
+    //
+    if (!params.checkm2_db) {
+        log.warn("--checkm2_db not provided: skipping CheckM2 quality assessment.")
+    }
+    if (!params.bakta_db) {
+        log.warn("--bakta_db not provided: skipping Bakta annotation and AMRFinderPlus (which requires Bakta outputs).")
+        if (params.amrfinder_db) {
+            log.warn("--amrfinder_db is set but has no effect without --bakta_db.")
+        }
+    }
+    else if (!params.amrfinder_db) {
+        log.warn("--amrfinder_db not provided: skipping AMRFinderPlus AMR detection.")
+    }
+    if (!params.genomad_db) {
+        log.warn("--genomad_db not provided: skipping geNomad mobile-element detection.")
+    }
+
 }
 
 /*
@@ -83,38 +108,12 @@ workflow PIPELINE_INITIALISATION {
 workflow PIPELINE_COMPLETION {
 
     take:
-    email             // string: Email address
-    email_on_fail     // string: Email address for pipeline failure
-    plaintext_email   // boolean: Send plain-text email
-    outdir            // string: Output directory
     monochrome_logs   // boolean: Disable coloured log outputs
-    hook_url          // string: Webhook URL for notifications
 
     main:
 
-    //
-    // Completion email and summary
-    //
     workflow.onComplete {
-        if (email || email_on_fail) {
-            completionEmail(
-                summary_params: paramsSummaryMap(workflow),
-                email: email,
-                email_on_fail: email_on_fail,
-                plaintext_email: plaintext_email,
-                outdir: outdir,
-                monochrome_logs: monochrome_logs
-            )
-        }
-
         completionSummary(monochrome_logs)
-
-        if (hook_url) {
-            notifyWebhook(
-                summary_params: paramsSummaryMap(workflow),
-                hook_url: hook_url
-            )
-        }
     }
 
     workflow.onError {
@@ -169,16 +168,21 @@ def helpMessage() {
         --help              Show this help message and exit
         --version           Show pipeline version and exit
 
-    Database arguments (required for full analysis):
-        --kraken2db         Path to Kraken2 database
-        --brackendb         Path to Bracken database
+    Database arguments (all optional - the corresponding step is skipped when unset):
+        --kraken2db         Path to Kraken2 database (with --run_kraken2, default true)
+        --brackendb         Path to Bracken database (falls back to --kraken2db)
         --checkm2_db        Path to CheckM2 database
-        --bakta_db          Path to Bakta database
-        --gtdbtk_db         Path to GTDB-Tk database
+        --bakta_db          Path to Bakta database (also required for AMRFinderPlus)
         --amrfinder_db      Path to AMRFinderPlus database
         --genomad_db        Path to geNomad database
-        --antismash_db      Path to antiSMASH database
+        --gtdbtk_db         Path to GTDB-Tk database (required with --run_gtdbtk)
+        --rgi_db            Path to RGI/CARD database (required with --run_rgi)
+        --mobsuite_db       Path to MOB-suite database (optional with --run_mobsuite)
+        --plassembler_db    Path to Plassembler database (Autocycler mode only)
+        --mlst_blastdb      Alternative MLST BLAST database directory
+        --mlst_datadir      Alternative MLST PubMLST data directory
 
+    See docs/usage.md and nextflow_schema.json for the full parameter list.
     For more information, visit: ${workflow.manifest.homePage}
     """.stripIndent()
 }
@@ -215,21 +219,4 @@ def completionSummary(monochrome_logs) {
     log.info "Results are available in: ${params.outdir}"
     log.info "Execution time: ${workflow.duration}"
     log.info ""
-}
-
-//
-// Send completion email
-//
-def completionEmail(Map args) {
-    // Email functionality - simplified version
-    // Full implementation would use sendMail directive
-    log.info "Pipeline completion notification would be sent to: ${args.email}"
-}
-
-//
-// Notify webhook
-//
-def notifyWebhook(Map args) {
-    // Webhook notification - simplified version
-    log.info "Webhook notification would be sent to: ${args.hook_url}"
 }

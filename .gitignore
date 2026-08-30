@@ -1,4 +1,5 @@
-.nextflow
+.nextflow*
+.nextflow.log*
 .vscode
 
 
@@ -6,3 +7,11 @@
 CLAUDE.md
 internal_docs
 .claude
+
+# Test artifacts
+work/
+.nf-test/
+.nf-test.log
+test_results/
+null/
+__pycache__/

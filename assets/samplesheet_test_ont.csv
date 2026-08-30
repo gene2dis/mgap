@@ -1,0 +1,2 @@
+sample,fastq_1,fastq_2
+TEST_BFRAGILIS_ONT,https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/nanopore/fastq/test.fastq.gz,

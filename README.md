@@ -20,19 +20,21 @@ This pipeline supports three input modes:
 
 - **Illumina short-read assembly** (FastP → SPAdes)
 - **Oxford Nanopore long-read assembly** (fastplong → Flye → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
-- **Pre-assembled contigs** (direct annotation) 
+- **Pre-assembled contigs** (direct annotation)
 
 ### Genome Assembly
 
 The genome assembly workflow processes Illumina and Oxford Nanopore data using technology-specific tools:
 
 #### Illumina Assembly
+
 1. Read QC, cleaning, and filtering ([`FastP`](https://github.com/OpenGene/fastp))
 2. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
 3. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
 4. Genome assembly ([`SPAdes`](https://github.com/ablab/spades))
 
 #### ONT Assembly (Flye mode, default)
+
 1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
 2. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
 3. Genome assembly ([`Flye`](https://github.com/fenderglass/Flye))
@@ -40,11 +42,13 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 5. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
 
 #### ONT Assembly (Autocycler mode)
+
 1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
 2. Consensus multi-assembler assembly ([`Autocycler`](https://github.com/rrwick/Autocycler))
 3. Optional contig reorientation on GFA ([`Dnaapler`](https://github.com/gbouras13/dnaapler)) + GFA-to-FASTA conversion ([`Autocycler gfa2fasta`](https://github.com/rrwick/Autocycler/wiki/Autocycler-gfa2fasta))
 
 #### Pre-assembled Contigs
+
 - Direct annotation workflow (skips assembly steps)
 
 ### Genome Annotation
@@ -64,10 +68,9 @@ With the assembled genome (or provided contigs), the annotation steps include:
    - _S. aureus_: SCCmec classification using [`sccmec`](https://github.com/rpetit3/sccmec)
    - _Salmonella_: Serotype prediction using [`SISTR`](https://github.com/phac-nml/sistr_cmd)
 
-
 ## Quick Start
 
-1. Install [`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=22.10.1`)
+1. Install [`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=23.04.0`)
 
 2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/), [`Podman`](https://podman.io/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility. Conda is also supported as a last resort.
 
@@ -82,18 +85,21 @@ For detailed usage instructions, see the [Usage documentation](docs/usage.md).
 Create a CSV samplesheet with your samples. Examples:
 
 **Illumina reads:**
+
 ```csv
 sample,fastq_1,fastq_2
 SAMPLE1,/path/to/sample1_R1.fastq.gz,/path/to/sample1_R2.fastq.gz
 ```
 
 **ONT reads:**
+
 ```csv
 sample,fastq_1
 SAMPLE1,/path/to/sample1.fastq.gz
 ```
 
 **Pre-assembled contigs:**
+
 ```csv
 sample,fasta
 SAMPLE1,/path/to/sample1.fasta
@@ -107,10 +113,11 @@ An [example samplesheet](assets/samplesheet.csv) is provided with the pipeline.
 A helper script is available to automatically generate samplesheets from a directory of sequencing files:
 
 ```bash
-python accesory_scripts/CreateSampleSheet.py /path/to/data samplesheet.csv
+python accessory_scripts/CreateSampleSheet.py /path/to/data samplesheet.csv
 ```
 
 The script auto-detects the data type (Illumina/ONT/contigs) and intelligently extracts sample names from filenames. It automatically generates the correct column format based on the detected data type:
+
 - Illumina: `sample,fastq_1,fastq_2`
 - ONT: `sample,fastq_1`
 - Contigs: `sample,fasta`
@@ -144,34 +151,33 @@ nextflow run gene2dis/mgap \
 
 ### Key Parameters
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--input` | required | Path to samplesheet CSV file |
-| `--outdir` | required | Output directory for results |
-| `--seq_type` | required | Sequencing type: `illumina`, `ont`, or `contig` |
-| `-profile` | — | Configuration profile: `docker`, `singularity`, `conda` |
-| `--bakta_db` | `null` | Path to Bakta database |
-| `--checkm2_db` | `null` | Path to CheckM2 database |
-| `--amrfinder_db` | `null` | Path to AMRFinderPlus database |
-| `--genomad_db` | `null` | Path to geNomad database |
-| `--run_kraken2` | `true` | Enable Kraken2 contamination detection |
-| `--kraken2db` | `null` | Path to Kraken2 database (required to run contamination detection) |
-| `--brackendb` | `null` | Path to Bracken database (Illumina only, alongside `--kraken2db`) |
-| `--adjust_coverage` | `true` | Enable coverage estimation and read subsampling |
-| `--max_coverage` | `110` | Target maximum coverage (x) for subsampling |
-| `--min_contig_length` | `1000` | Minimum contig length (bp) for Bakta annotation |
-| `--run_gtdbtk` | `false` | Enable GTDB-Tk taxonomic classification |
-| `--gtdbtk_db` | `null` | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled) |
-| `--run_dnaapler` | `true` | Enable contig reorientation with Dnaapler (ONT only) |
-| `--run_rgi` | `false` | Enable RGI antimicrobial resistance gene prediction |
-| `--rgi_db` | `null` | Path to RGI/CARD database (required if `--run_rgi` is enabled) |
-| `--run_mobsuite` | `false` | Enable MOB-suite plasmid detection and reconstruction |
-| `--mobsuite_db` | `null` | Path to pre-built MOB-suite database (optional; uses bundled DB if unset) |
+| Parameter             | Default  | Description                                                               |
+| --------------------- | -------- | ------------------------------------------------------------------------- |
+| `--input`             | required | Path to samplesheet CSV file                                              |
+| `--outdir`            | required | Output directory for results                                              |
+| `--seq_type`          | required | Sequencing type: `illumina`, `ont`, or `contig`                           |
+| `-profile`            | —        | Configuration profile: `docker`, `singularity`, `conda`                   |
+| `--bakta_db`          | `null`   | Path to Bakta database (Bakta and AMRFinderPlus are skipped if unset)     |
+| `--checkm2_db`        | `null`   | Path to CheckM2 database (CheckM2 is skipped if unset)                    |
+| `--amrfinder_db`      | `null`   | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset)        |
+| `--genomad_db`        | `null`   | Path to geNomad database (geNomad is skipped if unset)                    |
+| `--run_kraken2`       | `true`   | Enable Kraken2 contamination detection                                    |
+| `--kraken2db`         | `null`   | Path to Kraken2 database (required to run contamination detection)        |
+| `--brackendb`         | `null`   | Path to Bracken database (Illumina only; falls back to `--kraken2db`)     |
+| `--adjust_coverage`   | `true`   | Enable coverage estimation and read subsampling                           |
+| `--max_coverage`      | `110`    | Target maximum coverage (x) for subsampling                               |
+| `--min_contig_length` | `1000`   | Minimum contig length (bp) for Bakta annotation                           |
+| `--run_gtdbtk`        | `false`  | Enable GTDB-Tk taxonomic classification                                   |
+| `--gtdbtk_db`         | `null`   | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled)          |
+| `--run_dnaapler`      | `true`   | Enable contig reorientation with Dnaapler (ONT only)                      |
+| `--run_rgi`           | `false`  | Enable RGI antimicrobial resistance gene prediction                       |
+| `--rgi_db`            | `null`   | Path to RGI/CARD database (required if `--run_rgi` is enabled)            |
+| `--run_mobsuite`      | `false`  | Enable MOB-suite plasmid detection and reconstruction                     |
+| `--mobsuite_db`       | `null`   | Path to pre-built MOB-suite database (optional; uses bundled DB if unset) |
 
 > **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
 
 For a complete list of parameters and advanced configuration options, see the [Usage documentation](docs/usage.md).
-
 
 ## Output
 
@@ -181,17 +187,13 @@ For detailed information about the pipeline outputs, see the [Output documentati
 
 gene2dis/mgap was originally written by the Microbial Data Science Lab, Center for Bioinformatics and Integrative Biology, Universidad Andres Bello. Its development was led by Juan A. Ugalde.
 
+## Development
 
-## Contributions and Support
+Work on short-lived feature branches off `main`. Before merging, run `pre-commit run --all-files` and the test profile (`nextflow run . -profile test,docker --outdir results`).
 
-If you would like to contribute to this pipeline, please see the [contributing guidelines](.github/CONTRIBUTING.md).
+Test-profile runs clean up their `work/` task directories automatically. To remove all remaining run/test scratch (all gitignored): `rm -rf work .nextflow .nextflow.log* .nf-test .nf-test.log`.
 
 ## Citations
-
-<!-- TODO nf-core: Add citation for pipeline after first release. Uncomment lines below and update Zenodo doi and badge at the top of this file. -->
-<!-- If you use  gene2dis/mgap for your analysis, please cite it using the following doi: [10.5281/zenodo.XXXXXX](https://doi.org/10.5281/zenodo.XXXXXX) -->
-
-<!-- TODO nf-core: Add bibliography of tools and data used in your pipeline -->
 
 An extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.
 

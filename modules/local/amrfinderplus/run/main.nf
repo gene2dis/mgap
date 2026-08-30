@@ -52,13 +52,13 @@ process AMRFINDERPLUS_RUN {
     """
     touch ${prefix}.tsv
 
-    VER=\$(amrfinder --version)
-    DBVER=\$(echo \$(amrfinder --database ${amrfinderdb} --database_version 2> stdout) | rev | cut -f 1 -d ' ' | rev)
+    VER=4.2.5
+    DBVER=stub-db
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        amrfinderplus: \$(amrfinder --version)
-        amrfinderplus-database: \$(echo \$(amrfinder --database ${amrfinderdb} --database_version 2> stdout) | rev | cut -f 1 -d ' ' | rev)
+        amrfinderplus: 4.2.5
+        amrfinderplus-database: stub-db
     END_VERSIONS
     """
 }

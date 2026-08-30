@@ -20,7 +20,7 @@ process KLEBORATE {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    
+
     """
     kleborate \\
         $args \\
@@ -42,7 +42,7 @@ process KLEBORATE {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        kleborate: \$( echo \$(kleborate --version | sed 's/Kleborate v//;'))
+        kleborate: 3.2.4
     END_VERSIONS
     """
 }

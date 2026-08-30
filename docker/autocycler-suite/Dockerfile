@@ -1,3 +1,7 @@
+# Source of the published image docker.io/microds/autocycler:0.6.0
+# (digest sha256:feb81239eac4ac7d660355be66efc9d8eabafbbca726a547d2443051f819369f,
+# pinned in conf/ont.config). Rebuilds pick up newer assembler versions, so a
+# rebuilt image MUST be pushed under a new tag and the digest pin updated.
 FROM --platform=linux/amd64 mambaorg/micromamba:latest
 
 ENV MAMBA_DOCKERFILE_ACTIVATE=1
@@ -8,7 +12,7 @@ USER root
 RUN micromamba install -y -n base \
     -c conda-forge -c bioconda \
     python>=3.10 \
-    autocycler>=0.6.0 \
+    autocycler=0.6.0 \
     canu>=2.3 \
     flye>=2.9.6 \
     metamdbg>=1.0 \

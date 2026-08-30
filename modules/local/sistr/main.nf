@@ -12,9 +12,11 @@ process SISTR {
 
     output:
     tuple val(meta), path("*.tab")         , emit: tsv
-    tuple val(meta), path("*-allele.fasta"), emit: allele_fasta
-    tuple val(meta), path("*-allele.json") , emit: allele_json
-    tuple val(meta), path("*-cgmlst.csv")  , emit: cgmlst_csv
+    // novel-allele FASTA is only written when novel alleles are found;
+    // the json/csv can be absent when the cgMLST step is skipped or fails
+    tuple val(meta), path("*-allele.fasta"), emit: allele_fasta, optional: true
+    tuple val(meta), path("*-allele.json") , emit: allele_json , optional: true
+    tuple val(meta), path("*-cgmlst.csv")  , emit: cgmlst_csv  , optional: true
     path "versions.yml"                    , emit: versions
 
     when:
@@ -44,6 +46,20 @@ process SISTR {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         sistr: \$(echo \$(sistr --version 2>&1) | sed 's/^.*sistr_cmd //; s/ .*\$//' )
+    END_VERSIONS
+    """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    """
+    touch ${prefix}.tab
+    touch ${prefix}-allele.fasta
+    touch ${prefix}-allele.json
+    touch ${prefix}-cgmlst.csv
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        sistr: 1.1.3
     END_VERSIONS
     """
 }

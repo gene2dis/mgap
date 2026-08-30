@@ -1,14 +1,14 @@
 nextflow_process {
 
-    name "Test AMRFINDERPLUS_RUN module"
-    script "../../../modules/local/amrfinderplus/run/main.nf"
-    process "AMRFINDERPLUS_RUN"
+    name "Test SCCMEC module"
+    script "../../../modules/local/sccmec/main.nf"
+    process "SCCMEC"
 
     tag "modules"
     tag "modules_local"
-    tag "amrfinderplus"
+    tag "sccmec"
 
-    test("AMRFINDERPLUS_RUN - AMR detection - stub") {
+    test("SCCMEC - SCCmec typing - stub") {
 
         tag "stub"
 
@@ -19,12 +19,8 @@ nextflow_process {
                 """
                 input[0] = [
                     [ id:'test' ],
-                    file('test.fna'),
-                    file('test.faa'),
-                    file('test.gff'),
-                    'Escherichia'
+                    file('genome.fasta')
                 ]
-                input[1] = file('amrfinderdb')
                 """
             }
         }
@@ -32,7 +28,7 @@ nextflow_process {
         then {
             assertAll(
                 { assert process.success },
-                { assert process.out.report },
+                { assert process.out.tsv },
                 { assert process.out.versions }
             )
         }

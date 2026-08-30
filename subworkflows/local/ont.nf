@@ -11,7 +11,6 @@
 // MODULE: Installed directly from nf-core/modules
 //
 include { KRAKEN2_KRAKEN2 as KRAKEN2 } from '../../modules/nf-core/kraken2/kraken2/main'
-include { SEQTK_SAMPLE               } from '../../modules/nf-core/seqtk/sample/main'
 
 //
 // MODULE: nf-core modules
@@ -22,9 +21,13 @@ include { FLYE                       } from '../../modules/nf-core/flye/main'
 //
 // MODULE: Local modules (no nf-core equivalent yet)
 //
-include { MASH_SKETCH  } from '../../modules/local/mash/sketch/main'
 include { MEDAKA       } from '../../modules/local/medaka/main'
 include { DNAAPLER     } from '../../modules/local/dnaapler/main'
+
+//
+// SUBWORKFLOW: Local subworkflows
+//
+include { COVERAGE_ADJUST } from './coverage_adjust'
 
 //
 // MODULE: Autocycler modules for consensus long-read assembly
@@ -52,6 +55,7 @@ workflow ONT {
     //
     FASTPLONG ( ch_reads, [], false, false )
     ch_versions = ch_versions.mix(FASTPLONG.out.versions.first())
+    ch_reports = FASTPLONG.out.json.map { _meta, json -> json }
 
     //
     // MODULE: Run Kraken2 for contamination detection (optional)
@@ -64,6 +68,7 @@ workflow ONT {
             false
         )
         ch_versions = ch_versions.mix(KRAKEN2.out.versions.first())
+        ch_reports = ch_reports.mix(KRAKEN2.out.report.map { _meta, report -> report })
     }
 
     //
@@ -115,10 +120,25 @@ workflow ONT {
 
         //
         // Step 4: Collect all assemblies per sample and compress into unitig graph
+        // Assembler tasks run with errorStrategy 'ignore' (see conf/ont.config),
+        // so a sample can end up with zero assemblies - report it loudly
+        // instead of letting it vanish from groupTuple.
         //
         AUTOCYCLER_ASSEMBLY.out.assembly
             .groupTuple(by: 0)
             .map { meta, fasta_list -> [ meta, fasta_list.flatten() ] }
+            .set { ch_grouped_assemblies }
+
+        AUTOCYCLER_GENOME_SIZE.out.genome_size
+            .map { meta, _reads, _genome_size -> [ meta ] }
+            .join(ch_grouped_assemblies, remainder: true)
+            .map { meta, fasta_list ->
+                if (!fasta_list) {
+                    log.error("Sample '${meta.id}': all Autocycler assembler runs failed - the sample is excluded from all downstream analysis.")
+                }
+                [ meta, fasta_list ]
+            }
+            .filter { _meta, fasta_list -> fasta_list }
             .set { ch_assemblies_per_sample }
 
         AUTOCYCLER_COMPRESS ( ch_assemblies_per_sample )
@@ -154,7 +174,16 @@ workflow ONT {
             AUTOCYCLER_GFA2FASTA ( DNAAPLER.out.reoriented_gfa )
             ch_versions = ch_versions.mix(AUTOCYCLER_GFA2FASTA.out.versions.first())
 
-            ch_assembly = AUTOCYCLER_GFA2FASTA.out.fasta
+            // dnaapler's outputs are optional - fall back to the combined
+            // consensus assembly instead of silently dropping the sample
+            ch_assembly = AUTOCYCLER_COMBINE.out.fasta
+                .join(AUTOCYCLER_GFA2FASTA.out.fasta, remainder: true)
+                .map { meta, combined, reoriented ->
+                    if (!reoriented) {
+                        log.warn("Sample '${meta.id}': dnaapler produced no reoriented assembly - using the unoriented Autocycler consensus assembly.")
+                    }
+                    [ meta, reoriented ?: combined ]
+                }
         } else {
             ch_assembly = AUTOCYCLER_COMBINE.out.fasta
         }
@@ -166,43 +195,12 @@ workflow ONT {
         //
 
         //
-        // Coverage adjustment (optional)
+        // SUBWORKFLOW: Coverage adjustment (optional)
         //
         if (params.adjust_coverage) {
-            //
-            // MODULE: Estimate coverage with Mash
-            //
-            MASH_SKETCH ( FASTPLONG.out.reads )
-            ch_versions = ch_versions.mix(MASH_SKETCH.out.versions.first())
-
-            //
-            // Calculate coverage ratio and branch
-            //
-            MASH_SKETCH.out.coverage
-                .map { meta, reads, coverage ->
-                    def ratio = params.max_coverage / coverage.text.trim().toFloat()
-                    [ meta, reads, ratio ]
-                }
-                .branch { meta, reads, ratio ->
-                    reduce_coverage: ratio < 1
-                        return [ meta, reads, ratio ]
-                    keep_coverage: ratio >= 1
-                        return [ meta, reads ]
-                }
-                .set { coverage_status }
-
-            //
-            // MODULE: Subsample reads if coverage is too high
-            //
-            SEQTK_SAMPLE ( coverage_status.reduce_coverage )
-            ch_versions = ch_versions.mix(SEQTK_SAMPLE.out.versions.first())
-
-            //
-            // Combine subsampled and non-subsampled reads
-            //
-            ch_reads_for_assembly = coverage_status.keep_coverage
-                .mix(SEQTK_SAMPLE.out.reads)
-
+            COVERAGE_ADJUST ( FASTPLONG.out.reads )
+            ch_versions = ch_versions.mix(COVERAGE_ADJUST.out.versions)
+            ch_reads_for_assembly = COVERAGE_ADJUST.out.reads
         } else {
             ch_reads_for_assembly = FASTPLONG.out.reads
         }
@@ -231,7 +229,16 @@ workflow ONT {
             DNAAPLER ( MEDAKA.out.polished_fasta )
             ch_versions = ch_versions.mix(DNAAPLER.out.versions.first())
 
-            ch_assembly = DNAAPLER.out.reoriented_fasta
+            // dnaapler's outputs are optional - fall back to the unoriented
+            // polished assembly instead of silently dropping the sample
+            ch_assembly = MEDAKA.out.polished_fasta
+                .join(DNAAPLER.out.reoriented_fasta, remainder: true)
+                .map { meta, polished, reoriented ->
+                    if (!reoriented) {
+                        log.warn("Sample '${meta.id}': dnaapler produced no reoriented assembly - using the unoriented Medaka assembly.")
+                    }
+                    [ meta, reoriented ?: polished ]
+                }
         } else {
             ch_assembly = MEDAKA.out.polished_fasta
         }
@@ -239,5 +246,6 @@ workflow ONT {
 
     emit:
     assembly = ch_assembly  // channel: [ val(meta), path(fasta) ]
+    reports  = ch_reports   // channel: [ path(report) ] for MultiQC
     versions = ch_versions  // channel: [ path(versions.yml) ]
 }

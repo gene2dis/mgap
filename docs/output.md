@@ -66,6 +66,7 @@ All results are written to the directory specified with `--outdir`. The layout b
 ```
 
 > **Notes:**
+>
 > - `<sample_id>` directories are created for each sample. `gtdbtk/` is a single shared directory processed in batch mode across all samples.
 > - `bracken/` only appears for `--seq_type illumina`; ONT mode runs Kraken2 only.
 > - `subsampled/` only appears when reads exceed `--max_coverage` and `--adjust_coverage true` (default).
@@ -82,16 +83,16 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 
 - [FastP](#fastp) - Illumina read QC and trimming
 - [fastplong](#fastplong) - ONT read QC, filtering, and adapter trimming
-- [Kraken2 + Bracken](#kraken2--bracken) - Contamination detection *(optional)*
-- [Mash + Seqtk](#mash--seqtk) - Coverage estimation and read subsampling *(optional)*
+- [Kraken2 + Bracken](#kraken2--bracken) - Contamination detection _(optional)_
+- [Mash + Seqtk](#mash--seqtk) - Coverage estimation and read subsampling _(optional)_
 
 ### Genome Assembly
 
-- [SPAdes](#spades) - Illumina *de novo* assembly
-- [Flye](#flye) - ONT *de novo* assembly (default ONT assembler)
+- [SPAdes](#spades) - Illumina _de novo_ assembly
+- [Flye](#flye) - ONT _de novo_ assembly (default ONT assembler)
 - [Medaka](#medaka) - ONT assembly polishing (Flye mode)
-- [Autocycler](#autocycler) - ONT consensus multi-assembler assembly *(optional)*
-- [Dnaapler](#dnaapler) - Contig reorientation *(optional, ONT only)*
+- [Autocycler](#autocycler) - ONT consensus multi-assembler assembly _(optional)_
+- [Dnaapler](#dnaapler) - Contig reorientation _(optional, ONT only)_
 
 ### Genome Annotation and Analysis
 
@@ -99,17 +100,17 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - [CheckM2](#checkm2) - Genome completeness and contamination assessment
 - [MLST](#mlst) - Multi-locus sequence typing
 - [Bakta](#bakta) - Genome annotation
-- [GTDB-Tk](#gtdb-tk) - Taxonomic classification *(optional)*
+- [GTDB-Tk](#gtdb-tk) - Taxonomic classification _(optional)_
 - [AMRFinderPlus](#amrfinderplus) - Antimicrobial resistance detection
 - [geNomad](#genomad) - Mobile genetic element identification
-- [RGI](#rgi) - Resistance gene prediction *(optional)*
-- [MOB-suite](#mob-suite) - Plasmid detection and reconstruction *(optional)*
+- [RGI](#rgi) - Resistance gene prediction _(optional)_
+- [MOB-suite](#mob-suite) - Plasmid detection and reconstruction _(optional)_
 
 ### Species-Specific Analysis
 
-- [Kleborate](#kleborate) - *Klebsiella*-specific virulence and resistance scoring
-- [sccmec](#sccmec) - *S. aureus* SCCmec cassette typing
-- [SISTR](#sistr) - *Salmonella* serotype prediction
+- [Kleborate](#kleborate) - _Klebsiella_-specific virulence and resistance scoring
+- [sccmec](#sccmec) - _S. aureus_ SCCmec cassette typing
+- [SISTR](#sistr) - _Salmonella_ serotype prediction
 
 ### Reporting
 
@@ -204,7 +205,7 @@ This step is optional and runs when `--adjust_coverage` is enabled (default: tru
 
 </details>
 
-[SPAdes](https://github.com/ablab/spades) performs *de novo* genome assembly from Illumina short reads using the `--isolate` mode optimized for bacterial isolate genomes.
+[SPAdes](https://github.com/ablab/spades) performs _de novo_ genome assembly from Illumina short reads using the `--isolate` mode optimized for bacterial isolate genomes.
 
 This step runs for `--seq_type illumina` only.
 
@@ -221,7 +222,7 @@ This step runs for `--seq_type illumina` only.
 
 </details>
 
-[Flye](https://github.com/fenderglass/Flye) performs *de novo* assembly of long reads. The assembly mode is controlled by `--flye_mode` (default: `nano-hq`).
+[Flye](https://github.com/fenderglass/Flye) performs _de novo_ assembly of long reads. The assembly mode is controlled by `--flye_mode` (default: `nano-hq`).
 
 This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
 
@@ -268,7 +269,7 @@ This step runs for `--seq_type ont` with `--ont_assembler autocycler`.
 
 </details>
 
-[Dnaapler](https://github.com/gbouras13/dnaapler) reorients complete circular microbial genome assemblies so that each sequence starts at a consistent location, typically at a gene like *dnaA* (chromosomes), *repA* (plasmids), or *terL* (phages).
+[Dnaapler](https://github.com/gbouras13/dnaapler) reorients complete circular microbial genome assemblies so that each sequence starts at a consistent location, typically at a gene like _dnaA_ (chromosomes), _repA_ (plasmids), or _terL_ (phages).
 
 - **Flye mode:** Operates on FASTA input from Medaka, reorienting all contigs.
 - **Autocycler mode:** Operates on GFA input from `autocycler combine`, reorienting only circular contigs. The reoriented GFA is then converted to FASTA via `autocycler gfa2fasta`.
@@ -342,11 +343,11 @@ This step is optional and enabled by default (`--run_dnaapler true`). It only ap
 
 - `gtdbtk/`
   - `gtdbtk.batch.*.summary.tsv`: Taxonomic classification summary for all bacterial and archaeal genomes in the batch.
-  - `gtdbtk.batch.*.classify.tree.gz`: Phylogenetic tree with genome placement *(optional)*.
-  - `gtdbtk.batch.*.markers_summary.tsv`: Summary of identified marker genes *(optional)*.
-  - `gtdbtk.batch.*.msa.fasta.gz`: Multiple sequence alignment of marker genes *(optional)*.
-  - `gtdbtk.batch.*.filtered.tsv`: Genomes filtered during classification *(optional)*.
-  - `gtdbtk.batch.failed_genomes.tsv`: Genomes that failed classification *(optional)*.
+  - `gtdbtk.batch.*.classify.tree.gz`: Phylogenetic tree with genome placement _(optional)_.
+  - `gtdbtk.batch.*.markers_summary.tsv`: Summary of identified marker genes _(optional)_.
+  - `gtdbtk.batch.*.msa.fasta.gz`: Multiple sequence alignment of marker genes _(optional)_.
+  - `gtdbtk.batch.*.filtered.tsv`: Genomes filtered during classification _(optional)_.
+  - `gtdbtk.batch.failed_genomes.tsv`: Genomes that failed classification _(optional)_.
   - `gtdbtk.batch.log`: GTDB-Tk execution log.
   - `gtdbtk.batch.warnings.log`: Warnings generated during classification.
 
@@ -357,6 +358,7 @@ This step is optional and enabled by default (`--run_dnaapler true`). It only ap
 **Batch Processing:** GTDB-Tk processes all genomes in a single batch run, which significantly reduces runtime compared to processing genomes individually. All samples are analyzed together and results are consolidated into a single set of output files.
 
 The main output file is the `summary.tsv` which contains:
+
 - Taxonomic classification (domain to species level) for all genomes
 - Classification method used
 - Closest reference genome
@@ -379,6 +381,7 @@ This step is optional and only runs when `--run_gtdbtk` is enabled. The GTDB-Tk 
 [AMRFinderPlus](https://github.com/ncbi/amr) identifies antimicrobial resistance genes, stress response genes, and virulence factors in assembled genomes. It uses the Bakta-annotated nucleotide sequences, protein sequences, and GFF3 annotations alongside species information derived from MLST to perform organism-specific point mutation analysis for supported species.
 
 The output TSV contains:
+
 - Gene symbol and name
 - Protein/nucleotide accession
 - Sequence identity and coverage
@@ -414,6 +417,7 @@ The output TSV contains:
 [RGI](https://github.com/arpcard/rgi) (Resistance Gene Identifier) predicts resistomes from protein or nucleotide sequences using the Comprehensive Antibiotic Resistance Database (CARD). The tool identifies antimicrobial resistance genes based on homology and SNP models.
 
 The main output file (`*.txt`) contains:
+
 - **ORF_ID**: Open reading frame identifier
 - **Contig**: Source contig name
 - **Cut_Off**: Detection paradigm (Strict, Perfect, or Loose)
@@ -425,6 +429,7 @@ The main output file (`*.txt`) contains:
 - **% Coverage**: Sequence coverage of reference
 
 The JSON output provides additional details including:
+
 - Full nucleotide and protein sequences
 - CARD database annotations
 - Model information and detection parameters
@@ -466,8 +471,8 @@ This step is optional and only runs when `--run_mobsuite` is enabled. A pre-buil
 
 - MLST sequence type
 - Species identification (within the KpSC)
-- ICEKp-associated virulence loci: yersiniabactin (*ybt*), colibactin (*clb*), salmochelin (*iro*), hypermucoidy (*rmpA*)
-- Virulence plasmid associated loci: salmochelin (*iro*), aerobactin (*iuc*), hypermucoidy (*rmpA*, *rmpA2*)
+- ICEKp-associated virulence loci: yersiniabactin (_ybt_), colibactin (_clb_), salmochelin (_iro_), hypermucoidy (_rmpA_)
+- Virulence plasmid associated loci: salmochelin (_iro_), aerobactin (_iuc_), hypermucoidy (_rmpA_, _rmpA2_)
 - Antimicrobial resistance determinants: acquired genes, SNPs, gene truncations and intrinsic β-lactamases
 - K (capsule) and O antigen (LPS) serotype prediction
 
@@ -483,9 +488,9 @@ This step is optional and only runs when `--run_mobsuite` is enabled. A pre-buil
 
 </details>
 
-[sccmec](https://github.com/rpetit3/sccmec) classifies the SCCmec cassette type in *Staphylococcus aureus* genome assemblies. SCCmec (Staphylococcal Cassette Chromosome *mec*) is a mobile genetic element that carries the *mecA* gene responsible for methicillin resistance (MRSA).
+[sccmec](https://github.com/rpetit3/sccmec) classifies the SCCmec cassette type in _Staphylococcus aureus_ genome assemblies. SCCmec (Staphylococcal Cassette Chromosome _mec_) is a mobile genetic element that carries the _mecA_ gene responsible for methicillin resistance (MRSA).
 
-**Automatic detection:** This analysis is automatically triggered when *S. aureus* is detected based on MLST results.
+**Automatic detection:** This analysis is automatically triggered when _S. aureus_ is detected based on MLST results.
 
 ### SISTR
 
@@ -508,13 +513,26 @@ This step is optional and only runs when `--run_mobsuite` is enabled. A pre-buil
 
 ## Reporting
 
+### MultiQC
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `multiqc/`
+  - `multiqc_report.html`: interactive report aggregating fastp/fastplong, Kraken2, QUAST and Bakta results across all samples.
+  - `multiqc_data/`, `multiqc_plots/`: parsed data and exported plots behind the report.
+
+</details>
+
+[MultiQC](https://multiqc.info) aggregates the per-sample QC results of the run into a single interactive HTML report. Customise it with `--multiqc_config`, `--multiqc_title` and `--multiqc_logo`.
+
 ### Pipeline information
 
 <details markdown="1">
 <summary>Output files</summary>
 
 - `pipeline_info/`
-  - Reports generated by Nextflow: `execution_report.html`, `execution_timeline.html`, `execution_trace.txt` and `pipeline_dag.html`.
+  - Reports generated by Nextflow: `execution_report_<timestamp>.html`, `execution_timeline_<timestamp>.html`, `execution_trace_<timestamp>.txt` and `pipeline_dag_<timestamp>.html`.
   - `software_versions.yml`: Software versions used in the pipeline run.
 
 </details>

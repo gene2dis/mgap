@@ -98,7 +98,8 @@ flowchart TD
     TAXA_BRANCH -- "Salmonella" --> SISTR["SISTR<br>(serotype prediction)"]
 
     %% ── Software versions ──
-    QUAST & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD --> VERSIONS["CUSTOM_DUMPSOFTWAREVERSIONS<br>(collect versions)"]
+    QUAST & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD --> VERSIONS["software_versions.yml<br>(collect versions)"]
+    QUAST & BAKTA --> MULTIQC["MULTIQC<br>(aggregate QC report)"]
     KLEBORATE & SCCMEC & SISTR & MOBSUITE --> VERSIONS
 
     %% ── Styling ──
@@ -119,61 +120,61 @@ flowchart TD
 
 ### Illumina Subworkflow
 
-| Step | Tool | Description |
-|------|------|-------------|
-| 1 | **Fastp** | Quality trimming of paired-end reads |
-| 2 | **Kraken2** | Contamination detection *(optional, requires `--kraken2db`)* |
-| 2b | **Bracken** | Abundance re-estimation *(Illumina only; requires `--brackendb`)* |
-| 3 | **Mash Sketch** | Coverage estimation *(optional, if `--adjust_coverage`)* |
-| 4 | **Seqtk Sample** | Read subsampling when coverage exceeds `--max_coverage` |
-| 5 | **SPAdes** | *De novo* genome assembly |
+| Step | Tool             | Description                                                       |
+| ---- | ---------------- | ----------------------------------------------------------------- |
+| 1    | **Fastp**        | Quality trimming of paired-end reads                              |
+| 2    | **Kraken2**      | Contamination detection _(optional, requires `--kraken2db`)_      |
+| 2b   | **Bracken**      | Abundance re-estimation _(Illumina only; requires `--brackendb`)_ |
+| 3    | **Mash Sketch**  | Coverage estimation _(optional, if `--adjust_coverage`)_          |
+| 4    | **Seqtk Sample** | Read subsampling when coverage exceeds `--max_coverage`           |
+| 5    | **SPAdes**       | _De novo_ genome assembly                                         |
 
 ### ONT Subworkflow (Flye mode, default)
 
-| Step | Tool | Description |
-|------|------|-------------|
-| 1 | **fastplong** | Quality filtering and adapter trimming of long reads |
-| 2 | **Kraken2** | Contamination detection *(optional, requires `--kraken2db`; Bracken not run for ONT)* |
-| 3 | **Mash Sketch** | Coverage estimation *(optional, if `--adjust_coverage`)* |
-| 4 | **Seqtk Sample** | Read subsampling when coverage exceeds `--max_coverage` |
-| 5 | **Flye** | *De novo* long-read assembly |
-| 6 | **Medaka** | Assembly polishing |
-| 7 | **Dnaapler** | Contig reorientation using FASTA input *(optional, `--run_dnaapler`)* |
+| Step | Tool             | Description                                                                           |
+| ---- | ---------------- | ------------------------------------------------------------------------------------- |
+| 1    | **fastplong**    | Quality filtering and adapter trimming of long reads                                  |
+| 2    | **Kraken2**      | Contamination detection _(optional, requires `--kraken2db`; Bracken not run for ONT)_ |
+| 3    | **Mash Sketch**  | Coverage estimation _(optional, if `--adjust_coverage`)_                              |
+| 4    | **Seqtk Sample** | Read subsampling when coverage exceeds `--max_coverage`                               |
+| 5    | **Flye**         | _De novo_ long-read assembly                                                          |
+| 6    | **Medaka**       | Assembly polishing                                                                    |
+| 7    | **Dnaapler**     | Contig reorientation using FASTA input _(optional, `--run_dnaapler`)_                 |
 
 ### ONT Subworkflow (Autocycler mode)
 
-| Step | Tool | Description |
-|------|------|-------------|
-| 1 | **fastplong** | Quality filtering and adapter trimming of long reads |
-| 2 | **Kraken2** | Contamination detection *(optional, requires `--kraken2db`; Bracken not run for ONT)* |
-| 3 | **Autocycler genome_size** | Genome size estimation via Raven |
-| 4 | **Autocycler subsample** | Subsample reads into independent subsets |
-| 5 | **Autocycler assembly** | Fan-out assembly across multiple assemblers × subsamples |
-| 6 | **Autocycler compress** | Compress assemblies into unitig graph |
-| 7 | **Autocycler cluster** | Cluster unitigs into putative genomic sequences |
-| 8 | **Autocycler trim + resolve** | Trim and resolve each QC-pass cluster |
-| 9 | **Autocycler combine** | Combine resolved clusters into consensus assembly (FASTA + GFA) |
-| 10 | **Dnaapler** | Reorient circular contigs using GFA input *(optional, `run_dnaapler`)* |
-| 11 | **Autocycler gfa2fasta** | Convert reoriented GFA back to FASTA *(only when Dnaapler is enabled)* |
+| Step | Tool                          | Description                                                                           |
+| ---- | ----------------------------- | ------------------------------------------------------------------------------------- |
+| 1    | **fastplong**                 | Quality filtering and adapter trimming of long reads                                  |
+| 2    | **Kraken2**                   | Contamination detection _(optional, requires `--kraken2db`; Bracken not run for ONT)_ |
+| 3    | **Autocycler genome_size**    | Genome size estimation via Raven                                                      |
+| 4    | **Autocycler subsample**      | Subsample reads into independent subsets                                              |
+| 5    | **Autocycler assembly**       | Fan-out assembly across multiple assemblers × subsamples                              |
+| 6    | **Autocycler compress**       | Compress assemblies into unitig graph                                                 |
+| 7    | **Autocycler cluster**        | Cluster unitigs into putative genomic sequences                                       |
+| 8    | **Autocycler trim + resolve** | Trim and resolve each QC-pass cluster                                                 |
+| 9    | **Autocycler combine**        | Combine resolved clusters into consensus assembly (FASTA + GFA)                       |
+| 10   | **Dnaapler**                  | Reorient circular contigs using GFA input _(optional, `run_dnaapler`)_                |
+| 11   | **Autocycler gfa2fasta**      | Convert reoriented GFA back to FASTA _(only when Dnaapler is enabled)_                |
 
 ### Shared Downstream Analysis
 
-| Step | Tool | Description |
-|------|------|-------------|
-| 1 | **QUAST** | Assembly quality metrics |
-| 2 | **CheckM2** | Genome completeness and contamination assessment |
-| 3 | **MLST** | Multi-locus sequence typing |
-| 4 | **Bakta** | Genome annotation |
-| 5 | **GTDB-Tk** | Taxonomic classification *(optional)* |
-| 6 | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta + MLST outputs) |
-| 7 | **geNomad** | Mobile genetic element identification |
-| 8 | **RGI** | Resistance gene prediction *(optional)* |
-| 9 | **MOB-suite** | Plasmid detection and reconstruction *(optional)* |
+| Step | Tool              | Description                                                         |
+| ---- | ----------------- | ------------------------------------------------------------------- |
+| 1    | **QUAST**         | Assembly quality metrics                                            |
+| 2    | **CheckM2**       | Genome completeness and contamination assessment                    |
+| 3    | **MLST**          | Multi-locus sequence typing                                         |
+| 4    | **Bakta**         | Genome annotation                                                   |
+| 5    | **GTDB-Tk**       | Taxonomic classification _(optional)_                               |
+| 6    | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta + MLST outputs) |
+| 7    | **geNomad**       | Mobile genetic element identification                               |
+| 8    | **RGI**           | Resistance gene prediction _(optional)_                             |
+| 9    | **MOB-suite**     | Plasmid detection and reconstruction _(optional)_                   |
 
 ### Taxa-Specific Analysis
 
-| Species | Tool | Description |
-|---------|------|-------------|
-| *Klebsiella pneumoniae* | **Kleborate** | Virulence and resistance scoring |
-| *Staphylococcus aureus* | **sccmec** | SCCmec cassette typing |
-| *Salmonella enterica* | **SISTR** | Serovar and cgMLST subtype prediction |
+| Species                 | Tool          | Description                           |
+| ----------------------- | ------------- | ------------------------------------- |
+| _Klebsiella pneumoniae_ | **Kleborate** | Virulence and resistance scoring      |
+| _Staphylococcus aureus_ | **sccmec**    | SCCmec cassette typing                |
+| _Salmonella enterica_   | **SISTR**     | Serovar and cgMLST subtype prediction |

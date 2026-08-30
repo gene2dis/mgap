@@ -1,0 +1,60 @@
+name: test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  NXF_ANSI_LOG: false
+  NXF_VER: "26.04.4"
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  stub:
+    name: Run pipeline stub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pipeline code
+        uses: actions/checkout@v4
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@v2
+        with:
+          version: "${{ env.NXF_VER }}"
+
+      - name: Run pipeline with stub
+        run: |
+          nextflow run ${GITHUB_WORKSPACE} -profile test,docker -stub --outdir ./results
+
+  nf-test:
+    name: Run nf-test
+    runs-on: ubuntu-latest
+    env:
+      NFT_VER: "0.9.0"
+      NFT_WORKDIR: "~"
+      NFT_DIFF: "pdiff"
+      NFT_DIFF_ARGS: "--line-numbers --expand-tabs=2"
+    steps:
+      - name: Check out pipeline code
+        uses: actions/checkout@v4
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@v2
+        with:
+          version: "${{ env.NXF_VER }}"
+
+      - name: Disk space cleanup
+        uses: jlumbroso/free-disk-space@v1.3.1
+
+      - name: Install nf-test
+        uses: nf-core/setup-nf-test@v1
+        with:
+          version: ${{ env.NFT_VER }}
+
+      - name: Run nf-test
+        run: |
+          nf-test test --profile docker --ci

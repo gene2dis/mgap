@@ -10,8 +10,8 @@ keywords:
 tools:
   - rgi:
       description: |
-        Resistance Gene Identifier (RGI) predicts resistome(s) from protein or 
-        nucleotide data based on homology and SNP models. RGI uses the CARD 
+        Resistance Gene Identifier (RGI) predicts resistome(s) from protein or
+        nucleotide data based on homology and SNP models. RGI uses the CARD
         (Comprehensive Antibiotic Resistance Database) for reference data.
       homepage: https://github.com/arpcard/rgi
       documentation: https://github.com/arpcard/rgi#documentation
