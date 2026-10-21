@@ -80,6 +80,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Samples no longer vanish silently when dnaapler produces no reoriented assembly (falls back to the unoriented assembly with a warning)
 - SISTR's conditionally-produced outputs are optional, so runs no longer fail over missing novel-allele files
 - `ConsolidateResults.py`: fixed silently-dropped kleborate/sccmec tables, added ONT support and defensive parsing
+- Duplicate sample names in the samplesheet are rejected at launch (`uniqueEntries`); before, joins keyed on the sample could mis-join or drop samples
+- Database paths are checked at launch (`exists` in the schema, `checkIfExists` for Kraken2, Bracken, RGI and MOB-suite)
 
 ### `Removed`
 

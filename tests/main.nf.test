@@ -149,6 +149,32 @@ nextflow_pipeline {
 
     }
 
+    test("Duplicate sample names fail at launch - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input    = "${projectDir}/tests/data/samplesheet_duplicate_sample.csv"
+                seq_type = "illumina"
+                outdir   = "$outputDir"
+            }
+        }
+
+        then {
+            def output = (workflow.stdout + workflow.stderr).join('\n')
+            assertAll(
+                { assert workflow.failed },
+                { assert workflow.trace.tasks().size() == 0 },
+                { assert output.contains('Detected duplicate entries: [sample:TEST_BFRAGILIS]') }
+            )
+        }
+
+    }
+
     test("Run pipeline with test data") {
 
         tag "pipeline"
