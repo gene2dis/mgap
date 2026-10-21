@@ -43,7 +43,8 @@
                     "gtdbtk/classifywf": {
                         "branch": "master",
                         "git_sha": "5e433c4659a72e3e4aaf9d7275147d1a944165ee",
-                        "installed_by": ["modules"]
+                        "installed_by": ["modules"],
+                        "patch": "modules/nf-core/gtdbtk/classifywf/gtdbtk-classifywf.diff"
                     },
                     "kraken2/kraken2": {
                         "branch": "master",
@@ -53,12 +54,14 @@
                     "mlst": {
                         "branch": "master",
                         "git_sha": "49bdeefb70a2611393065e2b8dc269edef19b7d5",
-                        "installed_by": ["modules"]
+                        "installed_by": ["modules"],
+                        "patch": "modules/nf-core/mlst/mlst.diff"
                     },
                     "mobsuite/recon": {
                         "branch": "master",
                         "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
-                        "installed_by": ["modules"]
+                        "installed_by": ["modules"],
+                        "patch": "modules/nf-core/mobsuite/recon/mobsuite-recon.diff"
                     },
                     "multiqc": {
                         "branch": "master",

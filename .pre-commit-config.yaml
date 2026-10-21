@@ -4,8 +4,12 @@ repos:
     hooks:
       - id: check-yaml
         args: ["--unsafe"]
+      # modules/nf-core is installed from upstream; whitespace "fixes" there
+      # would show up as local edits in the module patch records
       - id: end-of-file-fixer
+        exclude: ^modules/nf-core/
       - id: trailing-whitespace
+        exclude: ^modules/nf-core/
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ["--maxkb=1000"]
