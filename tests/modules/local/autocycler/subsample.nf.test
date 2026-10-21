@@ -1,0 +1,41 @@
+nextflow_process {
+
+    name "Test AUTOCYCLER_SUBSAMPLE module"
+    script "../../../../modules/local/autocycler/subsample/main.nf"
+    process "AUTOCYCLER_SUBSAMPLE"
+
+    tag "modules"
+    tag "modules_local"
+    tag "autocycler"
+    tag "autocycler/subsample"
+
+    test("AUTOCYCLER_SUBSAMPLE - subsample reads - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    file("${baseDir}/tests/data/stub_inputs/reads.fastq.gz", checkIfExists: true),
+                    file("${baseDir}/tests/data/stub_inputs/genome_size.txt", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.subsampled_reads.size() == 1 },
+                { assert process.out.subsampled_reads[0][1].collect { file(it).name } == [ 'sample_01.fastq', 'sample_02.fastq' ] },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

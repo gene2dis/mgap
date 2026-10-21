@@ -49,8 +49,11 @@ process AMRFINDERPLUS_RUN {
 
     stub:
     prefix = task.ext.prefix ?: "${meta.id}"
+    // like the real run, the mutation report exists only when an organism is given
+    def mutation_report = species ? "touch ${prefix}-mutations.tsv" : ""
     """
     touch ${prefix}.tsv
+    ${mutation_report}
 
     VER=4.2.5
     DBVER=stub-db

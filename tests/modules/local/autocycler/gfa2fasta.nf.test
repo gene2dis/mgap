@@ -1,0 +1,39 @@
+nextflow_process {
+
+    name "Test AUTOCYCLER_GFA2FASTA module"
+    script "../../../../modules/local/autocycler/gfa2fasta/main.nf"
+    process "AUTOCYCLER_GFA2FASTA"
+
+    tag "modules"
+    tag "modules_local"
+    tag "autocycler"
+    tag "autocycler/gfa2fasta"
+
+    test("AUTOCYCLER_GFA2FASTA - GFA to FASTA - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    file('test_reoriented.gfa')
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert file(process.out.fasta[0][1]).name == 'test.fasta' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

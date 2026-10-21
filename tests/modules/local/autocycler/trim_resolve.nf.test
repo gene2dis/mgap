@@ -1,0 +1,40 @@
+nextflow_process {
+
+    name "Test AUTOCYCLER_TRIM_RESOLVE module"
+    script "../../../../modules/local/autocycler/trim_resolve/main.nf"
+    process "AUTOCYCLER_TRIM_RESOLVE"
+
+    tag "modules"
+    tag "modules_local"
+    tag "autocycler"
+    tag "autocycler/trim_resolve"
+
+    test("AUTOCYCLER_TRIM_RESOLVE - trim and resolve clusters - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    file("${baseDir}/tests/data/stub_inputs/autocycler_out", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.autocycler_dir.size() == 1 },
+                { assert file(process.out.autocycler_dir[0][1]).name == 'autocycler_out' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

@@ -1,0 +1,42 @@
+nextflow_process {
+
+    name "Test MASH_SKETCH module"
+    script "../../../modules/local/mash/sketch/main.nf"
+    process "MASH_SKETCH"
+
+    tag "modules"
+    tag "modules_local"
+    tag "mash"
+    tag "mash/sketch"
+
+    test("MASH_SKETCH - estimate read coverage - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:false ],
+                    [ file("${baseDir}/tests/data/stub_inputs/reads_1.fastq.gz", checkIfExists: true), file("${baseDir}/tests/data/stub_inputs/reads_2.fastq.gz", checkIfExists: true) ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.mash.size() == 1 },
+                { assert process.out.stats.size() == 1 },
+                { assert path(process.out.coverage[0][2]).text.trim() == '100' },
+                { assert process.out.coverage[0][1].collect { file(it).name } == [ 'reads_1.fastq.gz', 'reads_2.fastq.gz' ] },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

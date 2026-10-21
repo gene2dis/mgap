@@ -1,0 +1,40 @@
+nextflow_process {
+
+    name "Test AUTOCYCLER_COMPRESS module"
+    script "../../../../modules/local/autocycler/compress/main.nf"
+    process "AUTOCYCLER_COMPRESS"
+
+    tag "modules"
+    tag "modules_local"
+    tag "autocycler"
+    tag "autocycler/compress"
+
+    test("AUTOCYCLER_COMPRESS - build the unitig graph - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    [ file('test_flye_01.fasta'), file('test_raven_01.fasta') ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.autocycler_dir.size() == 1 },
+                { assert file(process.out.autocycler_dir[0][1]).name == 'autocycler_out' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

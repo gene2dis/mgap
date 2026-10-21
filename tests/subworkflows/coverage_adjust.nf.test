@@ -1,0 +1,82 @@
+nextflow_workflow {
+
+    name "Test COVERAGE_ADJUST subworkflow"
+    script "../../subworkflows/local/coverage_adjust.nf"
+    workflow "COVERAGE_ADJUST"
+
+    tag "subworkflows"
+    tag "coverage_adjust"
+
+    // The MASH_SKETCH stub always reports 100x coverage, so max_coverage
+    // decides the branch: below 100 subsamples, at or above keeps the reads.
+
+    test("COVERAGE_ADJUST - above max_coverage, subsample - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                max_coverage = 50
+                outdir       = "$outputDir"
+            }
+            workflow {
+                """
+                input[0] = Channel.of([
+                    [ id:'test', single_end:false ],
+                    [ file("${baseDir}/tests/data/stub_inputs/reads_1.fastq.gz", checkIfExists: true), file("${baseDir}/tests/data/stub_inputs/reads_2.fastq.gz", checkIfExists: true) ]
+                ])
+                """
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('MASH_SKETCH') } },
+                { assert succeeded.any { it.contains('SEQTK_SAMPLE') } },
+                { assert workflow.out.reads.size() == 1 },
+                // the reads now come from SEQTK_SAMPLE, not the input files
+                { assert [ workflow.out.reads[0][1] ].flatten().every { !(it.tokenize('/').last() in [ 'reads_1.fastq.gz', 'reads_2.fastq.gz' ]) } }
+            )
+        }
+
+    }
+
+    test("COVERAGE_ADJUST - within max_coverage, keep reads - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                max_coverage = 150
+                outdir       = "$outputDir"
+            }
+            workflow {
+                """
+                input[0] = Channel.of([
+                    [ id:'test', single_end:false ],
+                    [ file("${baseDir}/tests/data/stub_inputs/reads_1.fastq.gz", checkIfExists: true), file("${baseDir}/tests/data/stub_inputs/reads_2.fastq.gz", checkIfExists: true) ]
+                ])
+                """
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('MASH_SKETCH') } },
+                { assert !succeeded.any { it.contains('SEQTK_SAMPLE') } },
+                { assert workflow.out.reads.size() == 1 },
+                { assert workflow.out.reads[0][1].collect { it.tokenize('/').last() } == [ 'reads_1.fastq.gz', 'reads_2.fastq.gz' ] }
+            )
+        }
+
+    }
+
+}

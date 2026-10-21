@@ -1,0 +1,40 @@
+nextflow_process {
+
+    name "Test AUTOCYCLER_GENOME_SIZE module"
+    script "../../../../modules/local/autocycler/genome_size/main.nf"
+    process "AUTOCYCLER_GENOME_SIZE"
+
+    tag "modules"
+    tag "modules_local"
+    tag "autocycler"
+    tag "autocycler/genome_size"
+
+    test("AUTOCYCLER_GENOME_SIZE - estimate genome size - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    file("${baseDir}/tests/data/stub_inputs/reads.fastq.gz", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.genome_size.size() == 1 },
+                { assert path(process.out.genome_size[0][2]).text.trim() == '5000000' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

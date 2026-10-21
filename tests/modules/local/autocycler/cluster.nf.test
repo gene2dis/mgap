@@ -1,0 +1,40 @@
+nextflow_process {
+
+    name "Test AUTOCYCLER_CLUSTER module"
+    script "../../../../modules/local/autocycler/cluster/main.nf"
+    process "AUTOCYCLER_CLUSTER"
+
+    tag "modules"
+    tag "modules_local"
+    tag "autocycler"
+    tag "autocycler/cluster"
+
+    test("AUTOCYCLER_CLUSTER - cluster contigs - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    file("${baseDir}/tests/data/stub_inputs/autocycler_out", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.autocycler_dir.size() == 1 },
+                { assert file(process.out.autocycler_dir[0][1]).name == 'autocycler_out' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

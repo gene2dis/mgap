@@ -33,6 +33,67 @@ nextflow_pipeline {
 
     }
 
+    test("Run pipeline with coverage adjustment - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type        = "illumina"
+                run_kraken2     = false
+                adjust_coverage = true
+                // the MASH_SKETCH stub reports 100x, so 50x forces subsampling
+                max_coverage    = 50
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('MASH_SKETCH') } },
+                { assert succeeded.any { it.contains('SEQTK_SAMPLE') } },
+                { assert succeeded.any { it.contains('SPADES') } }
+            )
+        }
+
+    }
+
+    test("Run pipeline with Kraken2 and Bracken - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type        = "illumina"
+                run_kraken2     = true
+                kraken2db       = "${projectDir}/tests/data/stub_db/kraken2"
+                adjust_coverage = false
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('KRAKEN2') } },
+                { assert succeeded.any { it.contains('BRACKEN') } },
+                { assert succeeded.any { it.contains('SPADES') } }
+            )
+        }
+
+    }
+
     test("Run pipeline with single-end Illumina data - stub") {
 
         tag "pipeline"
@@ -144,6 +205,55 @@ nextflow_pipeline {
                 { assert workflow.success },
                 { assert succeeded.any { it.contains('QUAST') } },
                 { assert succeeded.any { it.contains('MLST') } }
+            )
+        }
+
+    }
+
+    test("MLST scheme routes samples to species tools - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+        config "./config/species_routing.config"
+
+        when {
+            params {
+                input        = "${projectDir}/tests/data/samplesheet_species_routing.csv"
+                seq_type     = "contig"
+                bakta_db     = "${projectDir}/tests/data/stub_db/bakta"
+                amrfinder_db = "${projectDir}/tests/data/stub_db/amrfinderplus"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            def ran = { process, sample -> succeeded.any { it.contains(process) && it.contains("(${sample})") } }
+            // log.warn reaches only the log file, not the console nf-test captures
+            def nextflow_log = path("${metaDir}/nextflow.log").text
+            def amrfinder = { sample -> path("$outputDir/${sample}/annotation/amrfinder/${sample}-mutations.tsv") }
+            assertAll(
+                { assert workflow.success },
+                // klebsiella scheme -> Kleborate only
+                { assert ran('KLEBORATE', 'TEST_KPNEUMONIAE') },
+                { assert !ran('KLEBORATE', 'TEST_SAUREUS') },
+                { assert !ran('KLEBORATE', 'TEST_OTHER') },
+                // saureus scheme -> SCCmec only
+                { assert ran('SCCMEC', 'TEST_SAUREUS') },
+                { assert !ran('SCCMEC', 'TEST_KPNEUMONIAE') },
+                { assert !ran('SCCMEC', 'TEST_OTHER') },
+                { assert !succeeded.any { it.contains('SISTR') } },
+                // AMRFinderPlus runs for every sample; an organism (and so a
+                // mutation report) only for the mapped schemes
+                { assert ['TEST_KPNEUMONIAE', 'TEST_SAUREUS', 'TEST_OTHER'].every { ran('AMRFINDERPLUS_RUN', it) } },
+                { assert amrfinder('TEST_KPNEUMONIAE').exists() },
+                { assert amrfinder('TEST_SAUREUS').exists() },
+                { assert !amrfinder('TEST_OTHER').exists() },
+                { assert nextflow_log.contains("Sample 'TEST_OTHER': MLST scheme 'none' has no AMRFinderPlus organism mapping") },
+                { assert !nextflow_log.contains("Sample 'TEST_KPNEUMONIAE': MLST scheme") },
+                { assert !nextflow_log.contains("Sample 'TEST_SAUREUS': MLST scheme") }
             )
         }
 
