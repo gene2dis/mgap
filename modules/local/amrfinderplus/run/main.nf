@@ -15,8 +15,6 @@ process AMRFINDERPLUS_RUN {
     tuple val(meta), path("${prefix}.tsv")          , emit: report
     tuple val(meta), path("${prefix}-mutations.tsv"), emit: mutation_report, optional: true
     path "versions.yml"                             , emit: versions
-    env 'VER'                                       , emit: tool_version
-    env 'DBVER'                                     , emit: db_version
 
     when:
     task.ext.when == null || task.ext.when
@@ -37,13 +35,14 @@ process AMRFINDERPLUS_RUN {
         --database ${amrfinderdb} \\
         --threads ${task.cpus} > ${prefix}.tsv
 
+    # the database version is the last word of --database_version's stdout
     VER=\$(amrfinder --version)
-    DBVER=\$(echo \$(amrfinder --database ${amrfinderdb} --database_version 2> stdout) | rev | cut -f 1 -d ' ' | rev)
+    DBVER=\$(echo \$(amrfinder --database ${amrfinderdb} --database_version 2>/dev/null) | rev | cut -f 1 -d ' ' | rev)
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        amrfinderplus: \$(amrfinder --version)
-        amrfinderplus-database: \$(echo \$(amrfinder --database ${amrfinderdb} --database_version 2> stdout) | rev | cut -f 1 -d ' ' | rev)
+        amrfinderplus: \$VER
+        amrfinderplus-database: \$DBVER
     END_VERSIONS
     """
 
@@ -54,9 +53,6 @@ process AMRFINDERPLUS_RUN {
     """
     touch ${prefix}.tsv
     ${mutation_report}
-
-    VER=4.2.5
-    DBVER=stub-db
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

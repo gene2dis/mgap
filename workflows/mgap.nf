@@ -314,7 +314,7 @@ workflow MGAP {
     )
     ch_versions = ch_versions.mix(SPECIES_TYPING.out.versions)
 
-    // Collate and publish software versions.
+    // Collate software versions.
     // Dedupe on file CONTENT (each process emits one versions.yml per task,
     // all with distinct paths) and prepend workflow-level versions, so the
     // aggregate is valid YAML with each process listed once.
@@ -325,13 +325,20 @@ workflow MGAP {
         .map { versions_file -> versions_file.text }
         .unique()
         .mix(channel.of(workflow_versions))
-        .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info", sort: true)
+        .set { ch_versions_text }
+
+    // The same versions as a MultiQC "Software Versions" section (MultiQC reads
+    // files named *_mqc_versions.yml). MultiQC's own version cannot be in it:
+    // it is only known once MULTIQC has run on this file.
+    ch_multiqc_files = ch_multiqc_files.mix(
+        ch_versions_text.collectFile(name: 'mgap_software_mqc_versions.yml', sort: true)
+    )
 
     //
     // MODULE: MultiQC - aggregate QC reports across all samples
-    // (fastp/fastplong json, Kraken2 reports, QUAST tsv, Bakta txt)
+    // (fastp/fastplong json, Kraken2 reports, QUAST tsv, Bakta txt, software versions)
     // Note: MULTIQC's version output is an eval tuple, not a versions.yml
-    // path, and must not be mixed into ch_versions (see the module).
+    // path, so it joins software_versions.yml as text below.
     //
     ch_multiqc_config = params.multiqc_config
         ? file(params.multiqc_config, checkIfExists: true)
@@ -346,6 +353,12 @@ workflow MGAP {
         [],  // replace names
         []   // sample names
     )
+
+    // Publish software_versions.yml: every tool, MultiQC included
+    MULTIQC.out.versions
+        .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
+        .mix(ch_versions_text)
+        .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info", sort: true)
 }
 
 /*

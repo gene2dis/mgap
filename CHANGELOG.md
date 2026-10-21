@@ -60,7 +60,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - GTDB-Tk receives genomes via a batchfile, so it works for any assembly file extension (the `gtdbtk_extension` parameter is gone)
 - The Mash/Seqtk coverage-adjustment logic is shared by the Illumina and ONT paths (`COVERAGE_ADJUST` subworkflow) and tolerates unparseable coverage estimates
 - The Autocycler container image is pinned by digest; assembler-failure tolerance moved to configuration with loud reporting when all assemblers fail for a sample
-- `software_versions.yml` is valid YAML listing each tool once, plus pipeline/Nextflow versions
+- `software_versions.yml` is valid YAML listing each tool once (MultiQC included), plus pipeline/Nextflow versions; the same versions appear as a Software Versions section in the MultiQC report
+- `AMRFINDERPLUS_RUN` reads the tool and database versions once, no longer emits the unused `VER`/`DBVER` env outputs and no longer writes a file named `stdout`
 - **Improved samplesheet handling for contig mode:**
   - `CreateSampleSheet.py` now uses `fasta` column instead of `fastq_1` for contig mode
   - CSV output format now matches data type (sample,fasta vs sample,fastq_1,fastq_2)
