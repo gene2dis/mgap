@@ -1,0 +1,43 @@
+nextflow_process {
+
+    name "Test AUTOCYCLER_ASSEMBLY module"
+    script "../../../../modules/local/autocycler/assembly/main.nf"
+    process "AUTOCYCLER_ASSEMBLY"
+
+    tag "modules"
+    tag "modules_local"
+    tag "autocycler"
+    tag "autocycler/assembly"
+
+    test("AUTOCYCLER_ASSEMBLY - one assembler on one subsample - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    file('sample_01.fastq'),
+                    '01',
+                    file("${baseDir}/tests/data/stub_inputs/genome_size.txt", checkIfExists: true),
+                    'flye'
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.assembly.size() == 1 },
+                { assert file(process.out.assembly[0][1]).name == 'test_flye_01.fasta' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

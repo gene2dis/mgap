@@ -1,0 +1,42 @@
+nextflow_process {
+
+    name "Test MASH_SKETCH module"
+    script "../../../modules/local/mash/sketch/main.nf"
+    process "MASH_SKETCH"
+
+    tag "modules"
+    tag "modules_local"
+    tag "mash"
+    tag "mash/sketch"
+
+    test("MASH_SKETCH - estimate read coverage - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:false ],
+                    [ file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_1.fastq.gz', checkIfExists: true), file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_2.fastq.gz', checkIfExists: true) ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.mash.size() == 1 },
+                { assert process.out.stats.size() == 1 },
+                { assert path(process.out.coverage[0][2]).text.trim() == '100' },
+                { assert process.out.coverage[0][1].collect { file(it).name } == [ 'test1_1.fastq.gz', 'test1_2.fastq.gz' ] },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}
