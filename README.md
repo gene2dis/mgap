@@ -149,31 +149,92 @@ nextflow run gene2dis/mgap \
     -profile docker
 ```
 
-### Key Parameters
+### Parameters
 
-| Parameter             | Default  | Description                                                               |
-| --------------------- | -------- | ------------------------------------------------------------------------- |
-| `--input`             | required | Path to samplesheet CSV file                                              |
-| `--outdir`            | required | Output directory for results                                              |
-| `--seq_type`          | required | Sequencing type: `illumina`, `ont`, or `contig`                           |
-| `-profile`            | —        | Configuration profile: `docker`, `singularity`, `conda`                   |
-| `--bakta_db`          | `null`   | Path to Bakta database (Bakta and AMRFinderPlus are skipped if unset)     |
-| `--checkm2_db`        | `null`   | Path to CheckM2 database (CheckM2 is skipped if unset)                    |
-| `--amrfinder_db`      | `null`   | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset)        |
-| `--genomad_db`        | `null`   | Path to geNomad database (geNomad is skipped if unset)                    |
-| `--run_kraken2`       | `true`   | Enable Kraken2 contamination detection                                    |
-| `--kraken2db`         | `null`   | Path to Kraken2 database (required to run contamination detection)        |
-| `--brackendb`         | `null`   | Path to Bracken database (Illumina only; falls back to `--kraken2db`)     |
-| `--adjust_coverage`   | `true`   | Enable coverage estimation and read subsampling                           |
-| `--max_coverage`      | `110`    | Target maximum coverage (x) for subsampling                               |
-| `--min_contig_length` | `1000`   | Minimum contig length (bp) for Bakta annotation                           |
-| `--run_gtdbtk`        | `false`  | Enable GTDB-Tk taxonomic classification                                   |
-| `--gtdbtk_db`         | `null`   | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled)          |
-| `--run_dnaapler`      | `true`   | Enable contig reorientation with Dnaapler (ONT only)                      |
-| `--run_rgi`           | `false`  | Enable RGI antimicrobial resistance gene prediction                       |
-| `--rgi_db`            | `null`   | Path to RGI/CARD database (required if `--run_rgi` is enabled)            |
-| `--run_mobsuite`      | `false`  | Enable MOB-suite plasmid detection and reconstruction                     |
-| `--mobsuite_db`       | `null`   | Path to pre-built MOB-suite database (optional; uses bundled DB if unset) |
+Every user-facing parameter, grouped as in `nextflow_schema.json`. Database parameters default to `null`; the step
+that needs them is skipped, with a warning at launch, when they are unset.
+
+#### Input and output
+
+| Parameter         | Default  | Description                                             |
+| ----------------- | -------- | ------------------------------------------------------- |
+| `--input`         | required | Path to samplesheet CSV file                            |
+| `--outdir`        | required | Output directory for results                            |
+| `--seq_type`      | required | Sequencing type: `illumina`, `ont`, or `contig`         |
+| `--multiqc_title` | `null`   | MultiQC report title (page header and file name)        |
+| `-profile`        | —        | Configuration profile: `docker`, `singularity`, `conda` |
+
+#### Pipeline steps
+
+| Parameter           | Default | Description                                                  |
+| ------------------- | ------- | ------------------------------------------------------------ |
+| `--run_kraken2`     | `true`  | Enable Kraken2 contamination detection (needs `--kraken2db`) |
+| `--adjust_coverage` | `true`  | Enable coverage estimation and read subsampling              |
+| `--max_coverage`    | `110`   | Target maximum coverage (x) for subsampling                  |
+| `--run_gtdbtk`      | `false` | Enable GTDB-Tk taxonomic classification                      |
+| `--run_rgi`         | `false` | Enable RGI antimicrobial resistance gene prediction          |
+| `--run_mobsuite`    | `false` | Enable MOB-suite plasmid detection and reconstruction        |
+| `--run_dnaapler`    | `true`  | Enable contig reorientation with Dnaapler (ONT only)         |
+
+#### Databases
+
+| Parameter                  | Default | Description                                                                                   |
+| -------------------------- | ------- | --------------------------------------------------------------------------------------------- |
+| `--bakta_db`               | `null`  | Path to Bakta database (Bakta and AMRFinderPlus are skipped if unset)                         |
+| `--checkm2_db`             | `null`  | Path to CheckM2 database file (CheckM2 is skipped if unset)                                   |
+| `--amrfinder_db`           | `null`  | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset; also needs `--bakta_db`)   |
+| `--genomad_db`             | `null`  | Path to geNomad database (geNomad is skipped if unset)                                        |
+| `--kraken2db`              | `null`  | Path to Kraken2 database (required to run contamination detection)                            |
+| `--brackendb`              | `null`  | Path to Bracken database (Illumina only; falls back to `--kraken2db`)                         |
+| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled)                              |
+| `--gtdbtk_pplacer_scratch` | `true`  | Use a scratch directory for pplacer to reduce GTDB-Tk memory use                              |
+| `--rgi_db`                 | `null`  | Path to RGI/CARD database (required if `--run_rgi` is enabled)                                |
+| `--mobsuite_db`            | `null`  | Path to pre-built MOB-suite database (optional; uses bundled DB if unset)                     |
+| `--mlst_blastdb`           | `null`  | Alternative MLST BLAST database directory containing `mlst.fa` and its index files (optional) |
+| `--mlst_datadir`           | `null`  | Alternative MLST PubMLST data directory (optional; uses the one bundled with mlst if unset)   |
+| `--plassembler_db`         | `null`  | Path to Plassembler database (only needed when `plassembler` is in `--autocycler_assemblers`) |
+
+#### Illumina read processing (fastp)
+
+| Parameter                           | Default | Description                                      |
+| ----------------------------------- | ------- | ------------------------------------------------ |
+| `--fastp_qualified_quality`         | `15`    | Minimum base quality for a base to be qualified  |
+| `--fastp_unqualified_percent_limit` | `40`    | Maximum percentage of unqualified bases per read |
+| `--fastp_cut_front_window_size`     | `4`     | Window size for front trimming                   |
+| `--fastp_cut_front_mean_quality`    | `20`    | Mean quality threshold for front trimming        |
+| `--fastp_cut_right_window_size`     | `4`     | Window size for right trimming                   |
+| `--fastp_cut_right_mean_quality`    | `20`    | Mean quality threshold for right trimming        |
+| `--fastp_reads_minlength`           | `50`    | Minimum read length after trimming               |
+| `--fastp_n_base_limit`              | `5`     | Maximum number of N bases per read               |
+
+#### ONT read processing and assembly
+
+| Parameter                               | Default                                        | Description                                                                                        |
+| --------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `--ont_assembler`                       | `flye`                                         | `flye` (Flye + Medaka) or `autocycler` (consensus of several assemblers)                           |
+| `--fastplong_qualified_quality`         | `15`                                           | Minimum base quality for a base to be qualified (fastplong)                                        |
+| `--fastplong_unqualified_percent_limit` | `40`                                           | Maximum percentage of unqualified bases per read (fastplong)                                       |
+| `--fastplong_min_read_length`           | `1000`                                         | Minimum read length (fastplong)                                                                    |
+| `--flye_mode`                           | `nano-hq`                                      | Flye read mode: `nano-hq`, `nano-raw`, `nano-corr`, `pacbio-raw`, `pacbio-corr`, `pacbio-hifi`     |
+| `--medaka_model`                        | `null`                                         | Medaka model matching the basecaller model (`medaka tools list_models`); medaka's default if unset |
+| `--autocycler_assemblers`               | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Assemblers for Autocycler; also supported: `canu`, `myloasm`, `plassembler`                        |
+| `--autocycler_read_type`                | `ont_r10`                                      | Read type for the Autocycler assembler helper: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`    |
+| `--autocycler_max_contigs`              | `50`                                           | Maximum contigs per assembly in the Autocycler compress and cluster steps                          |
+
+#### RGI
+
+| Parameter              | Default   | Description                                                           |
+| ---------------------- | --------- | --------------------------------------------------------------------- |
+| `--rgi_include_loose`  | `false`   | Include loose hits (below the detection model cut-off)                |
+| `--rgi_include_nudge`  | `false`   | Include hits nudged from loose to strict for partial gene sequences   |
+| `--rgi_low_quality`    | `false`   | Low quality/coverage mode for short contigs, to predict partial genes |
+| `--rgi_alignment_tool` | `DIAMOND` | Alignment tool for RGI searches: `DIAMOND` or `BLAST`                 |
+
+#### Annotation
+
+| Parameter             | Default | Description                                     |
+| --------------------- | ------- | ----------------------------------------------- |
+| `--min_contig_length` | `1000`  | Minimum contig length (bp) for Bakta annotation |
 
 > **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
 
