@@ -33,6 +33,67 @@ nextflow_pipeline {
 
     }
 
+    test("Run pipeline with coverage adjustment - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type        = "illumina"
+                run_kraken2     = false
+                adjust_coverage = true
+                // the MASH_SKETCH stub reports 100x, so 50x forces subsampling
+                max_coverage    = 50
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('MASH_SKETCH') } },
+                { assert succeeded.any { it.contains('SEQTK_SAMPLE') } },
+                { assert succeeded.any { it.contains('SPADES') } }
+            )
+        }
+
+    }
+
+    test("Run pipeline with Kraken2 and Bracken - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type        = "illumina"
+                run_kraken2     = true
+                kraken2db       = "${projectDir}/tests/data/stub_db/kraken2"
+                adjust_coverage = false
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('KRAKEN2') } },
+                { assert succeeded.any { it.contains('BRACKEN') } },
+                { assert succeeded.any { it.contains('SPADES') } }
+            )
+        }
+
+    }
+
     test("Run pipeline with single-end Illumina data - stub") {
 
         tag "pipeline"
