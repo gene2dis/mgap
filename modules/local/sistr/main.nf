@@ -33,7 +33,6 @@ process SISTR {
     fi
 
     sistr \\
-        --qc \\
         $args \\
         --threads $task.cpus \\
         --alleles-output ${prefix}-allele.json \\
