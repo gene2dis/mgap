@@ -66,8 +66,7 @@ include { samplesheetToList } from 'plugin/nf-schema'
 //
 include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
-include { KLEBSIELLA } from '../subworkflows/local/klebsiella'
-include { SALMONELLA } from '../subworkflows/local/salmonella'
+include { SPECIES_TYPING } from '../subworkflows/local/species_typing'
 include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/run/main'
 include { RGI_MAIN } from '../modules/local/rgi/main/main'
@@ -86,7 +85,6 @@ include { MOBSUITE_RECON } from '../modules/nf-core/mobsuite/recon/main'
 include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
-include { SCCMEC } from '../modules/local/sccmec/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
 include { MULTIQC } from '../modules/nf-core/multiqc/main'
 
@@ -274,6 +272,7 @@ workflow MGAP {
             ch_gtdbtk_db,
             params.gtdbtk_pplacer_scratch
         )
+        // one batch task for the whole run, so no .first() needed
         ch_versions = ch_versions.mix(GTDBTK.out.versions)
     }
 
@@ -306,40 +305,14 @@ workflow MGAP {
     }
 
     //
-    // Run taxa-specific tools
-    // TODO: Move to dedicated subworkflow
+    // SUBWORKFLOW: species-specific typing (Kleborate, SCCmec, SISTR), routed by
+    // the organism mapped from each sample's MLST scheme
     //
-    species_code_ch
-        .join(ch_annotation_fasta)
-        .branch { meta, species, fasta ->
-            klebsiella: species == "Klebsiella_pneumoniae"
-                return [ meta, fasta ]
-            saureus: species == "Staphylococcus_aureus"
-                return [ meta, fasta ]
-            salmonella: species == "Salmonella"
-                return [ meta, fasta ]
-            other: true
-                return [ meta, fasta ]
-        }
-        .set { taxa_genome_process }
-
-    // Run Klebsiella-specific subworkflow
-    KLEBSIELLA(
-        taxa_genome_process.klebsiella
+    SPECIES_TYPING(
+        species_code_ch,
+        ch_annotation_fasta
     )
-    ch_versions = ch_versions.mix(KLEBSIELLA.out.versions)
-
-    // Run sccmec for S. aureus SCCmec typing
-    SCCMEC(
-        taxa_genome_process.saureus
-    )
-    ch_versions = ch_versions.mix(SCCMEC.out.versions)
-
-    // Run SISTR for Salmonella serotype prediction
-    SALMONELLA(
-        taxa_genome_process.salmonella
-    )
-    ch_versions = ch_versions.mix(SALMONELLA.out.versions)
+    ch_versions = ch_versions.mix(SPECIES_TYPING.out.versions)
 
     // Collate and publish software versions.
     // Dedupe on file CONTENT (each process emits one versions.yml per task,

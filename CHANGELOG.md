@@ -23,7 +23,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Added issue templates for bug reports and feature requests
 - Added `mobsuite/recon` (nf-core module) for optional plasmid detection and reconstruction, gated by `--run_mobsuite`
 - Added local `sistr` module (v1.1.3) for automatic Salmonella serotype prediction, triggered when MLST scheme is `salmonella`
-- Added `SALMONELLA` local subworkflow wrapping SISTR, following the existing `KLEBSIELLA` / `SCCMEC` taxa-specific pattern
+- Added the `SPECIES_TYPING` local subworkflow: one place that routes samples by MLST-derived organism to Kleborate, SCCmec and SISTR (replaces the one-module `KLEBSIELLA` and `SALMONELLA` subworkflows and the bare `SCCMEC` call)
 - Working test profile with tiny public test data (`-profile test`), plus stub pipeline tests for paired/single-end Illumina, ONT (both assembler modes) and contig inputs
 - Single-end Illumina support (detected from the samplesheet)
 - Run-level MultiQC report aggregating fastp/fastplong, Kraken2, QUAST and Bakta results (`--multiqc_config`, `--multiqc_title`, `--multiqc_logo`)
