@@ -5,7 +5,7 @@ process SCCMEC {
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/sccmec:1.2.0--hdfd78af_0' :
-        'quay.io/biocontainers/sccmec:1.2.0--hdfd78af_0' }"
+        'biocontainers/sccmec:1.2.0--hdfd78af_0' }"
 
     input:
     tuple val(meta), path(fasta)
