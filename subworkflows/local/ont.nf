@@ -121,7 +121,7 @@ workflow ONT {
 
         //
         // Step 4: Collect all assemblies per sample and compress into unitig graph
-        // Assembler tasks run with errorStrategy 'ignore' (see conf/ont.config),
+        // Assembler tasks run with errorStrategy 'ignore' (see conf/modules.config),
         // so a sample can end up with zero assemblies - report it loudly
         // instead of letting it vanish from groupTuple.
         //

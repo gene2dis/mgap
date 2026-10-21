@@ -224,7 +224,7 @@ The Autocycler modules require a Docker image containing Autocycler and all supp
 microds/autocycler:0.6.0@sha256:feb81239eac4ac7d660355be66efc9d8eabafbbca726a547d2443051f819369f
 ```
 
-The pipeline pins this image by digest in `conf/ont.config`, so runs always use the exact image the pipeline was tested with. The image is built from `docker/autocycler-suite/Dockerfile`; because the Dockerfile installs assemblers from bioconda, a rebuild is not bit-identical — rebuilt images must be pushed under a **new tag** and the digest pin in `conf/ont.config` updated accordingly:
+The pipeline pins this image by digest in `conf/modules.config`, so runs always use the exact image the pipeline was tested with. The image is built from `docker/autocycler-suite/Dockerfile`; because the Dockerfile installs assemblers from bioconda, a rebuild is not bit-identical — rebuilt images must be pushed under a **new tag** and the digest pin in `conf/modules.config` updated accordingly:
 
 ```bash
 cd docker/autocycler-suite
