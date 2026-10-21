@@ -292,7 +292,7 @@ workflow MGAP {
     if (params.run_mobsuite) {
         MOBSUITE_RECON(
             ch_annotation_fasta,
-            params.mobsuite_db ? file(params.mobsuite_db) : []
+            params.mobsuite_db ? file(params.mobsuite_db, checkIfExists: true) : []
         )
         ch_versions = ch_versions.mix(MOBSUITE_RECON.out.versions.first())
     }
@@ -301,7 +301,7 @@ workflow MGAP {
     if (params.run_rgi) {
         RGI_MAIN(
             genome_assembly,
-            params.rgi_db
+            file(params.rgi_db, checkIfExists: true)
         )
         ch_versions = ch_versions.mix(RGI_MAIN.out.versions.first())
     }

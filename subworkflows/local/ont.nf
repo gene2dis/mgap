@@ -63,7 +63,7 @@ workflow ONT {
     if (params.run_kraken2 && params.kraken2db) {
         KRAKEN2 (
             FASTPLONG.out.reads,
-            params.kraken2db,
+            file(params.kraken2db, checkIfExists: true),
             false,
             false
         )
