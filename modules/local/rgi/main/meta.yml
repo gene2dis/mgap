@@ -31,12 +31,13 @@ input:
         pattern: "*.{fasta,fasta.gz,fa,fa.gz,fna,fna.gz}"
         ontologies:
           - edam: "http://edamontology.org/format_1929"
-  - - db:
-        type: directory
-        description: |
-          Path to the CARD database directory. The database should be pre-loaded
-          using 'rgi load' or contain the necessary CARD JSON files.
-        pattern: "*"
+  - card_db:
+      type: directory
+      description: |
+        RGI local database directory from RGI_LOAD (CARD loaded with
+        rgi load --local, BLAST and DIAMOND databases built). Copied into the
+        task as ./localDB.
+      pattern: "*"
 output:
   tsv:
     - - meta:

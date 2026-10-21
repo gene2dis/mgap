@@ -406,18 +406,15 @@ nextflow run gene2dis/mgap \
 
 **Database setup:**
 
-The CARD database must be downloaded and set up before running RGI. See the [RGI documentation](https://github.com/arpcard/rgi#card-database) for database installation instructions:
+The CARD database must be downloaded before running RGI. See the [RGI documentation](https://github.com/arpcard/rgi#card-database) for details:
 
 ```bash
 # Download CARD database
 wget https://card.mcmaster.ca/latest/data
 tar -xvf data ./card.json
-
-# Load database (creates localDB directory)
-rgi load --card_json card.json --local
 ```
 
-Then provide the path to the database directory (containing the loaded database files) via `--rgi_db`.
+Then provide the directory containing `card.json` via `--rgi_db`. The pipeline runs `rgi load` and builds the BLAST and DIAMOND databases once per run (`RGI_LOAD`), and every sample's `RGI_MAIN` task uses that local database.
 
 ### MOB-suite Plasmid Detection
 

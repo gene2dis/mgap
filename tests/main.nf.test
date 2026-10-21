@@ -261,6 +261,35 @@ nextflow_pipeline {
 
     }
 
+    test("RGI loads CARD once per run - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input    = "${projectDir}/tests/data/samplesheet_species_routing.csv"
+                seq_type = "contig"
+                run_rgi  = true
+                rgi_db   = "${projectDir}/tests/data/stub_db/card"
+                outdir   = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.count { it.contains('RGI_LOAD') } == 1 },
+                { assert succeeded.count { it.contains('RGI_MAIN') } == 3 },
+                { assert path("$outputDir/TEST_OTHER/annotation/rgi/TEST_OTHER.txt").exists() }
+            )
+        }
+
+    }
+
     test("Duplicate sample names fail at launch - stub") {
 
         tag "pipeline"

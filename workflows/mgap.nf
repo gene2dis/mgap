@@ -69,6 +69,7 @@ include { ONT } from '../subworkflows/local/ont'
 include { SPECIES_TYPING } from '../subworkflows/local/species_typing'
 include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/run/main'
+include { RGI_LOAD } from '../modules/local/rgi/load/main'
 include { RGI_MAIN } from '../modules/local/rgi/main/main'
 include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoend/main'
 include { MOBSUITE_RECON } from '../modules/nf-core/mobsuite/recon/main'
@@ -296,10 +297,16 @@ workflow MGAP {
     }
 
     // RUN RGI for antimicrobial resistance gene prediction
+    // CARD is loaded once per run; every sample gets the same local database
     if (params.run_rgi) {
+        RGI_LOAD(
+            file(params.rgi_db, checkIfExists: true)
+        )
+        ch_versions = ch_versions.mix(RGI_LOAD.out.versions)
+
         RGI_MAIN(
             genome_assembly,
-            file(params.rgi_db, checkIfExists: true)
+            RGI_LOAD.out.db
         )
         ch_versions = ch_versions.mix(RGI_MAIN.out.versions.first())
     }

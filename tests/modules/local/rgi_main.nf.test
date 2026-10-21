@@ -22,7 +22,7 @@ nextflow_process {
                     [ id:'test' ],
                     file('genome.fasta')
                 ]
-                input[1] = file('card')
+                input[1] = file('localDB')
                 """
             }
         }

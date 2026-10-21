@@ -71,6 +71,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - **Removed deprecated local modules** (replaced by nf-core versions): checkm2, flye, genomad, nanoq, spades (amrfinderplus and kleborate keep customized local copies)
 - `conf/ont.config` is merged into `conf/modules.config`, which now holds the options of every process
 - Bakta no longer publishes its `versions.yml` into `<sample>/annotation/bakta/` (versions are collected in `pipeline_info/software_versions.yml`)
+- RGI loads CARD once per run: a new `RGI_LOAD` step runs `rgi load` and builds the BLAST/DIAMOND databases, and `RGI_MAIN` works on a copy of that local database instead of loading CARD for every sample
 - Kleborate (`-p kpsc --trim_headers`) and SISTR (`--qc`) options moved from the module scripts to `ext.args` in `conf/modules.config` (same command lines)
 
 ### `Fixed`
