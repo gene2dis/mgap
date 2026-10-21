@@ -104,10 +104,11 @@ workflow ONT {
 
         AUTOCYCLER_SUBSAMPLE.out.subsampled_reads
             .flatMap { meta, subsample_files, genome_size ->
-                subsample_files
+                // a glob matching a single file yields a Path, not a list
+                [ subsample_files ].flatten()
                     .findAll { f -> f.name.endsWith('.fastq') }
                     .collectMany { subsample_file ->
-                        def subsample_id = subsample_file.baseName.replaceFirst(/\.fastq$/, '')
+                        def subsample_id = subsample_file.baseName
                         assembler_list.collect { assembler ->
                             [ meta, subsample_file, subsample_id, genome_size, assembler ]
                         }
