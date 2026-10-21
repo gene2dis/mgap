@@ -4,8 +4,9 @@ repos:
     hooks:
       - id: check-yaml
         args: ["--unsafe"]
-      # modules/nf-core is installed from upstream; whitespace "fixes" there
-      # would show up as local edits in the module patch records
+      # modules/nf-core is installed from upstream; formatting "fixes" there
+      # would show up as local edits in the module patch records (prettier
+      # below skips it too)
       - id: end-of-file-fixer
         exclude: ^modules/nf-core/
       - id: trailing-whitespace
@@ -21,6 +22,7 @@ repos:
     hooks:
       - id: prettier
         types_or: [json, yaml, markdown]
+        exclude: ^modules/nf-core/
 
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: 2.7.3

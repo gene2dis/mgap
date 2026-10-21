@@ -152,7 +152,7 @@ nextflow run gene2dis/mgap \
 ### Parameters
 
 Every user-facing parameter, grouped as in `nextflow_schema.json`. Database parameters default to `null`; the step
-that needs them is skipped, with a warning at launch, when they are unset.
+that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus and geNomad print a warning at launch).
 
 #### Input and output
 
