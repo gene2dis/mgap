@@ -232,7 +232,7 @@ nextflow_pipeline {
             def succeeded = workflow.trace.succeeded().collect { it.name }
             def ran = { process, sample -> succeeded.any { it.contains(process) && it.contains("(${sample})") } }
             // log.warn reaches only the log file, not the console nf-test captures
-            def log = path("${metaDir}/nextflow.log").text
+            def nextflow_log = path("${metaDir}/nextflow.log").text
             def amrfinder = { sample -> path("$outputDir/${sample}/annotation/amrfinder/${sample}-mutations.tsv") }
             assertAll(
                 { assert workflow.success },
@@ -251,9 +251,9 @@ nextflow_pipeline {
                 { assert amrfinder('TEST_KPNEUMONIAE').exists() },
                 { assert amrfinder('TEST_SAUREUS').exists() },
                 { assert !amrfinder('TEST_OTHER').exists() },
-                { assert log.contains("Sample 'TEST_OTHER': MLST scheme 'none' has no AMRFinderPlus organism mapping") },
-                { assert !log.contains("Sample 'TEST_KPNEUMONIAE': MLST scheme") },
-                { assert !log.contains("Sample 'TEST_SAUREUS': MLST scheme") }
+                { assert nextflow_log.contains("Sample 'TEST_OTHER': MLST scheme 'none' has no AMRFinderPlus organism mapping") },
+                { assert !nextflow_log.contains("Sample 'TEST_KPNEUMONIAE': MLST scheme") },
+                { assert !nextflow_log.contains("Sample 'TEST_SAUREUS': MLST scheme") }
             )
         }
 

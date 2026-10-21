@@ -20,7 +20,7 @@ nextflow_process {
                 """
                 input[0] = [
                     [ id:'test', single_end:false ],
-                    [ file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_1.fastq.gz', checkIfExists: true), file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_2.fastq.gz', checkIfExists: true) ]
+                    [ file("${baseDir}/tests/data/stub_inputs/reads_1.fastq.gz", checkIfExists: true), file("${baseDir}/tests/data/stub_inputs/reads_2.fastq.gz", checkIfExists: true) ]
                 ]
                 """
             }
@@ -32,7 +32,7 @@ nextflow_process {
                 { assert process.out.mash.size() == 1 },
                 { assert process.out.stats.size() == 1 },
                 { assert path(process.out.coverage[0][2]).text.trim() == '100' },
-                { assert process.out.coverage[0][1].collect { file(it).name } == [ 'test1_1.fastq.gz', 'test1_2.fastq.gz' ] },
+                { assert process.out.coverage[0][1].collect { file(it).name } == [ 'reads_1.fastq.gz', 'reads_2.fastq.gz' ] },
                 { assert process.out.versions }
             )
         }

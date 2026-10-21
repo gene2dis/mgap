@@ -51,6 +51,9 @@ jobs:
         NXF_VER:
           - "26.04.0"
           - "26.04.4"
+    env:
+      # overrides the workflow-level NXF_VER, which the launcher would otherwise use
+      NXF_VER: ${{ matrix.NXF_VER }}
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
@@ -62,6 +65,7 @@ jobs:
 
       - name: Run pipeline with stub
         run: |
+          nextflow -version
           nextflow run ${GITHUB_WORKSPACE} -profile test,docker -stub --outdir ./results
 
   nf-test:

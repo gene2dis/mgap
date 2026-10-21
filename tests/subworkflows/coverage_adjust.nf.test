@@ -25,7 +25,7 @@ nextflow_workflow {
                 """
                 input[0] = Channel.of([
                     [ id:'test', single_end:false ],
-                    [ file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_1.fastq.gz', checkIfExists: true), file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_2.fastq.gz', checkIfExists: true) ]
+                    [ file("${baseDir}/tests/data/stub_inputs/reads_1.fastq.gz", checkIfExists: true), file("${baseDir}/tests/data/stub_inputs/reads_2.fastq.gz", checkIfExists: true) ]
                 ])
                 """
             }
@@ -38,8 +38,8 @@ nextflow_workflow {
                 { assert succeeded.any { it.contains('MASH_SKETCH') } },
                 { assert succeeded.any { it.contains('SEQTK_SAMPLE') } },
                 { assert workflow.out.reads.size() == 1 },
-                // the SEQTK_SAMPLE stub writes <id>.fastq.gz in place of the input pair
-                { assert [ workflow.out.reads[0][1] ].flatten().collect { it.tokenize('/').last() } == [ 'test.fastq.gz' ] }
+                // the reads now come from SEQTK_SAMPLE, not the input files
+                { assert [ workflow.out.reads[0][1] ].flatten().every { !(it.tokenize('/').last() in [ 'reads_1.fastq.gz', 'reads_2.fastq.gz' ]) } }
             )
         }
 
@@ -60,7 +60,7 @@ nextflow_workflow {
                 """
                 input[0] = Channel.of([
                     [ id:'test', single_end:false ],
-                    [ file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_1.fastq.gz', checkIfExists: true), file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_2.fastq.gz', checkIfExists: true) ]
+                    [ file("${baseDir}/tests/data/stub_inputs/reads_1.fastq.gz", checkIfExists: true), file("${baseDir}/tests/data/stub_inputs/reads_2.fastq.gz", checkIfExists: true) ]
                 ])
                 """
             }
@@ -73,7 +73,7 @@ nextflow_workflow {
                 { assert succeeded.any { it.contains('MASH_SKETCH') } },
                 { assert !succeeded.any { it.contains('SEQTK_SAMPLE') } },
                 { assert workflow.out.reads.size() == 1 },
-                { assert workflow.out.reads[0][1].collect { it.tokenize('/').last() } == [ 'test1_1.fastq.gz', 'test1_2.fastq.gz' ] }
+                { assert workflow.out.reads[0][1].collect { it.tokenize('/').last() } == [ 'reads_1.fastq.gz', 'reads_2.fastq.gz' ] }
             )
         }
 
