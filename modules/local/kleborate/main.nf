@@ -19,8 +19,6 @@ process KLEBORATE {
 
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
-
     """
     kleborate \\
         $args \\
@@ -36,9 +34,10 @@ process KLEBORATE {
     """
 
     stub:
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    // Kleborate names its outputs after the preset, not the sample
     """
-    touch ${prefix}.results.txt
+    touch klebsiella_pneumo_complex_output.txt
+    touch klebsiella_pneumo_complex_hAMRonization_output.txt
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

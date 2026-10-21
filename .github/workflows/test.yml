@@ -34,7 +34,7 @@ jobs:
     name: Run nf-test
     runs-on: ubuntu-latest
     env:
-      NFT_VER: "0.9.0"
+      NFT_VER: "0.9.5"
       NFT_WORKDIR: "~"
       NFT_DIFF: "pdiff"
       NFT_DIFF_ARGS: "--line-numbers --expand-tabs=2"

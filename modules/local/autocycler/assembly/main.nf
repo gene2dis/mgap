@@ -7,7 +7,7 @@ process AUTOCYCLER_ASSEMBLY {
         'docker://microds/autocycler:0.6.0' :
         'docker.io/microds/autocycler:0.6.0' }"
 
-    // Note: errorStrategy 'ignore' for this process is set in conf/ont.config
+    // Note: errorStrategy 'ignore' for this process is set in conf/modules.config
     // (individual assembler failures are tolerated by the consensus step)
 
     input:

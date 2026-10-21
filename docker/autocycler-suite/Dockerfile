@@ -1,6 +1,6 @@
 # Source of the published image docker.io/microds/autocycler:0.6.0
 # (digest sha256:feb81239eac4ac7d660355be66efc9d8eabafbbca726a547d2443051f819369f,
-# pinned in conf/ont.config). Rebuilds pick up newer assembler versions, so a
+# pinned in conf/modules.config). Rebuilds pick up newer assembler versions, so a
 # rebuilt image MUST be pushed under a new tag and the digest pin updated.
 FROM --platform=linux/amd64 mambaorg/micromamba:latest
 

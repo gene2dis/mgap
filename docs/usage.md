@@ -224,7 +224,7 @@ The Autocycler modules require a Docker image containing Autocycler and all supp
 microds/autocycler:0.6.0@sha256:feb81239eac4ac7d660355be66efc9d8eabafbbca726a547d2443051f819369f
 ```
 
-The pipeline pins this image by digest in `conf/ont.config`, so runs always use the exact image the pipeline was tested with. The image is built from `docker/autocycler-suite/Dockerfile`; because the Dockerfile installs assemblers from bioconda, a rebuild is not bit-identical — rebuilt images must be pushed under a **new tag** and the digest pin in `conf/ont.config` updated accordingly:
+The pipeline pins this image by digest in `conf/modules.config`, so runs always use the exact image the pipeline was tested with. The image is built from `docker/autocycler-suite/Dockerfile`; because the Dockerfile installs assemblers from bioconda, a rebuild is not bit-identical — rebuilt images must be pushed under a **new tag** and the digest pin in `conf/modules.config` updated accordingly:
 
 ```bash
 cd docker/autocycler-suite
@@ -568,7 +568,18 @@ nextflow run gene2dis/mgap \
 
 ### Cloud execution
 
-The pipeline supports execution on AWS and Google Cloud:
+The pipeline has profiles for AWS Batch (`mgap_awsbatch`) and Google Cloud Batch (`mgap_googlebatch`). Task resources
+come from `conf/base.config`, so a task that runs out of memory is retried with more; on Google Batch, Nextflow picks
+the cheapest N2 machine type that fits each request. Set `--awsregion` (default `us-east-1`) or `--gcp_region` (default
+`us-central1`) as needed, and `--awscli` only if your AMI does not use Fusion and needs the path to the AWS CLI.
+
+The profiles are prefixed with `mgap_` because nf-core's institutional configs define their own `awsbatch` and
+`googlebatch` profiles; those still work with this pipeline but set different defaults (for example AWS region
+`eu-west-1`).
+
+> [!NOTE]
+> These profiles are checked only with `nextflow config` (`-profile mgap_awsbatch,docker` and
+> `-profile mgap_googlebatch,docker`); they have not been run on a cloud account.
 
 ```bash
 # AWS Batch
@@ -577,7 +588,7 @@ nextflow run gene2dis/mgap \
     --outdir s3://bucket/results \
     --seq_type illumina \
     --awsqueue my-batch-queue \
-    -profile awsbatch,docker
+    -profile mgap_awsbatch,docker
 
 # Google Cloud Batch
 nextflow run gene2dis/mgap \
@@ -585,7 +596,7 @@ nextflow run gene2dis/mgap \
     --outdir gs://bucket/results \
     --seq_type illumina \
     --gcp_project my-project \
-    -profile googlebatch,docker
+    -profile mgap_googlebatch,docker
 
 # Seqera Platform (Tower)
 nextflow run gene2dis/mgap \

@@ -52,7 +52,7 @@ workflow ILLUMINA {
     if (params.run_kraken2 && params.kraken2db) {
         KRAKEN2 (
             FASTP.out.reads,
-            params.kraken2db,
+            file(params.kraken2db, checkIfExists: true),
             false,
             false
         )
@@ -63,7 +63,7 @@ workflow ILLUMINA {
         // the Kraken2 DB directory (which must then contain Bracken kmer files)
         BRACKEN (
             KRAKEN2.out.report,
-            params.brackendb ?: params.kraken2db
+            file(params.brackendb ?: params.kraken2db, checkIfExists: true)
         )
         ch_versions = ch_versions.mix(BRACKEN.out.versions.first())
     }

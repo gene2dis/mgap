@@ -11,7 +11,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 
 - Migrated to `nf-schema@2.2.0` plugin for parameter validation (replacing deprecated `nf-validation`)
 - Added `PIPELINE_INITIALISATION` and `PIPELINE_COMPLETION` subworkflows for standardized initialization
-- Added cloud configuration profiles: `awsbatch`, `googlebatch`, `tower`
+- Added cloud configuration profiles: `mgap_awsbatch`, `mgap_googlebatch`, `tower` (prefixed so they do not merge with nf-core's institutional `awsbatch`/`googlebatch` profiles)
 - Added Wave container and Fusion filesystem support for cloud execution
 - Added nf-test framework with pipeline and module tests
 - Added a single GitHub CI workflow (`test.yml`: stub test-profile run + nf-test suite)
@@ -66,6 +66,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
   - Enabled lenient mode for more flexible input validation
   - Added support for gzipped FASTA files (.fasta.gz, .fa.gz, .fna.gz)
 - **Removed deprecated local modules** (replaced by nf-core versions): checkm2, flye, genomad, nanoq, spades (amrfinderplus and kleborate keep customized local copies)
+- `conf/ont.config` is merged into `conf/modules.config`, which now holds the options of every process
+- Bakta no longer publishes its `versions.yml` into `<sample>/annotation/bakta/` (versions are collected in `pipeline_info/software_versions.yml`)
 
 ### `Fixed`
 
@@ -78,6 +80,9 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Samples no longer vanish silently when dnaapler produces no reoriented assembly (falls back to the unoriented assembly with a warning)
 - SISTR's conditionally-produced outputs are optional, so runs no longer fail over missing novel-allele files
 - `ConsolidateResults.py`: fixed silently-dropped kleborate/sccmec tables, added ONT support and defensive parsing
+- Duplicate sample names in the samplesheet are rejected at launch (`uniqueEntries`); before, joins keyed on the sample could mis-join or drop samples
+- Database paths are checked at launch (`exists` in the schema, `checkIfExists` for Kraken2, Bracken, RGI and MOB-suite)
+- Cloud profiles: resources come from `conf/base.config` with retry scaling (Google Batch machine types no longer smaller than the requested memory), `google.location` replaces the ignored `google.region`, and the dead `google.lifeSciences` block and the AMI-specific AWS CLI default are gone
 
 ### `Removed`
 
@@ -90,7 +95,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 
 ### `Dependencies`
 
-- Nextflow: `>=23.04.0` (minimum version)
+- Nextflow: `>=26.04.0` (minimum version; the version the pipeline is developed and CI-tested on)
 - nf-schema: `2.2.0` (replacing nf-validation)
 
 ## v1.0dev - [date]

@@ -1,0 +1,91 @@
+Changes in component 'nf-core/mlst'
+Changes in 'mlst/main.nf':
+--- modules/nf-core/mlst/main.nf
++++ modules/nf-core/mlst/main.nf
+@@ -9,6 +9,8 @@
+ 
+     input:
+     tuple val(meta), path(fasta)
++    path blastdb
++    path datadir
+ 
+     output:
+     tuple val(meta), path("*.tsv"), emit: tsv
+@@ -20,9 +22,17 @@
+     script:
+     def args = task.ext.args ?: ''
+     def prefix = task.ext.prefix ?: "${meta.id}"
++    // `blastdb` must be the DIRECTORY containing mlst.fa and its sibling
++    // BLAST index files (mlst.fa.n*). Staging a single file would leave the
++    // index files behind and blastn would fail with a misleading
++    // "Database memory map file error".
++    def blastdb_arg = blastdb ? "--blastdb ${blastdb}/mlst.fa" : ''
++    def datadir_arg = datadir ? "--datadir ${datadir}" : ''
+     """
+     mlst \\
+         $args \\
++        $blastdb_arg \\
++        $datadir_arg \\
+         --threads $task.cpus \\
+         $fasta \\
+         > ${prefix}.tsv
+@@ -33,4 +43,15 @@
+     END_VERSIONS
+     """
+ 
++    stub:
++    def prefix = task.ext.prefix ?: "${meta.id}"
++    """
++    touch ${prefix}.tsv
++
++    cat <<-END_VERSIONS > versions.yml
++    "${task.process}":
++        mlst: 2.25.0
++    END_VERSIONS
++    """
++
+ }
+
+'modules/nf-core/mlst/environment.yml' is unchanged
+Changes in 'mlst/meta.yml':
+--- modules/nf-core/mlst/meta.yml
++++ modules/nf-core/mlst/meta.yml
+@@ -22,6 +22,22 @@
+         description: Assembly fasta file
+         pattern: "*.{fasta,fa,fna}"
+         ontologies: []
++  - blastdb:
++      type: directory
++      description: |
++        Optional alternative BLAST database directory containing
++        `mlst.fa` and its BLAST index sibling files (`mlst.fa.n*`).
++        The module appends `/mlst.fa` when building `mlst --blastdb`.
++        Passing the `.fa` file directly would leave the index files
++        unstaged. Pass `[]` to use the default database bundled with mlst.
++      ontologies: []
++  - datadir:
++      type: directory
++      description: |
++        Optional alternative PubMLST data directory to use instead of the
++        one bundled with mlst. Forwarded to `mlst --datadir`. Pass `[]` to
++        use the default directory.
++      ontologies: []
+ output:
+   tsv:
+     - - meta:
+
+Changes in 'mlst/tests/main.nf.test':
+--- modules/nf-core/mlst/tests/main.nf.test
++++ modules/nf-core/mlst/tests/main.nf.test
+@@ -18,6 +18,8 @@
+                 input[0] = [ [ id:'test', single_end:false ], // meta map
+                              file(params.modules_testdata_base_path + "genomics/prokaryotes/bacteroides_fragilis/genome/genome.fna.gz", checkIfExists: true)
+                            ]
++                input[1] = []
++                input[2] = []
+                 """
+             }
+         }
+
+'modules/nf-core/mlst/tests/main.nf.test.snap' is unchanged
+************************************************************

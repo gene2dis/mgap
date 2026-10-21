@@ -1,0 +1,70 @@
+Changes in component 'nf-core/mobsuite/recon'
+Changes in 'mobsuite/recon/main.nf':
+--- modules/nf-core/mobsuite/recon/main.nf
++++ modules/nf-core/mobsuite/recon/main.nf
+@@ -9,6 +9,7 @@
+ 
+     input:
+     tuple val(meta), path(fasta)
++    path mobsuite_db
+ 
+     output:
+     tuple val(meta), path("results/chromosome.fasta")    , emit: chromosome
+@@ -25,6 +26,7 @@
+     def prefix = task.ext.prefix ?: "${meta.id}"
+     def is_compressed = fasta.getName().endsWith(".gz") ? true : false
+     def fasta_name = fasta.getName().replace(".gz", "")
++    def db_arg = mobsuite_db ? "--database_directory ${mobsuite_db}" : ''
+     """
+     if [ "$is_compressed" == "true" ]; then
+         gzip -c -d $fasta > $fasta_name
+@@ -32,6 +34,7 @@
+ 
+     mob_recon \\
+         --infile $fasta_name \\
++        $db_arg \\
+         $args \\
+         --num_threads $task.cpus \\
+         --outdir results \\
+
+'modules/nf-core/mobsuite/recon/environment.yml' is unchanged
+Changes in 'mobsuite/recon/meta.yml':
+--- modules/nf-core/mobsuite/recon/meta.yml
++++ modules/nf-core/mobsuite/recon/meta.yml
+@@ -25,6 +25,13 @@
+         description: A bacterial genome assembly in FASTA format
+         pattern: "*.{fasta,fa,fna}"
+         ontologies: []
++  - mobsuite_db:
++      type: directory
++      description: |
++        Optional pre-built MOB-suite database directory, forwarded to
++        `mob_recon --database_directory`. Pass `[]` to use the database
++        bundled with the container.
++      ontologies: []
+ output:
+   chromosome:
+     - - meta:
+
+Changes in 'mobsuite/recon/tests/main.nf.test':
+--- modules/nf-core/mobsuite/recon/tests/main.nf.test
++++ modules/nf-core/mobsuite/recon/tests/main.nf.test
+@@ -19,6 +19,7 @@
+                     [ id:'test', single_end:false ], // meta map
+ 				    file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta', checkIfExists: true)
+                 ]
++                input[1] = []
+ 
+                 """
+             }
+@@ -42,6 +43,7 @@
+                     [ id:'test', single_end:false ], // meta map
+ 				    file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta', checkIfExists: true)
+                 ]
++                input[1] = []
+ 
+                 """
+             }
+
+'modules/nf-core/mobsuite/recon/tests/main.nf.test.snap' is unchanged
+************************************************************

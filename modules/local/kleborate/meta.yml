@@ -35,7 +35,10 @@ output:
             e.g. [ id:'test', single_end:false ]
       - "*.txt":
           type: file
-          description: Result file generated after screening
+          description: |
+            Result files generated after screening, named after the preset
+            (klebsiella_pneumo_complex_output.txt and
+            klebsiella_pneumo_complex_hAMRonization_output.txt)
           pattern: "*.txt"
           ontologies: []
   versions:

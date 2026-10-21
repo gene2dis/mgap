@@ -220,6 +220,7 @@
                     "type": "string",
                     "description": "Path to RGI/CARD database directory.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "rgi_include_loose": {
@@ -259,60 +260,70 @@
                     "type": "string",
                     "description": "Path to Bakta database directory.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "mlst_blastdb": {
                     "type": "string",
                     "description": "Path to an alternative MLST BLAST database directory containing `mlst.fa` and its BLAST index siblings (`mlst.fa.n*`). The module appends `/mlst.fa` when forwarding to `mlst --blastdb`. Optional: if unset, the database bundled with the mlst container is used.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "mlst_datadir": {
                     "type": "string",
                     "description": "Path to an alternative MLST PubMLST data directory. Forwarded to `mlst --datadir`. Optional: if unset, the directory bundled with the mlst container is used.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "checkm2_db": {
                     "type": "string",
                     "description": "Path to CheckM2 database file.",
                     "format": "file-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "kraken2db": {
                     "type": "string",
                     "description": "Path to Kraken2 database directory.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "amrfinder_db": {
                     "type": "string",
                     "description": "Path to AMRFinderPlus database directory.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "brackendb": {
                     "type": "string",
                     "description": "Path to Bracken database directory (Illumina only). Falls back to --kraken2db if unset, which then must contain Bracken kmer distribution files.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "genomad_db": {
                     "type": "string",
                     "description": "Path to geNomad database directory.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "mobsuite_db": {
                     "type": "string",
                     "description": "Path to a pre-built MOB-suite database directory. Optional: if unset, MOB-suite uses the database bundled with its container.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "gtdbtk_db": {
                     "type": "string",
                     "description": "Path to GTDB-Tk database directory.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "gtdbtk_pplacer_scratch": {
@@ -409,6 +420,7 @@
                     "type": "string",
                     "description": "Path to Plassembler database directory. Required only if 'plassembler' is included in autocycler_assemblers.",
                     "format": "directory-path",
+                    "exists": true,
                     "fa_icon": "fas fa-database"
                 },
                 "autocycler_max_contigs": {
