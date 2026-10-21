@@ -15,6 +15,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Added Wave container and Fusion filesystem support for cloud execution
 - Added nf-test framework with pipeline and module tests
 - Added a single GitHub CI workflow (`test.yml`: stub test-profile run + nf-test suite)
+- CI lint job (`pre-commit run --all-files`, `nextflow lint`); the stub run also runs on the minimum Nextflow version (26.04.0)
+- Stub tests for species routing (MLST scheme → Kleborate, SCCmec, AMRFinderPlus organism), coverage adjustment, Kraken2/Bracken, every Autocycler module, `MASH_SKETCH`, `RGI_MAIN` and the `COVERAGE_ADJUST` subworkflow
 - Added `meta.yml` and `environment.yml` to all local modules
 - Added stub sections to key modules for fast testing
 - Added pre-commit hooks configuration
