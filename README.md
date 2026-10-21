@@ -250,7 +250,8 @@ gene2dis/mgap was originally written by the Microbial Data Science Lab, Center f
 
 ## Development
 
-Work on short-lived feature branches off `main`. Before merging, run `pre-commit run --all-files` and the test profile (`nextflow run . -profile test,docker --outdir results`).
+`main` is the production pipeline; development happens on `dev`. Work on short-lived feature branches off `dev` and
+open pull requests into `dev`; `dev` is merged into `main` only for a release. Before merging, run `pre-commit run --all-files` and the test profile (`nextflow run . -profile test,docker --outdir results`).
 
 Test-profile runs clean up their `work/` task directories automatically. To remove all remaining run/test scratch (all gitignored): `rm -rf work .nextflow .nextflow.log* .nf-test .nf-test.log`.
 
