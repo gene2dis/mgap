@@ -90,7 +90,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 
 ### `Dependencies`
 
-- Nextflow: `>=23.04.0` (minimum version)
+- Nextflow: `>=26.04.0` (minimum version; the version the pipeline is developed and CI-tested on)
 - nf-schema: `2.2.0` (replacing nf-validation)
 
 ## v1.0dev - [date]
