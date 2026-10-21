@@ -45,8 +45,11 @@ process MLST {
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
+    // ext.stub_scheme (set by test configs) writes an mlst-style row so stub
+    // runs can exercise the species branches; unset keeps the empty file
+    def stub_row = task.ext.stub_scheme ? "printf '%s\\t%s\\t-\\n' ${fasta} ${task.ext.stub_scheme} > ${prefix}.tsv" : "touch ${prefix}.tsv"
     """
-    touch ${prefix}.tsv
+    ${stub_row}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
