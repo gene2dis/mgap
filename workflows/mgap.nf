@@ -103,16 +103,17 @@ workflow MGAP {
     ch_multiqc_files = channel.empty()
 
     //
-    // Create input channel based on sequencing type
+    // Parse the samplesheet once, then keep the columns each sequencing type needs.
+    // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
     //
+    ch_samplesheet = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
     genome_assembly = channel.empty()
 
     if (params.seq_type == "illumina") {
         //
         // SUBWORKFLOW: Illumina short-read assembly
-        // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
         //
-        ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
+        ch_input = ch_samplesheet
             .map { meta, fastq_1, fastq_2, _fasta ->
                 if (!fastq_1) {
                     error("Sample '${meta.id}': no fastq_1 given but --seq_type is 'illumina'. This looks like a contig samplesheet - did you mean --seq_type contig?")
@@ -129,9 +130,8 @@ workflow MGAP {
     } else if (params.seq_type == "ont") {
         //
         // SUBWORKFLOW: ONT long-read assembly
-        // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
         //
-        ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
+        ch_input = ch_samplesheet
             .map { meta, fastq_1, _fastq_2, _fasta ->
                 if (!fastq_1) {
                     error("Sample '${meta.id}': no fastq_1 given but --seq_type is 'ont'. This looks like a contig samplesheet - did you mean --seq_type contig?")
@@ -147,9 +147,8 @@ workflow MGAP {
     } else if (params.seq_type == "contig") {
         //
         // Direct contig input (pre-assembled)
-        // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
         //
-        ch_input = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
+        ch_input = ch_samplesheet
             .map { meta, _fastq_1, _fastq_2, fasta ->
                 if (!fasta) {
                     error("Sample '${meta.id}': no fasta given but --seq_type is 'contig'. This looks like a reads samplesheet - did you mean --seq_type illumina or ont?")
