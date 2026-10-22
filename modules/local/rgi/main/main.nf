@@ -38,7 +38,7 @@ process RGI_MAIN {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        rgi: \$(rgi main --version 2>&1 | grep -oP '\\d+\\.\\d+\\.\\d+')
+        rgi: \$(rgi main --version 2>/dev/null)
     END_VERSIONS
     """
 

@@ -76,6 +76,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 
 ### `Fixed`
 
+- RGI's version is recorded in `software_versions.yml` (it was empty: the container's busybox `grep` has no `-P`)
 - _Salmonella_ samples now reach SISTR and get the AMRFinderPlus `Salmonella` organism: mlst 2.25.0 reports the scheme as `senterica_achtman_2`, which the MLST-to-organism map did not list. The map was checked against `mlst --longlist` (2.25.0) and `amrfinder --list_organisms` (4.2.5): `vcholerae_2`, `diphtheria_3` and `helicobacter` added; `sepidermidis` removed, because AMRFinderPlus has no `Staphylococcus_epidermidis` organism and exited with an error for those samples
 - Fixed implicit closure parameter warnings in map/branch operations
 - Fixed deprecated `Channel` factory usage (now uses lowercase `channel`)
