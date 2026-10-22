@@ -34,8 +34,10 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   │   ├── *.fasta                  #   Final consensus assembly
 │   │   │   └── *.gfa                    #   Final consensus assembly graph
 │   │   │                                #   (ONT, --ont_assembler autocycler)
-│   │   └── dnaapler/                    # Reoriented assembly: *_reoriented.fasta / *.gfa / *.fasta
-│   │                                    #   (ONT only, --run_dnaapler true [default])
+│   │   ├── dnaapler/                    # Reoriented assembly: *_reoriented.fasta / *.gfa / *.fasta
+│   │   │                                #   (ONT only, --run_dnaapler true [default])
+│   │   └── annotation_input/            # FASTA read by every annotation tool: *.fasta (contigs >= --min_contig_length,
+│   │                                    #   uncompressed), *.filter_stats.tsv (contigs and length before/after)
 │   ├── qc/
 │   │   └── quast/                       # Assembly quality metrics: *.tsv
 │   └── annotation/
@@ -93,6 +95,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - [Medaka](#medaka) - ONT assembly polishing (Flye mode)
 - [Autocycler](#autocycler) - ONT consensus multi-assembler assembly _(optional)_
 - [Dnaapler](#dnaapler) - Contig reorientation _(optional, ONT only)_
+- [Annotation input](#annotation-input) - Length filter and decompression before annotation
 
 ### Genome Annotation and Analysis
 
@@ -276,6 +279,21 @@ This step runs for `--seq_type ont` with `--ont_assembler autocycler`.
 
 This step is optional and enabled by default (`--run_dnaapler true`). It only applies to ONT assemblies.
 
+### Annotation input
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/assemblies/annotation_input/`
+  - `<sample_id>.fasta`: The assembly (SPAdes scaffolds, ONT assembly or the samplesheet contigs) without contigs shorter than `--min_contig_length` (default 1000 bp), uncompressed, original contig names and descriptions kept.
+  - `<sample_id>.filter_stats.tsv`: `seqkit stats` table with one row for the assembly before the filter and one for the file above: number of contigs, total length, N50 and other length statistics.
+
+</details>
+
+[SeqKit](https://bioinf.shenwei.me/seqkit/) prepares one FASTA per sample that every annotation and typing tool reads: CheckM2, MLST, Bakta, GTDB-Tk, geNomad, MOB-suite, RGI, Kleborate, sccmec and SISTR (AMRFinderPlus reads Bakta's outputs, which keep the same contig names). All of them therefore see the same contigs under the same names. QUAST runs on the unfiltered assembly, so its statistics describe the assembly as produced.
+
+This step runs for every `--seq_type`.
+
 ---
 
 ## Genome Annotation and Analysis
@@ -290,7 +308,7 @@ This step is optional and enabled by default (`--run_dnaapler true`). It only ap
 
 </details>
 
-[QUAST](https://github.com/ablab/quast) evaluates genome assembly quality by computing metrics such as total length, number of contigs, N50, GC content, and largest contig size.
+[QUAST](https://github.com/ablab/quast) evaluates genome assembly quality by computing metrics such as total length, number of contigs, N50, GC content, and largest contig size. It runs on the unfiltered assembly; the other tools in this section read the [annotation input](#annotation-input) (contigs >= `--min_contig_length`).
 
 ### CheckM2
 
@@ -334,7 +352,7 @@ This step is optional and enabled by default (`--run_dnaapler true`). It only ap
 
 </details>
 
-[Bakta](https://github.com/oschwengers/bakta) provides rapid and standardized annotation of bacterial genomes. It identifies CDSs, tRNAs, rRNAs, ncRNAs, CRISPR arrays, and other genomic features. The Bakta outputs (nucleotide FASTA, protein FASTA, GFF3) are used as input for downstream AMRFinderPlus and geNomad analyses.
+[Bakta](https://github.com/oschwengers/bakta) provides rapid and standardized annotation of bacterial genomes. It identifies CDSs, tRNAs, rRNAs, ncRNAs, CRISPR arrays, and other genomic features. Bakta runs with `--keep-contig-headers`, so its outputs use the contig names of the assembly. The Bakta outputs (nucleotide FASTA, protein FASTA, GFF3) are the input of AMRFinderPlus.
 
 ### GTDB-Tk
 
@@ -401,7 +419,7 @@ The output TSV contains:
 
 </details>
 
-[geNomad](https://github.com/apcamargo/genomad) identifies mobile genetic elements (prophages and plasmids) in genome assemblies. It uses the Bakta-annotated nucleotide sequences as input and classifies contigs as chromosome, plasmid, or virus based on gene content and genomic signatures.
+[geNomad](https://github.com/apcamargo/genomad) identifies mobile genetic elements (prophages and plasmids) in genome assemblies. It reads the [annotation input](#annotation-input) and classifies contigs as chromosome, plasmid, or virus based on gene content and genomic signatures.
 
 ### RGI
 

@@ -72,7 +72,7 @@ gtdbtk_pplacer_scratch: true # Use scratch dir for pplacer (reduces RAM)
 # Annotation options
 # ----------------------------------------------------------------------------
 
-min_contig_length: 1000 # Minimum contig length (bp) passed to Bakta
+min_contig_length: 1000 # Minimum contig length (bp) for every annotation tool (QUAST sees all contigs)
 
 # ----------------------------------------------------------------------------
 # Illumina preprocessing (fastp)

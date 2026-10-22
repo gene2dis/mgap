@@ -1,0 +1,100 @@
+nextflow_process {
+
+    name "Test SEQKIT_FILTER module"
+    script "../../../modules/local/seqkit/filter/main.nf"
+    process "SEQKIT_FILTER"
+
+    tag "modules"
+    tag "modules_local"
+    tag "seqkit"
+
+    // conf/modules.config sets ext.args to --min-len ${params.min_contig_length} (1000).
+    // contigs.fasta: contig_1 1500 bp (with a description), contig_2 999 bp, contig_3 1000 bp.
+
+    test("SEQKIT_FILTER - gzipped input") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file("${projectDir}/tests/data/seqkit_filter/contigs.fasta.gz", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def fasta = path(process.out.fasta[0][1])
+            def headers = fasta.text.readLines().findAll { it.startsWith('>') }
+            def stats = path(process.out.stats[0][1]).text.readLines()*.split('\t')
+            assertAll(
+                { assert process.success },
+                // uncompressed, original headers kept, the 999 bp contig dropped
+                { assert fasta.fileName.toString() == 'test.fasta' },
+                { assert headers == [ '>contig_1 length=1500 circular=true', '>contig_3' ] },
+                // header row, then the input (3 contigs) and the output (2 contigs)
+                { assert stats.size() == 3 },
+                { assert stats[1][stats[0].findIndexOf { it == 'num_seqs' }] == '3' },
+                { assert stats[2][stats[0].findIndexOf { it == 'num_seqs' }] == '2' },
+                { assert stats[2][stats[0].findIndexOf { it == 'sum_len' }] == '2500' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+    test("SEQKIT_FILTER - plain input with the sample's own name") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'contigs' ],
+                    file("${projectDir}/tests/data/seqkit_filter/contigs.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def fasta = path(process.out.fasta[0][1])
+            assertAll(
+                { assert process.success },
+                // the input is staged under input/, so contigs.fasta in, contigs.fasta out
+                { assert fasta.fileName.toString() == 'contigs.fasta' },
+                { assert fasta.text.readLines().findAll { it.startsWith('>') }.size() == 2 }
+            )
+        }
+
+    }
+
+    test("SEQKIT_FILTER - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file("${projectDir}/tests/data/stub_inputs/genome.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.fasta[0][1]).text.startsWith('>') },
+                { assert process.out.stats },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}
