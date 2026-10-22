@@ -28,6 +28,11 @@ process RGI_LOAD {
     # otherwise build them in every sample's localDB copy (RGI 6.0.3 app.Database).
     python -c "from app.Database import Database; Database(local_database=True).build_databases()"
 
+    # build_databases() ignores makeblastdb/diamond exit codes: fail here, not in every RGI_MAIN
+    for f in proteindb.fsa protein.db.pin protein.db.dmnd; do
+        test -s localDB/\$f || { echo "RGI_LOAD: localDB/\$f is missing or empty" >&2; exit 1; }
+    done
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         rgi: \$(rgi main --version 2>/dev/null)

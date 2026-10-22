@@ -348,9 +348,14 @@ workflow MGAP {
 
     // The same versions as a MultiQC "Software Versions" section (MultiQC reads
     // files named *_mqc_versions.yml). MultiQC's own version cannot be in it:
-    // it is only known once MULTIQC has run on this file.
+    // it is only known once MULTIQC has run on this file. Groups are the process
+    // name alone (GENE2DIS_MGAP:MGAP:ILLUMINA:FASTP -> FASTP) so MultiQC merges
+    // them with the versions its own modules detect instead of listing tools twice.
     ch_multiqc_files = ch_multiqc_files.mix(
-        ch_versions_text.collectFile(name: 'mgap_software_mqc_versions.yml', sort: true)
+        ch_versions_text
+            .map { text -> text.replaceFirst(/^"(?:[^"]*:)?([^":]+)":/, '"$1":') }
+            .unique()
+            .collectFile(name: 'mgap_software_mqc_versions.yml', sort: true)
     )
 
     //
