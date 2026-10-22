@@ -23,15 +23,9 @@ process SISTR {
     task.ext.when == null || task.ext.when
 
     script:
-    def args          = task.ext.args ?: ''
-    def prefix        = task.ext.prefix ?: "${meta.id}"
-    def is_compressed = fasta.getName().endsWith(".gz") ? true : false
-    def fasta_name    = fasta.getName().replace(".gz", "")
+    def args   = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    if [ "$is_compressed" == "true" ]; then
-        gzip -c -d $fasta > $fasta_name
-    fi
-
     sistr \\
         $args \\
         --threads $task.cpus \\
@@ -40,7 +34,7 @@ process SISTR {
         --cgmlst-profiles ${prefix}-cgmlst.csv \\
         --output-prediction ${prefix} \\
         --output-format tab \\
-        $fasta_name
+        $fasta
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
