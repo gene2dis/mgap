@@ -10,7 +10,7 @@ include { SISTR     } from '../../modules/local/sistr/main'
 
 workflow SPECIES_TYPING {
     take:
-    species // channel: [ val(meta), val(organism) ]; organism is null when unmapped
+    species // channel: [ val(meta), val(organism) ]; organism is null when unmapped (no branch matches)
     fasta   // channel: [ val(meta), path(fasta) ]
 
     main:
@@ -24,8 +24,6 @@ workflow SPECIES_TYPING {
             saureus: organism == "Staphylococcus_aureus"
                 return [ meta, assembly ]
             salmonella: organism == "Salmonella"
-                return [ meta, assembly ]
-            other: true
                 return [ meta, assembly ]
         }
         .set { ch_species_fasta }

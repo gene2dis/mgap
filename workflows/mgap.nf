@@ -13,6 +13,10 @@
     N. meningitidis, AMRFinderPlus needs the species), 'serratia' (genus-level
     scheme; AMRFinderPlus has only Serratia_marcescens), 'sepidermidis'
     (no Staphylococcus_epidermidis organism in AMRFinderPlus).
+    Still mapped though they cover more than the organism's species, pending
+    a decision: 'bordetella_3' (B. pertussis, parapertussis, bronchiseptica)
+    and 'campylobacter_nonjejuni*' (non-jejuni/coli species; the
+    AMRFinderPlus Campylobacter organism is curated for C. jejuni/coli).
 ----------------------------------------------------------------------------------------
 */
 
