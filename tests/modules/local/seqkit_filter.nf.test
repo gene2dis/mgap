@@ -69,6 +69,33 @@ nextflow_process {
 
     }
 
+    test("SEQKIT_FILTER - no contig long enough") {
+
+        when {
+            params {
+                min_contig_length = 2000
+            }
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file("${projectDir}/tests/data/seqkit_filter/contigs.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            // an empty file, which MGAP drops from annotation with a warning
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.fasta[0][1]).toFile().length() == 0 },
+                { assert path(process.out.stats[0][1]).text.readLines().size() == 3 }
+            )
+        }
+
+    }
+
     test("SEQKIT_FILTER - stub") {
 
         tag "stub"

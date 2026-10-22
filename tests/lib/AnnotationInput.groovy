@@ -62,7 +62,11 @@ class AnnotationInput {
 
     private static Path taskDir(Path workDir, String hash) {
         def (prefix, rest) = hash.tokenize('/')
-        return Files.list(workDir.resolve(prefix)).find { it.fileName.toString().startsWith(rest) }
+        def dir = Files.list(workDir.resolve(prefix)).withCloseable { stream ->
+            stream.filter { it.fileName.toString().startsWith(rest) }.findFirst().orElse(null)
+        }
+        assert dir != null : "no work directory for task hash ${hash} under ${workDir}"
+        return dir
     }
 
     // symlinks Nextflow staged into the task directory, in any subdirectory

@@ -192,7 +192,16 @@ workflow MGAP {
     //
     SEQKIT_FILTER( genome_assembly )
     ch_versions = ch_versions.mix(SEQKIT_FILTER.out.versions.first())
+    // A sample with no contig >= --min_contig_length gets an empty file: leave it
+    // out of annotation (GTDB-Tk's batch would fail for every sample) and say so
     ch_annotation_fasta = SEQKIT_FILTER.out.fasta
+        .filter { meta, fasta ->
+            if (fasta.size() == 0) {
+                log.warn("Sample '${meta.id}': no contig is at least ${params.min_contig_length} bp - the sample is excluded from annotation and typing (QUAST still reports the assembly).")
+                return false
+            }
+            true
+        }
 
     // RUN Checkm2 (only when --checkm2_db is provided)
     if (params.checkm2_db) {

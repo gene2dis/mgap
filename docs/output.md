@@ -290,7 +290,7 @@ This step is optional and enabled by default (`--run_dnaapler true`). It only ap
 
 </details>
 
-[SeqKit](https://bioinf.shenwei.me/seqkit/) prepares one FASTA per sample that every annotation and typing tool reads: CheckM2, MLST, Bakta, GTDB-Tk, geNomad, MOB-suite, RGI, Kleborate, sccmec and SISTR (AMRFinderPlus reads Bakta's outputs, which keep the same contig names). All of them therefore see the same contigs under the same names. QUAST runs on the unfiltered assembly, so its statistics describe the assembly as produced.
+[SeqKit](https://bioinf.shenwei.me/seqkit/) prepares one FASTA per sample that every annotation and typing tool reads: CheckM2, MLST, Bakta, GTDB-Tk, geNomad, MOB-suite, RGI, Kleborate, sccmec and SISTR (AMRFinderPlus reads Bakta's outputs, which keep the same contig names). All of them therefore see the same contigs under the same names. QUAST runs on the unfiltered assembly, so its statistics describe the assembly as produced. A sample with no contig of at least `--min_contig_length` gets an empty file here and is left out of annotation and typing, with a warning in the log.
 
 This step runs for every `--seq_type`.
 
