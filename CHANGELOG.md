@@ -22,8 +22,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Added pre-commit hooks configuration
 - Added issue templates for bug reports and feature requests
 - Added `mobsuite/recon` (nf-core module) for optional plasmid detection and reconstruction, gated by `--run_mobsuite`
-- Added local `sistr` module (v1.1.3) for automatic Salmonella serotype prediction, triggered when MLST scheme is `salmonella`
-- Added `SALMONELLA` local subworkflow wrapping SISTR, following the existing `KLEBSIELLA` / `SCCMEC` taxa-specific pattern
+- Added local `sistr` module (v1.1.3) for automatic Salmonella serotype prediction, triggered when MLST scheme is `senterica_achtman_2`
+- Added the `SPECIES_TYPING` local subworkflow: one place that routes samples by MLST-derived organism to Kleborate, SCCmec and SISTR (replaces the one-module `KLEBSIELLA` and `SALMONELLA` subworkflows and the bare `SCCMEC` call)
 - Working test profile with tiny public test data (`-profile test`), plus stub pipeline tests for paired/single-end Illumina, ONT (both assembler modes) and contig inputs
 - Single-end Illumina support (detected from the samplesheet)
 - Run-level MultiQC report aggregating fastp/fastplong, Kraken2, QUAST and Bakta results (`--multiqc_config`, `--multiqc_title`, `--multiqc_logo`)
@@ -60,7 +60,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - GTDB-Tk receives genomes via a batchfile, so it works for any assembly file extension (the `gtdbtk_extension` parameter is gone)
 - The Mash/Seqtk coverage-adjustment logic is shared by the Illumina and ONT paths (`COVERAGE_ADJUST` subworkflow) and tolerates unparseable coverage estimates
 - The Autocycler container image is pinned by digest; assembler-failure tolerance moved to configuration with loud reporting when all assemblers fail for a sample
-- `software_versions.yml` is valid YAML listing each tool once, plus pipeline/Nextflow versions
+- `software_versions.yml` is valid YAML listing each tool once (MultiQC included), plus pipeline/Nextflow versions; all but MultiQC's own appear as a Software Versions section in the MultiQC report (grouped by process name, so tools MultiQC also detects are listed once)
+- `AMRFINDERPLUS_RUN` reads the tool and database versions once, no longer emits the unused `VER`/`DBVER` env outputs and no longer writes a file named `stdout`
 - **Improved samplesheet handling for contig mode:**
   - `CreateSampleSheet.py` now uses `fasta` column instead of `fastq_1` for contig mode
   - CSV output format now matches data type (sample,fasta vs sample,fastq_1,fastq_2)
@@ -70,9 +71,15 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - **Removed deprecated local modules** (replaced by nf-core versions): checkm2, flye, genomad, nanoq, spades (amrfinderplus and kleborate keep customized local copies)
 - `conf/ont.config` is merged into `conf/modules.config`, which now holds the options of every process
 - Bakta no longer publishes its `versions.yml` into `<sample>/annotation/bakta/` (versions are collected in `pipeline_info/software_versions.yml`)
+- RGI loads CARD once per run: a new `RGI_LOAD` step runs `rgi load` and builds the BLAST/DIAMOND databases, and `RGI_MAIN` works on a copy of that local database instead of loading CARD for every sample
+- Kleborate (`-p kpsc --trim_headers`) and SISTR (`--qc`) options moved from the module scripts to `ext.args` in `conf/modules.config` (same command lines)
 
 ### `Fixed`
 
+- RGI's version is recorded in `software_versions.yml` (it was empty: the container's busybox `grep` has no `-P`)
+- `AMRFINDERPLUS_RUN` passes `--organism` only when the given AMRFinderPlus database lists it, and otherwise runs without it with a warning, instead of failing the sample (e.g. an older `--amrfinder_db`)
+- `RGI_LOAD` fails when the protein, BLAST or DIAMOND database was not built (RGI ignores those build errors), instead of every `RGI_MAIN` rebuilding them
+- _Salmonella_ samples now reach SISTR and get the AMRFinderPlus `Salmonella` organism: mlst 2.25.0 reports the scheme as `senterica_achtman_2`, which the MLST-to-organism map did not list. Their AMRFinderPlus results now include point mutations (`<sample>-mutations.tsv`, e.g. `gyrA_D87Y`) and apply the organism's gene suppression (e.g. `fieF` is no longer reported). The map was checked against `mlst --longlist` (2.25.0) and `amrfinder --list_organisms` (4.2.5): `vcholerae_2`, `diphtheria_3` and `helicobacter` added; `sepidermidis` removed, because AMRFinderPlus has no `Staphylococcus_epidermidis` organism and exited with an error for those samples
 - Fixed implicit closure parameter warnings in map/branch operations
 - Fixed deprecated `Channel` factory usage (now uses lowercase `channel`)
 - Fixed dnaapler version command (was incorrectly calling medaka)

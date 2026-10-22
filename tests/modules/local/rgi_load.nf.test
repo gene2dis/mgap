@@ -1,0 +1,36 @@
+nextflow_process {
+
+    name "Test RGI_LOAD module"
+    script "../../../modules/local/rgi/load/main.nf"
+    process "RGI_LOAD"
+
+    tag "modules"
+    tag "modules_local"
+    tag "rgi"
+    tag "rgi/load"
+
+    test("RGI_LOAD - CARD local database - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = file('card')
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert file(process.out.db[0]).name == 'localDB' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

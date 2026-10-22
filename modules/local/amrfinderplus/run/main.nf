@@ -15,8 +15,6 @@ process AMRFINDERPLUS_RUN {
     tuple val(meta), path("${prefix}.tsv")          , emit: report
     tuple val(meta), path("${prefix}-mutations.tsv"), emit: mutation_report, optional: true
     path "versions.yml"                             , emit: versions
-    env 'VER'                                       , emit: tool_version
-    env 'DBVER'                                     , emit: db_version
 
     when:
     task.ext.when == null || task.ext.when
@@ -24,26 +22,38 @@ process AMRFINDERPLUS_RUN {
     script:
     def args = task.ext.args   ?: ''
     prefix   = task.ext.prefix ?: "${meta.id}"
-    def organism_param = species ? "--organism ${species} --mutation_all ${prefix}-mutations.tsv" : ""
+    def organism = species ?: ''
     """
+    # Pass the organism only if this database lists it: amrfinder exits with an
+    # error for an organism its database does not know (e.g. an older --amrfinder_db)
+    ORGANISM_ARGS=""
+    if [ -n "${organism}" ]; then
+        if amrfinder --database ${amrfinderdb} --list_organisms 2>/dev/null | tr ' ,' '\\n\\n' | grep -qx "${organism}"; then
+            ORGANISM_ARGS="--organism ${organism} --mutation_all ${prefix}-mutations.tsv"
+        else
+            echo "WARNING: organism ${organism} is not in this AMRFinderPlus database; running without --organism" >&2
+        fi
+    fi
+
     amrfinder \\
         --plus \\
         -n ${fasta_nuc} \\
         -p ${fasta_prot} \\
         -g ${gff3} \\
         -a bakta \\
-        ${organism_param} \\
+        \$ORGANISM_ARGS \\
         ${args} \\
         --database ${amrfinderdb} \\
         --threads ${task.cpus} > ${prefix}.tsv
 
+    # the database version is the last word of --database_version's stdout
     VER=\$(amrfinder --version)
-    DBVER=\$(echo \$(amrfinder --database ${amrfinderdb} --database_version 2> stdout) | rev | cut -f 1 -d ' ' | rev)
+    DBVER=\$(echo \$(amrfinder --database ${amrfinderdb} --database_version 2>/dev/null) | rev | cut -f 1 -d ' ' | rev)
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        amrfinderplus: \$(amrfinder --version)
-        amrfinderplus-database: \$(echo \$(amrfinder --database ${amrfinderdb} --database_version 2> stdout) | rev | cut -f 1 -d ' ' | rev)
+        amrfinderplus: \$VER
+        amrfinderplus-database: \$DBVER
     END_VERSIONS
     """
 
@@ -54,9 +64,6 @@ process AMRFINDERPLUS_RUN {
     """
     touch ${prefix}.tsv
     ${mutation_report}
-
-    VER=4.2.5
-    DBVER=stub-db
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

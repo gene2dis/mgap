@@ -4,10 +4,19 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     MLST scheme to AMRFinderPlus organism mapping.
     Keys are mlst scheme names (mlst --longlist); values are AMRFinderPlus
-    --organism values (amrfinder --list_organisms).
-    Note: the shared 'neisseria' scheme covers both N. gonorrhoeae and
-    N. meningitidis, but AMRFinderPlus needs a species-level organism —
-    so Neisseria is intentionally left unmapped.
+    --organism values (amrfinder --list_organisms). Checked against mlst 2.25.0
+    and AMRFinderPlus 4.2.5 (database 2025-12-03.1); an organism missing from
+    that list makes amrfinder exit with an error, so only listed ones are used.
+    'salmonella' and 'ecoli_2' are pre-2.23 mlst scheme names, kept for
+    --mlst_datadir databases built with older mlst.
+    Left unmapped on purpose: 'neisseria' (one scheme for N. gonorrhoeae and
+    N. meningitidis, AMRFinderPlus needs the species), 'serratia' (genus-level
+    scheme; AMRFinderPlus has only Serratia_marcescens), 'sepidermidis'
+    (no Staphylococcus_epidermidis organism in AMRFinderPlus).
+    Still mapped though they cover more than the organism's species, pending
+    a decision: 'bordetella_3' (B. pertussis, parapertussis, bronchiseptica)
+    and 'campylobacter_nonjejuni*' (non-jejuni/coli species; the
+    AMRFinderPlus Campylobacter organism is curated for C. jejuni/coli).
 ----------------------------------------------------------------------------------------
 */
 
@@ -30,6 +39,7 @@ def getTaxaNames() {
         "campylobacter_nonjejuni_9": "Campylobacter",
         "cdifficile": "Clostridioides_difficile",
         "cdiphtheriae": "Corynebacterium_diphtheriae",
+        "diphtheria_3": "Corynebacterium_diphtheriae",
         "cfreundii": "Citrobacter_freundii",
         "ecloacae": "Enterobacter_cloacae",
         "efaecalis": "Enterococcus_faecalis",
@@ -37,18 +47,20 @@ def getTaxaNames() {
         "ecoli": "Escherichia",
         "ecoli_achtman_4": "Escherichia",
         "ecoli_2": "Escherichia",
+        "helicobacter": "Helicobacter_pylori",
         "hinfluenzae": "Haemophilus_influenzae",
         "koxytoca": "Klebsiella_oxytoca",
         "klebsiella": "Klebsiella_pneumoniae",
         "paeruginosa": "Pseudomonas_aeruginosa",
         "salmonella": "Salmonella",
+        "senterica_achtman_2": "Salmonella",
         "saureus": "Staphylococcus_aureus",
-        "sepidermidis": "Staphylococcus_epidermidis",
         "spseudintermedius": "Staphylococcus_pseudintermedius",
         "sagalactiae": "Streptococcus_agalactiae",
         "spneumoniae": "Streptococcus_pneumoniae",
         "spyogenes": "Streptococcus_pyogenes",
         "vcholerae": "Vibrio_cholerae",
+        "vcholerae_2": "Vibrio_cholerae",
         "vparahaemolyticus": "Vibrio_parahaemolyticus",
         "vvulnificus": "Vibrio_vulnificus"
     ]
@@ -66,10 +78,10 @@ include { samplesheetToList } from 'plugin/nf-schema'
 //
 include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
-include { KLEBSIELLA } from '../subworkflows/local/klebsiella'
-include { SALMONELLA } from '../subworkflows/local/salmonella'
+include { SPECIES_TYPING } from '../subworkflows/local/species_typing'
 include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/run/main'
+include { RGI_LOAD } from '../modules/local/rgi/load/main'
 include { RGI_MAIN } from '../modules/local/rgi/main/main'
 include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoend/main'
 include { MOBSUITE_RECON } from '../modules/nf-core/mobsuite/recon/main'
@@ -86,7 +98,6 @@ include { MOBSUITE_RECON } from '../modules/nf-core/mobsuite/recon/main'
 include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
-include { SCCMEC } from '../modules/local/sccmec/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
 include { MULTIQC } from '../modules/nf-core/multiqc/main'
 
@@ -274,6 +285,7 @@ workflow MGAP {
             ch_gtdbtk_db,
             params.gtdbtk_pplacer_scratch
         )
+        // one batch task for the whole run, so no .first() needed
         ch_versions = ch_versions.mix(GTDBTK.out.versions)
     }
 
@@ -297,51 +309,31 @@ workflow MGAP {
     }
 
     // RUN RGI for antimicrobial resistance gene prediction
+    // CARD is loaded once per run; every sample gets the same local database
     if (params.run_rgi) {
+        RGI_LOAD(
+            file(params.rgi_db, checkIfExists: true)
+        )
+        ch_versions = ch_versions.mix(RGI_LOAD.out.versions)
+
         RGI_MAIN(
             genome_assembly,
-            file(params.rgi_db, checkIfExists: true)
+            RGI_LOAD.out.db
         )
         ch_versions = ch_versions.mix(RGI_MAIN.out.versions.first())
     }
 
     //
-    // Run taxa-specific tools
-    // TODO: Move to dedicated subworkflow
+    // SUBWORKFLOW: species-specific typing (Kleborate, SCCmec, SISTR), routed by
+    // the organism mapped from each sample's MLST scheme
     //
-    species_code_ch
-        .join(ch_annotation_fasta)
-        .branch { meta, species, fasta ->
-            klebsiella: species == "Klebsiella_pneumoniae"
-                return [ meta, fasta ]
-            saureus: species == "Staphylococcus_aureus"
-                return [ meta, fasta ]
-            salmonella: species == "Salmonella"
-                return [ meta, fasta ]
-            other: true
-                return [ meta, fasta ]
-        }
-        .set { taxa_genome_process }
-
-    // Run Klebsiella-specific subworkflow
-    KLEBSIELLA(
-        taxa_genome_process.klebsiella
+    SPECIES_TYPING(
+        species_code_ch,
+        ch_annotation_fasta
     )
-    ch_versions = ch_versions.mix(KLEBSIELLA.out.versions)
+    ch_versions = ch_versions.mix(SPECIES_TYPING.out.versions)
 
-    // Run sccmec for S. aureus SCCmec typing
-    SCCMEC(
-        taxa_genome_process.saureus
-    )
-    ch_versions = ch_versions.mix(SCCMEC.out.versions)
-
-    // Run SISTR for Salmonella serotype prediction
-    SALMONELLA(
-        taxa_genome_process.salmonella
-    )
-    ch_versions = ch_versions.mix(SALMONELLA.out.versions)
-
-    // Collate and publish software versions.
+    // Collate software versions.
     // Dedupe on file CONTENT (each process emits one versions.yml per task,
     // all with distinct paths) and prepend workflow-level versions, so the
     // aggregate is valid YAML with each process listed once.
@@ -352,13 +344,25 @@ workflow MGAP {
         .map { versions_file -> versions_file.text }
         .unique()
         .mix(channel.of(workflow_versions))
-        .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info", sort: true)
+        .set { ch_versions_text }
+
+    // The same versions as a MultiQC "Software Versions" section (MultiQC reads
+    // files named *_mqc_versions.yml). MultiQC's own version cannot be in it:
+    // it is only known once MULTIQC has run on this file. Groups are the process
+    // name alone (GENE2DIS_MGAP:MGAP:ILLUMINA:FASTP -> FASTP) so MultiQC merges
+    // them with the versions its own modules detect instead of listing tools twice.
+    ch_multiqc_files = ch_multiqc_files.mix(
+        ch_versions_text
+            .map { text -> text.replaceFirst(/^"(?:[^"]*:)?([^":]+)":/, '"$1":') }
+            .unique()
+            .collectFile(name: 'mgap_software_mqc_versions.yml', sort: true)
+    )
 
     //
     // MODULE: MultiQC - aggregate QC reports across all samples
-    // (fastp/fastplong json, Kraken2 reports, QUAST tsv, Bakta txt)
+    // (fastp/fastplong json, Kraken2 reports, QUAST tsv, Bakta txt, software versions)
     // Note: MULTIQC's version output is an eval tuple, not a versions.yml
-    // path, and must not be mixed into ch_versions (see the module).
+    // path, so it joins software_versions.yml as text below.
     //
     ch_multiqc_config = params.multiqc_config
         ? file(params.multiqc_config, checkIfExists: true)
@@ -373,6 +377,12 @@ workflow MGAP {
         [],  // replace names
         []   // sample names
     )
+
+    // Publish software_versions.yml: every tool, MultiQC included
+    MULTIQC.out.versions
+        .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
+        .mix(ch_versions_text)
+        .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info", sort: true)
 }
 
 /*

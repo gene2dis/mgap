@@ -1,0 +1,45 @@
+name: rgi_load
+description: Load the CARD database into a local RGI database directory once per run
+keywords:
+  - bacteria
+  - antibiotic resistance
+  - antimicrobial resistance
+  - AMR
+  - CARD
+  - database
+tools:
+  - rgi:
+      description: |
+        Resistance Gene Identifier (RGI) predicts resistome(s) from protein or
+        nucleotide data based on homology and SNP models. RGI uses the CARD
+        (Comprehensive Antibiotic Resistance Database) for reference data.
+      homepage: https://github.com/arpcard/rgi
+      documentation: https://github.com/arpcard/rgi#documentation
+      tool_dev_url: https://github.com/arpcard/rgi
+      doi: "10.1093/nar/gkz935"
+      licence: ["Apache-2.0"]
+      identifier: biotools:rgi
+input:
+  - db:
+      type: directory
+      description: CARD database directory containing card.json
+      pattern: "*"
+output:
+  db:
+    - localDB:
+        type: directory
+        description: |
+          RGI local database (rgi load --local) with the protein FASTA, BLAST and
+          DIAMOND databases already built, ready to be staged into RGI_MAIN
+        pattern: "localDB"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+        ontologies:
+          - edam: "http://edamontology.org/format_3750"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

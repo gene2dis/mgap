@@ -22,8 +22,6 @@ process KLEBORATE {
     """
     kleborate \\
         $args \\
-        -p kpsc \\
-        --trim_headers \\
         -o ./ \\
         --assemblies $fastas
 

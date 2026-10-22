@@ -9,7 +9,7 @@ process RGI_MAIN {
 
     input:
     tuple val(meta), path(fasta)
-    path db
+    path card_db, stageAs: 'card_localDB'
 
     output:
     tuple val(meta), path("${prefix}.txt"), emit: tsv
@@ -23,8 +23,9 @@ process RGI_MAIN {
     def args = task.ext.args ?: ''
     prefix = task.ext.prefix ?: "${meta.id}"
     """
-    rgi clean --local
-    rgi load --card_json ${db}/card.json --local
+    # rgi main --local reads and writes ./localDB (it appends to .ncbirc on every
+    # run), so work on a copy of the database RGI_LOAD built, not the staged link
+    cp -rL card_localDB localDB
 
     rgi main \\
         --input_sequence ${fasta} \\
@@ -33,9 +34,11 @@ process RGI_MAIN {
         --num_threads ${task.cpus} \\
         ${args}
 
+    rm -rf localDB
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        rgi: \$(rgi main --version 2>&1 | grep -oP '\\d+\\.\\d+\\.\\d+')
+        rgi: \$(rgi main --version 2>/dev/null)
     END_VERSIONS
     """
 

@@ -84,23 +84,26 @@ flowchart TD
 
     %% ── RGI (optional) ──
     ASSEMBLY --> RGI_CHK{"run_rgi?"}
-    RGI_CHK -- yes --> RGI["RGI<br>(AMR gene prediction)"]
+    RGI_CHK -- yes --> RGI_LOAD["RGI load<br>(CARD, once per run)"]
+    RGI_LOAD --> RGI["RGI<br>(AMR gene prediction)"]
 
     %% ── MOB-suite (optional) ──
     BAKTA --> MOBSUITE_CHK{"run_mobsuite?"}
     MOBSUITE_CHK -- yes --> MOBSUITE["MOB-suite<br>(plasmid reconstruction)"]
 
     %% ── Taxa-specific tools ──
-    SPECIES --> TAXA_BRANCH{"Species?"}
+    SPECIES --> TAXA_BRANCH{"SPECIES_TYPING<br>Species?"}
     BAKTA --> TAXA_BRANCH
     TAXA_BRANCH -- "K. pneumoniae" --> KLEBORATE["Kleborate"]
     TAXA_BRANCH -- "S. aureus" --> SCCMEC["sccmec"]
     TAXA_BRANCH -- "Salmonella" --> SISTR["SISTR<br>(serotype prediction)"]
 
     %% ── Software versions ──
-    QUAST & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD --> VERSIONS["software_versions.yml<br>(collect versions)"]
+    QUAST & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD & RGI --> TOOL_VERSIONS["Tool versions"]
+    KLEBORATE & SCCMEC & SISTR & MOBSUITE --> TOOL_VERSIONS
     QUAST & BAKTA --> MULTIQC["MULTIQC<br>(aggregate QC report)"]
-    KLEBORATE & SCCMEC & SISTR & MOBSUITE --> VERSIONS
+    TOOL_VERSIONS -- "Software Versions section" --> MULTIQC
+    TOOL_VERSIONS & MULTIQC --> VERSIONS["software_versions.yml<br>(tools + MultiQC)"]
 
     %% ── Styling ──
     classDef decision fill:#ffd966,stroke:#333,color:#000
@@ -110,8 +113,8 @@ flowchart TD
     classDef merge fill:#e1d5e7,stroke:#9673a6,color:#000
 
     class SEQ_TYPE,KR2_ILL,KR2_ONT,COV_ILL,COV_ONT,ASM_ONT,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,TAXA_BRANCH decision
-    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,MASH_ONT,SEQTK_ONT,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI,MOBSUITE optional
-    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,VERSIONS,SPECIES,AMR_JOIN process
+    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,MASH_ONT,SEQTK_ONT,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI_LOAD,RGI,MOBSUITE optional
+    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,TOOL_VERSIONS,VERSIONS,SPECIES,AMR_JOIN process
     class INPUT input
     class ASSEMBLY merge
 ```
@@ -168,7 +171,7 @@ flowchart TD
 | 5    | **GTDB-Tk**       | Taxonomic classification _(optional)_                               |
 | 6    | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta + MLST outputs) |
 | 7    | **geNomad**       | Mobile genetic element identification                               |
-| 8    | **RGI**           | Resistance gene prediction _(optional)_                             |
+| 8    | **RGI**           | Resistance gene prediction; CARD loaded once per run _(optional)_   |
 | 9    | **MOB-suite**     | Plasmid detection and reconstruction _(optional)_                   |
 
 ### Taxa-Specific Analysis

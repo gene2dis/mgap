@@ -1,0 +1,55 @@
+nextflow_workflow {
+
+    name "Test SPECIES_TYPING subworkflow"
+    script "../../subworkflows/local/species_typing.nf"
+    workflow "SPECIES_TYPING"
+
+    tag "subworkflows"
+    tag "species_typing"
+
+    test("SPECIES_TYPING - organism routes each sample to its tool - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+            workflow {
+                """
+                def fasta = file("${baseDir}/tests/data/stub_inputs/genome.fasta", checkIfExists: true)
+                input[0] = Channel.of(
+                    [ [ id:'kpn' ], 'Klebsiella_pneumoniae' ],
+                    [ [ id:'sau' ], 'Staphylococcus_aureus' ],
+                    [ [ id:'sen' ], 'Salmonella' ],
+                    [ [ id:'eco' ], 'Escherichia' ],
+                    [ [ id:'unk' ], null ]
+                )
+                input[1] = Channel.of(
+                    [ [ id:'kpn' ], fasta ],
+                    [ [ id:'sau' ], fasta ],
+                    [ [ id:'sen' ], fasta ],
+                    [ [ id:'eco' ], fasta ],
+                    [ [ id:'unk' ], fasta ]
+                )
+                """
+            }
+        }
+
+        then {
+            def ids = { ch -> ch.collect { it[0].id }.sort() }
+            assertAll(
+                { assert workflow.success },
+                { assert ids(workflow.out.kleborate) == [ 'kpn' ] },
+                { assert ids(workflow.out.sccmec) == [ 'sau' ] },
+                { assert ids(workflow.out.sistr) == [ 'sen' ] },
+                // one versions.yml per tool, not per sample
+                { assert workflow.out.versions.size() == 3 }
+            )
+        }
+
+    }
+
+}

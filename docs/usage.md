@@ -406,18 +406,15 @@ nextflow run gene2dis/mgap \
 
 **Database setup:**
 
-The CARD database must be downloaded and set up before running RGI. See the [RGI documentation](https://github.com/arpcard/rgi#card-database) for database installation instructions:
+The CARD database must be downloaded before running RGI. See the [RGI documentation](https://github.com/arpcard/rgi#card-database) for details:
 
 ```bash
 # Download CARD database
 wget https://card.mcmaster.ca/latest/data
 tar -xvf data ./card.json
-
-# Load database (creates localDB directory)
-rgi load --card_json card.json --local
 ```
 
-Then provide the path to the database directory (containing the loaded database files) via `--rgi_db`.
+Then provide the directory containing `card.json` via `--rgi_db`. The pipeline runs `rgi load` and builds the BLAST and DIAMOND databases once per run (`RGI_LOAD`), and every sample's `RGI_MAIN` task uses that local database.
 
 ### MOB-suite Plasmid Detection
 
@@ -461,7 +458,7 @@ nextflow run gene2dis/mgap \
 
 ### MLST Typing
 
-[MLST](https://github.com/tseemann/mlst) (Torsten Seemann's classic MLST) scans assemblies against PubMLST typing schemes and is run automatically on every sample. The scheme it reports also drives downstream logic in the pipeline (for example, a `salmonella` call triggers SISTR).
+[MLST](https://github.com/tseemann/mlst) (Torsten Seemann's classic MLST) scans assemblies against PubMLST typing schemes and is run automatically on every sample. The scheme it reports also drives downstream logic in the pipeline (for example, a `senterica_achtman_2` call triggers SISTR).
 
 The tool ships with its own bundled BLAST database and PubMLST data directory inside the container, so no databases are required by default. If you need to run against an updated or custom set of schemes, you can override either one:
 
@@ -488,7 +485,7 @@ See the [mlst documentation](https://github.com/tseemann/mlst#updating-the-datab
 
 ### SISTR Salmonella Serotyping
 
-[SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serotypes and cgMLST subtypes directly from assemblies. The pipeline runs SISTR **v1.1.3** automatically whenever MLST detects a _Salmonella enterica_ assembly (MLST scheme `salmonella`). No additional flags or databases are required — SISTR bundles its own reference data in the container.
+[SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serotypes and cgMLST subtypes directly from assemblies. The pipeline runs SISTR **v1.1.3** automatically whenever MLST detects a _Salmonella enterica_ assembly (MLST scheme `senterica_achtman_2`). No additional flags or databases are required — SISTR bundles its own reference data in the container.
 
 SISTR is skipped for any other species and adds no runtime cost to non-Salmonella samples.
 

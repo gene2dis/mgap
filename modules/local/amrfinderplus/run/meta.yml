@@ -79,16 +79,6 @@ output:
         pattern: "versions.yml"
         ontologies:
           - edam: "http://edamontology.org/format_3750"
-  tool_version:
-    - VER:
-        type: string
-        description: The version of the tool in string format (useful for downstream
-          tools such as hAMRronization)
-  db_version:
-    - DBVER:
-        type: string
-        description: The version of the used database in string format (useful for downstream
-          tools such as hAMRronization)
 authors:
   - "@rpetit3"
   - "@louperelo"
