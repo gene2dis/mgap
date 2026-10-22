@@ -60,7 +60,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - GTDB-Tk receives genomes via a batchfile, so it works for any assembly file extension (the `gtdbtk_extension` parameter is gone)
 - The Mash/Seqtk coverage-adjustment logic is shared by the Illumina and ONT paths (`COVERAGE_ADJUST` subworkflow) and tolerates unparseable coverage estimates
 - The Autocycler container image is pinned by digest; assembler-failure tolerance moved to configuration with loud reporting when all assemblers fail for a sample
-- `software_versions.yml` is valid YAML listing each tool once (MultiQC included), plus pipeline/Nextflow versions; the same versions appear as a Software Versions section in the MultiQC report
+- `software_versions.yml` is valid YAML listing each tool once (MultiQC included), plus pipeline/Nextflow versions; all but MultiQC's own appear as a Software Versions section in the MultiQC report
 - `AMRFINDERPLUS_RUN` reads the tool and database versions once, no longer emits the unused `VER`/`DBVER` env outputs and no longer writes a file named `stdout`
 - **Improved samplesheet handling for contig mode:**
   - `CreateSampleSheet.py` now uses `fasta` column instead of `fastq_1` for contig mode
@@ -77,7 +77,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 ### `Fixed`
 
 - RGI's version is recorded in `software_versions.yml` (it was empty: the container's busybox `grep` has no `-P`)
-- _Salmonella_ samples now reach SISTR and get the AMRFinderPlus `Salmonella` organism: mlst 2.25.0 reports the scheme as `senterica_achtman_2`, which the MLST-to-organism map did not list. The map was checked against `mlst --longlist` (2.25.0) and `amrfinder --list_organisms` (4.2.5): `vcholerae_2`, `diphtheria_3` and `helicobacter` added; `sepidermidis` removed, because AMRFinderPlus has no `Staphylococcus_epidermidis` organism and exited with an error for those samples
+- _Salmonella_ samples now reach SISTR and get the AMRFinderPlus `Salmonella` organism: mlst 2.25.0 reports the scheme as `senterica_achtman_2`, which the MLST-to-organism map did not list. Their AMRFinderPlus results now include point mutations (`<sample>-mutations.tsv`, e.g. `gyrA_D87Y`) and apply the organism's gene suppression (e.g. `fieF` is no longer reported). The map was checked against `mlst --longlist` (2.25.0) and `amrfinder --list_organisms` (4.2.5): `vcholerae_2`, `diphtheria_3` and `helicobacter` added; `sepidermidis` removed, because AMRFinderPlus has no `Staphylococcus_epidermidis` organism and exited with an error for those samples
 - Fixed implicit closure parameter warnings in map/branch operations
 - Fixed deprecated `Channel` factory usage (now uses lowercase `channel`)
 - Fixed dnaapler version command (was incorrectly calling medaka)
