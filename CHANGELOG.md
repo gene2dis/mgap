@@ -22,7 +22,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Added pre-commit hooks configuration
 - Added issue templates for bug reports and feature requests
 - Added `mobsuite/recon` (nf-core module) for optional plasmid detection and reconstruction, gated by `--run_mobsuite`
-- Added local `sistr` module (v1.1.3) for automatic Salmonella serotype prediction, triggered when MLST scheme is `salmonella`
+- Added local `sistr` module (v1.1.3) for automatic Salmonella serotype prediction, triggered when MLST scheme is `senterica_achtman_2`
 - Added the `SPECIES_TYPING` local subworkflow: one place that routes samples by MLST-derived organism to Kleborate, SCCmec and SISTR (replaces the one-module `KLEBSIELLA` and `SALMONELLA` subworkflows and the bare `SCCMEC` call)
 - Working test profile with tiny public test data (`-profile test`), plus stub pipeline tests for paired/single-end Illumina, ONT (both assembler modes) and contig inputs
 - Single-end Illumina support (detected from the samplesheet)
@@ -76,6 +76,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 
 ### `Fixed`
 
+- _Salmonella_ samples now reach SISTR and get the AMRFinderPlus `Salmonella` organism: mlst 2.25.0 reports the scheme as `senterica_achtman_2`, which the MLST-to-organism map did not list. The map was checked against `mlst --longlist` (2.25.0) and `amrfinder --list_organisms` (4.2.5): `vcholerae_2`, `diphtheria_3` and `helicobacter` added; `sepidermidis` removed, because AMRFinderPlus has no `Staphylococcus_epidermidis` organism and exited with an error for those samples
 - Fixed implicit closure parameter warnings in map/branch operations
 - Fixed deprecated `Channel` factory usage (now uses lowercase `channel`)
 - Fixed dnaapler version command (was incorrectly calling medaka)

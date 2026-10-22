@@ -241,21 +241,27 @@ nextflow_pipeline {
                 // klebsiella scheme -> Kleborate only
                 { assert ran('KLEBORATE', 'TEST_KPNEUMONIAE') },
                 { assert !ran('KLEBORATE', 'TEST_SAUREUS') },
+                { assert !ran('KLEBORATE', 'TEST_SENTERICA') },
                 { assert !ran('KLEBORATE', 'TEST_OTHER') },
                 // saureus scheme -> SCCmec only
                 { assert ran('SCCMEC', 'TEST_SAUREUS') },
                 { assert !ran('SCCMEC', 'TEST_KPNEUMONIAE') },
+                { assert !ran('SCCMEC', 'TEST_SENTERICA') },
                 { assert !ran('SCCMEC', 'TEST_OTHER') },
-                { assert !succeeded.any { it.contains('SISTR') } },
+                // senterica_achtman_2 scheme -> SISTR only
+                { assert ran('SISTR', 'TEST_SENTERICA') },
+                { assert succeeded.count { it.contains('SISTR') } == 1 },
                 // AMRFinderPlus runs for every sample; an organism (and so a
                 // mutation report) only for the mapped schemes
-                { assert ['TEST_KPNEUMONIAE', 'TEST_SAUREUS', 'TEST_OTHER'].every { ran('AMRFINDERPLUS_RUN', it) } },
+                { assert ['TEST_KPNEUMONIAE', 'TEST_SAUREUS', 'TEST_SENTERICA', 'TEST_OTHER'].every { ran('AMRFINDERPLUS_RUN', it) } },
                 { assert amrfinder('TEST_KPNEUMONIAE').exists() },
                 { assert amrfinder('TEST_SAUREUS').exists() },
+                { assert amrfinder('TEST_SENTERICA').exists() },
                 { assert !amrfinder('TEST_OTHER').exists() },
                 { assert nextflow_log.contains("Sample 'TEST_OTHER': MLST scheme 'none' has no AMRFinderPlus organism mapping") },
                 { assert !nextflow_log.contains("Sample 'TEST_KPNEUMONIAE': MLST scheme") },
-                { assert !nextflow_log.contains("Sample 'TEST_SAUREUS': MLST scheme") }
+                { assert !nextflow_log.contains("Sample 'TEST_SAUREUS': MLST scheme") },
+                { assert !nextflow_log.contains("Sample 'TEST_SENTERICA': MLST scheme") }
             )
         }
 
@@ -283,7 +289,7 @@ nextflow_pipeline {
             assertAll(
                 { assert workflow.success },
                 { assert succeeded.count { it.contains('RGI_LOAD') } == 1 },
-                { assert succeeded.count { it.contains('RGI_MAIN') } == 3 },
+                { assert succeeded.count { it.contains('RGI_MAIN') } == 4 },
                 { assert path("$outputDir/TEST_OTHER/annotation/rgi/TEST_OTHER.txt").exists() }
             )
         }

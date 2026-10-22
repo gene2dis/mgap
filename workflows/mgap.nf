@@ -4,10 +4,15 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     MLST scheme to AMRFinderPlus organism mapping.
     Keys are mlst scheme names (mlst --longlist); values are AMRFinderPlus
-    --organism values (amrfinder --list_organisms).
-    Note: the shared 'neisseria' scheme covers both N. gonorrhoeae and
-    N. meningitidis, but AMRFinderPlus needs a species-level organism —
-    so Neisseria is intentionally left unmapped.
+    --organism values (amrfinder --list_organisms). Checked against mlst 2.25.0
+    and AMRFinderPlus 4.2.5 (database 2025-12-03.1); an organism missing from
+    that list makes amrfinder exit with an error, so only listed ones are used.
+    'salmonella' and 'ecoli_2' are pre-2.23 mlst scheme names, kept for
+    --mlst_datadir databases built with older mlst.
+    Left unmapped on purpose: 'neisseria' (one scheme for N. gonorrhoeae and
+    N. meningitidis, AMRFinderPlus needs the species), 'serratia' (genus-level
+    scheme; AMRFinderPlus has only Serratia_marcescens), 'sepidermidis'
+    (no Staphylococcus_epidermidis organism in AMRFinderPlus).
 ----------------------------------------------------------------------------------------
 */
 
@@ -30,6 +35,7 @@ def getTaxaNames() {
         "campylobacter_nonjejuni_9": "Campylobacter",
         "cdifficile": "Clostridioides_difficile",
         "cdiphtheriae": "Corynebacterium_diphtheriae",
+        "diphtheria_3": "Corynebacterium_diphtheriae",
         "cfreundii": "Citrobacter_freundii",
         "ecloacae": "Enterobacter_cloacae",
         "efaecalis": "Enterococcus_faecalis",
@@ -37,18 +43,20 @@ def getTaxaNames() {
         "ecoli": "Escherichia",
         "ecoli_achtman_4": "Escherichia",
         "ecoli_2": "Escherichia",
+        "helicobacter": "Helicobacter_pylori",
         "hinfluenzae": "Haemophilus_influenzae",
         "koxytoca": "Klebsiella_oxytoca",
         "klebsiella": "Klebsiella_pneumoniae",
         "paeruginosa": "Pseudomonas_aeruginosa",
         "salmonella": "Salmonella",
+        "senterica_achtman_2": "Salmonella",
         "saureus": "Staphylococcus_aureus",
-        "sepidermidis": "Staphylococcus_epidermidis",
         "spseudintermedius": "Staphylococcus_pseudintermedius",
         "sagalactiae": "Streptococcus_agalactiae",
         "spneumoniae": "Streptococcus_pneumoniae",
         "spyogenes": "Streptococcus_pyogenes",
         "vcholerae": "Vibrio_cholerae",
+        "vcholerae_2": "Vibrio_cholerae",
         "vparahaemolyticus": "Vibrio_parahaemolyticus",
         "vvulnificus": "Vibrio_vulnificus"
     ]
