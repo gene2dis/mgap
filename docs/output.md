@@ -285,12 +285,12 @@ This step is optional and enabled by default (`--run_dnaapler true`). It only ap
 <summary>Output files</summary>
 
 - `<sample_id>/assemblies/annotation_input/`
-  - `<sample_id>.fasta`: The assembly (SPAdes scaffolds, ONT assembly or the samplesheet contigs) without contigs shorter than `--min_contig_length` (default 1000 bp), uncompressed, original contig names and descriptions kept.
+  - `<sample_id>.fasta`: The assembly (SPAdes scaffolds, ONT assembly or the samplesheet contigs) without contigs shorter than `--min_contig_length` (default 1000 bp), uncompressed, contigs renamed `contig_1`, `contig_2`, ... in assembly order, with the original header kept as the description (e.g. `>contig_1 NODE_1_length_1682762_cov_30.909424`).
   - `<sample_id>.filter_stats.tsv`: `seqkit stats` table with one row for the assembly before the filter and one for the file above: number of contigs, total length, N50 and other length statistics.
 
 </details>
 
-[SeqKit](https://bioinf.shenwei.me/seqkit/) prepares one FASTA per sample that every annotation and typing tool reads: CheckM2, MLST, Bakta, GTDB-Tk, geNomad, MOB-suite, RGI, Kleborate, sccmec and SISTR (AMRFinderPlus reads Bakta's outputs, which keep the same contig names). All of them therefore see the same contigs under the same names. QUAST runs on the unfiltered assembly, so its statistics describe the assembly as produced. A sample with no contig of at least `--min_contig_length` gets an empty file here and is left out of annotation and typing, with a warning in the log.
+[SeqKit](https://bioinf.shenwei.me/seqkit/) prepares one FASTA per sample that every annotation and typing tool reads: CheckM2, MLST, Bakta, GTDB-Tk, geNomad, MOB-suite, RGI, Kleborate, sccmec and SISTR (AMRFinderPlus reads Bakta's outputs, which keep the same contig names). All of them therefore see the same contigs under the same names, and the original assembler name of any `contig_N` can be looked up in this file. QUAST runs on the unfiltered assembly, so its statistics describe the assembly as produced. A sample with no contig of at least `--min_contig_length` gets an empty file here and is left out of annotation and typing, with a warning in the log.
 
 This step runs for every `--seq_type`.
 
@@ -352,7 +352,7 @@ This step runs for every `--seq_type`.
 
 </details>
 
-[Bakta](https://github.com/oschwengers/bakta) provides rapid and standardized annotation of bacterial genomes. It identifies CDSs, tRNAs, rRNAs, ncRNAs, CRISPR arrays, and other genomic features. Bakta runs with `--keep-contig-headers`, so its outputs use the contig names of the assembly. The Bakta outputs (nucleotide FASTA, protein FASTA, GFF3) are the input of AMRFinderPlus.
+[Bakta](https://github.com/oschwengers/bakta) provides rapid and standardized annotation of bacterial genomes. It identifies CDSs, tRNAs, rRNAs, ncRNAs, CRISPR arrays, and other genomic features. Bakta runs with `--keep-contig-headers`, so its outputs use the `contig_N` names of the [annotation input](#annotation-input). The Bakta outputs (nucleotide FASTA, protein FASTA, GFF3) are the input of AMRFinderPlus.
 
 ### GTDB-Tk
 

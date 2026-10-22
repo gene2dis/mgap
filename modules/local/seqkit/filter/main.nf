@@ -20,14 +20,18 @@ process SEQKIT_FILTER {
     task.ext.when == null || task.ext.when
 
     script:
-    def args = task.ext.args ?: ''
-    prefix   = task.ext.prefix ?: "${meta.id}"
+    def args   = task.ext.args ?: ''
+    def args2  = task.ext.args2 ?: ''
+    // ext.args2 renames the kept sequences (seqkit replace); without it they keep their names
+    def rename = args2 ? "| seqkit replace ${args2}" : ''
+    prefix     = task.ext.prefix ?: "${meta.id}"
     """
     # seqkit reads plain or gzipped FASTA; the output is always uncompressed
     seqkit seq \\
         --threads $task.cpus \\
         $args \\
         $fasta \\
+        $rename \\
         > ${prefix}.fasta
 
     # contigs and total length before (input) and after (output) the filter

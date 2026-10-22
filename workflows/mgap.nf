@@ -187,8 +187,9 @@ workflow MGAP {
 
     //
     // Prepare the annotation FASTA once per sample: contigs >= --min_contig_length,
-    // uncompressed, original headers kept. Every annotation and typing tool reads
-    // this file; QUAST above keeps the raw assembly so assembly stats stay comparable.
+    // uncompressed, renamed contig_1..N (original header kept as the description).
+    // Every annotation and typing tool reads this file; QUAST above keeps the raw
+    // assembly so assembly stats stay comparable.
     //
     SEQKIT_FILTER( genome_assembly )
     ch_versions = ch_versions.mix(SEQKIT_FILTER.out.versions.first())

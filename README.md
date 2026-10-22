@@ -54,7 +54,7 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 ### Genome Annotation
 
 With the assembled genome (or provided contigs), contigs shorter than `--min_contig_length` (default 1000 bp) are removed
-and the rest written uncompressed, with their original names, to one FASTA per sample
+and the rest written uncompressed and renamed `contig_1`, `contig_2`, ... to one FASTA per sample
 ([`SeqKit`](https://github.com/shenwei356/seqkit)). Every annotation step reads that file; QUAST reports the whole
 assembly. The annotation steps include:
 

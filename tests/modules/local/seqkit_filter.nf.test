@@ -30,9 +30,9 @@ nextflow_process {
             def stats = path(process.out.stats[0][1]).text.readLines()*.split('\t')
             assertAll(
                 { assert process.success },
-                // uncompressed, original headers kept, the 999 bp contig dropped
+                // uncompressed, the 999 bp contig dropped, renamed contig_N with the original header kept
                 { assert fasta.fileName.toString() == 'test.fasta' },
-                { assert headers == [ '>contig_1 length=1500 circular=true', '>contig_3' ] },
+                { assert headers == [ '>contig_1 contig_1 length=1500 circular=true', '>contig_2 contig_3' ] },
                 // header row, then the input (3 contigs) and the output (2 contigs)
                 { assert stats.size() == 3 },
                 { assert stats[1][stats[0].findIndexOf { it == 'num_seqs' }] == '3' },
