@@ -47,11 +47,8 @@ flowchart TD
     ASM_ONT -- "autocycler" --> AC_GSIZE["Autocycler<br>(genome size)"]
     AC_GSIZE --> AC_SUB["Autocycler<br>(subsample)"]
     AC_SUB --> AC_ASM["Autocycler<br>(multi-assembler)"]
-    AC_ASM --> AC_COMP["Autocycler<br>(compress)"]
-    AC_COMP --> AC_CLUST["Autocycler<br>(cluster)"]
-    AC_CLUST --> AC_TR["Autocycler<br>(trim + resolve)"]
-    AC_TR --> AC_COMB["Autocycler<br>(combine)"]
-    AC_COMB --> DNAAPLER_AC{"run_dnaapler?"}
+    AC_ASM --> AC_CONS["Autocycler consensus<br>(compress, cluster,<br>trim + resolve, combine)"]
+    AC_CONS --> DNAAPLER_AC{"run_dnaapler?"}
     DNAAPLER_AC -- yes --> DNAAPLER_G["Dnaapler<br>(reorientation, GFA)"]
     DNAAPLER_G --> GFA2FASTA["Autocycler<br>(gfa2fasta)"]
     GFA2FASTA --> ASSEMBLY
@@ -154,12 +151,9 @@ flowchart TD
 | 3    | **Autocycler genome_size**    | Genome size estimation via Raven                                                      |
 | 4    | **Autocycler subsample**      | Subsample reads into independent subsets                                              |
 | 5    | **Autocycler assembly**       | Fan-out assembly across multiple assemblers × subsamples                              |
-| 6    | **Autocycler compress**       | Compress assemblies into unitig graph                                                 |
-| 7    | **Autocycler cluster**        | Cluster unitigs into putative genomic sequences                                       |
-| 8    | **Autocycler trim + resolve** | Trim and resolve each QC-pass cluster                                                 |
-| 9    | **Autocycler combine**        | Combine resolved clusters into consensus assembly (FASTA + GFA)                       |
-| 10   | **Dnaapler**                  | Reorient circular contigs using GFA input _(optional, `run_dnaapler`)_                |
-| 11   | **Autocycler gfa2fasta**      | Convert reoriented GFA back to FASTA _(only when Dnaapler is enabled)_                |
+| 6    | **Autocycler consensus**      | One task per sample: compress assemblies into a unitig graph, cluster, trim and resolve each QC-pass cluster, combine into the consensus assembly (FASTA + GFA); a sample with no QC-pass cluster is reported and excluded |
+| 7    | **Dnaapler**                  | Reorient circular contigs using GFA input _(optional, `run_dnaapler`)_                |
+| 8    | **Autocycler gfa2fasta**      | Convert reoriented GFA back to FASTA _(only when Dnaapler is enabled)_                |
 
 ### Shared Downstream Analysis
 

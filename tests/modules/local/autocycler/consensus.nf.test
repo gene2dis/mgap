@@ -1,0 +1,98 @@
+nextflow_process {
+
+    name "Test AUTOCYCLER_CONSENSUS module"
+    script "../../../../modules/local/autocycler/consensus/main.nf"
+    process "AUTOCYCLER_CONSENSUS"
+
+    tag "modules"
+    tag "modules_local"
+    tag "autocycler"
+    tag "autocycler/consensus"
+
+    // Four synthetic assemblies of one 12 kb circular chromosome and one 3 kb
+    // circular plasmid, each rotated to a different start position
+    test("AUTOCYCLER_CONSENSUS - resolves two circular sequences") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    files("${baseDir}/tests/data/autocycler/test_asm*.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def headers = path(process.out.fasta[0][1]).readLines().findAll { it.startsWith('>') }
+            assertAll(
+                { assert process.success },
+                { assert headers.size() == 2 },
+                { assert headers.any { it.contains('length=12000') && it.contains('circular=true') } },
+                { assert headers.any { it.contains('length=3000') && it.contains('circular=true') } },
+                { assert file(process.out.gfa[0][1]).name == 'test.gfa' },
+                { assert path(process.out.autocycler_dir[0][1]).resolve('consensus_assembly.fasta').exists() },
+                { assert path(process.out.versions[0]).text.contains('autocycler: 0.8.0') }
+            )
+        }
+
+    }
+
+    test("AUTOCYCLER_CONSENSUS - no QC-pass cluster gives no consensus and no error") {
+
+        config "../../../config/autocycler_no_qc_pass.config"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    files("${baseDir}/tests/data/autocycler/test_asm*.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.fasta.size() == 0 },
+                { assert process.out.gfa.size() == 0 },
+                { assert process.out.autocycler_dir.size() == 1 },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+    test("AUTOCYCLER_CONSENSUS - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    files("${baseDir}/tests/data/autocycler/test_asm*.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert file(process.out.fasta[0][1]).name == 'test.fasta' },
+                { assert file(process.out.gfa[0][1]).name == 'test.gfa' },
+                { assert file(process.out.autocycler_dir[0][1]).name == 'autocycler_out' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

@@ -176,7 +176,7 @@ nextflow_pipeline {
             assertAll(
                 { assert workflow.success },
                 { assert succeeded.any { it.contains('AUTOCYCLER_ASSEMBLY') } },
-                { assert succeeded.any { it.contains('AUTOCYCLER_COMBINE') } },
+                { assert succeeded.any { it.contains('AUTOCYCLER_CONSENSUS') } },
                 { assert succeeded.any { it.contains('AUTOCYCLER_GFA2FASTA') } },
                 { assert succeeded.any { it.contains('MLST') } }
             )
