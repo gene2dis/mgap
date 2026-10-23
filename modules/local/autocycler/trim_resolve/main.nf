@@ -28,7 +28,7 @@ process AUTOCYCLER_TRIM_RESOLVE {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        autocycler: \$( autocycler --version 2>&1 | sed 's/autocycler //' )
+        autocycler: \$( autocycler --version 2>&1 | sed 's/^Autocycler //' )
     END_VERSIONS
     """
 
@@ -38,7 +38,7 @@ process AUTOCYCLER_TRIM_RESOLVE {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        autocycler: 0.6.0
+        autocycler: 0.8.0
     END_VERSIONS
     """
 }

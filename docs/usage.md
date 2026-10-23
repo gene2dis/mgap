@@ -161,7 +161,7 @@ Any parameters you leave out of the YAML file fall back to the pipeline defaults
 
 ### Autocycler Consensus Assembly (ONT)
 
-For ONT data, the pipeline supports an alternative assembler: [Autocycler](https://github.com/rrwick/Autocycler) (v0.6.0+). Autocycler generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results, producing higher-quality assemblies than any single assembler alone.
+For ONT data, the pipeline supports an alternative assembler: [Autocycler](https://github.com/rrwick/Autocycler) (v0.8.0). Autocycler generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results, producing higher-quality assemblies than any single assembler alone.
 
 **Basic usage:**
 
@@ -221,20 +221,24 @@ nextflow run gene2dis/mgap \
 The Autocycler modules require a Docker image containing Autocycler and all supported assemblers. A pre-built image is available on Docker Hub and will be pulled automatically:
 
 ```
-microds/autocycler:0.6.0@sha256:feb81239eac4ac7d660355be66efc9d8eabafbbca726a547d2443051f819369f
+microds/autocycler:0.8.0@sha256:48ca6289d9cced23a4e273dfb4ab7c667603cec3943edf40018ccab5020cbd44
 ```
 
-The pipeline pins this image by digest in `conf/modules.config`, so runs always use the exact image the pipeline was tested with. The image is built from `docker/autocycler-suite/Dockerfile`; because the Dockerfile installs assemblers from bioconda, a rebuild is not bit-identical — rebuilt images must be pushed under a **new tag** and the digest pin in `conf/modules.config` updated accordingly:
+It holds Autocycler 0.8.0, Canu 2.3, Flye 2.9.6, metaMDBG 1.4, miniasm 0.3, minimap2 2.31, Minipolish 0.2.1, Myloasm 0.7.0, NECAT 0.0.1_update20200803, NextDenovo 2.5.2, NextPolish 1.4.1, Plassembler 1.8.5 (with dnaapler 1.4.0), Racon 1.5.0 and Raven 1.8.3. The conda profile installs the same versions from `modules/local/autocycler/environment.yml`.
+
+The pipeline pins this image by digest in `conf/modules.config` (the only container definition for the Autocycler modules), so runs always use the exact image the pipeline was tested with. The image is built from `docker/autocycler-suite/Dockerfile`, which pins every package and the base image exactly; packages' own dependencies are resolved at build time, so a rebuild is still not bit-identical, and rebuilt images must be pushed under a **new tag** and the digest pin in `conf/modules.config` updated accordingly:
 
 ```bash
 cd docker/autocycler-suite
 docker build -t microds/autocycler:<new-tag> .
+docker push microds/autocycler:<new-tag>
+docker inspect --format '{{index .RepoDigests 0}}' microds/autocycler:<new-tag>
 ```
 
-For Singularity users, the image is pulled automatically via `docker://microds/autocycler:0.6.0`. To build manually:
+For Singularity users, the image is pulled automatically via `docker://microds/autocycler:0.8.0`. To build manually:
 
 ```bash
-singularity build autocycler.sif docker://microds/autocycler:0.6.0
+singularity build autocycler.sif docker://microds/autocycler:0.8.0
 ```
 
 ### Read QC Parameters
