@@ -5,8 +5,9 @@ process AUTOCYCLER_ASSEMBLY {
     // container: the autocycler-suite image, pinned by digest in conf/modules.config
     conda "${moduleDir}/../environment.yml"
 
-    // Note: errorStrategy 'ignore' for this process is set in conf/modules.config
-    // (individual assembler failures are tolerated by the consensus step)
+    // errorStrategy is set in conf/modules.config: an out-of-memory exit is retried
+    // once with more memory, other failures are ignored (the consensus step works
+    // with whatever assemblies succeeded)
 
     input:
     tuple val(meta), path(subsample_reads), val(subsample_id), path(genome_size), val(assembler), path(plassembler_db)
@@ -26,12 +27,23 @@ process AUTOCYCLER_ASSEMBLY {
     """
     ${plassembler_db_env}
 
+    status=0
     autocycler helper ${assembler} \\
         --reads ${subsample_reads} \\
         --out_prefix ${prefix} \\
         --threads ${task.cpus} \\
         --genome_size \$(head -n1 ${genome_size}) \\
-        ${args}
+        ${args} \\
+        2> helper.log || status=\$?
+    cat helper.log >&2
+
+    # The helper only prints "<assembler> failed with status signal: 9 (SIGKILL)" when
+    # the out-of-memory killer stops the assembler, and exits 0 without an assembly.
+    # Exit 137 instead, so the errorStrategy can retry the task with more memory.
+    if grep -q 'failed with status signal: 9' helper.log; then
+        exit 137
+    fi
+    [[ \$status -eq 0 ]] || exit \$status
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

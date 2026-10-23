@@ -1,5 +1,5 @@
 name: "autocycler_assembly"
-description: Assemble one read subset with one assembler through autocycler helper.
+description: Assemble one read subset with one assembler through autocycler helper. An assembler killed by the out-of-memory killer exits 137 so the task can be retried.
 keywords:
   - autocycler
   - assembly

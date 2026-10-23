@@ -121,9 +121,9 @@ workflow ONT {
 
         //
         // Step 4: Collect all assemblies per sample
-        // Assembler tasks run with errorStrategy 'ignore' (see conf/modules.config),
-        // so a sample can end up with zero assemblies - report it loudly
-        // instead of letting it vanish from groupTuple.
+        // Assembler tasks that still fail after the out-of-memory retry are ignored
+        // (see conf/modules.config), so a sample can end up with zero assemblies -
+        // report it loudly instead of letting it vanish from groupTuple.
         //
         AUTOCYCLER_ASSEMBLY.out.assembly
             .groupTuple(by: 0)
