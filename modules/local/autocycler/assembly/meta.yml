@@ -1,0 +1,54 @@
+name: "autocycler_assembly"
+description: Assemble one read subset with one assembler through autocycler helper.
+keywords:
+  - autocycler
+  - assembly
+  - long reads
+tools:
+  - autocycler:
+      description: "Consensus long-read assembly for bacterial genomes"
+      homepage: "https://github.com/rrwick/Autocycler"
+      documentation: "https://github.com/rrwick/Autocycler/wiki/Autocycler-helper"
+      tool_dev_url: "https://github.com/rrwick/Autocycler"
+      licence: ["GPL-3.0"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - subsample_reads:
+      type: file
+      description: One read subset
+      pattern: "*.fastq"
+  - subsample_id:
+      type: string
+      description: Subset name (e.g. sample_01)
+  - genome_size:
+      type: file
+      description: Estimated genome size in bases (one line)
+      pattern: "*_genome_size.txt"
+  - assembler:
+      type: string
+      description: autocycler helper task (raven, miniasm, flye, metamdbg, necat, nextdenovo, canu, myloasm, plassembler)
+  - plassembler_db:
+      type: directory
+      description: Plassembler database, exported as PLASSEMBLER_DB; pass [] for other assemblers
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - assembly:
+      type: file
+      description: Assembly (absent when the assembler produced none)
+      pattern: "*.fasta"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

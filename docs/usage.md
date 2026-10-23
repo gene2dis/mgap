@@ -208,7 +208,7 @@ nextflow run gene2dis/mgap \
 | `--autocycler_assemblers`  | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler                                                                             |
 | `--autocycler_read_type`   | `ont_r10`                                      | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`                                                                   |
 | `--autocycler_max_contigs` | `50`                                           | Maximum number of contigs to retain per sample during compress and cluster steps                                              |
-| `--plassembler_db`         | `null`                                         | Path to Plassembler database. Plassembler is skipped if not provided                                                          |
+| `--plassembler_db`         | `null`                                         | Path to Plassembler database (staged into the Plassembler tasks). Plassembler is skipped if not provided                      |
 
 **Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
 

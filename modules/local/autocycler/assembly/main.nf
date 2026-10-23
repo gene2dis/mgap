@@ -9,7 +9,7 @@ process AUTOCYCLER_ASSEMBLY {
     // (individual assembler failures are tolerated by the consensus step)
 
     input:
-    tuple val(meta), path(subsample_reads), val(subsample_id), path(genome_size), val(assembler)
+    tuple val(meta), path(subsample_reads), val(subsample_id), path(genome_size), val(assembler), path(plassembler_db)
 
     output:
     tuple val(meta), path("*.fasta"), emit: assembly, optional: true
@@ -20,9 +20,9 @@ process AUTOCYCLER_ASSEMBLY {
 
     script:
     def prefix = task.ext.prefix ?: "${meta.id}_${assembler}_${subsample_id}"
-    def read_type = params.autocycler_read_type ?: 'ont_r10'
-    def plassembler_db_env = params.plassembler_db ? "export PLASSEMBLER_DB=\"${params.plassembler_db}\"" : ""
     def args = task.ext.args ?: ''
+    // autocycler helper plassembler finds its database through PLASSEMBLER_DB
+    def plassembler_db_env = plassembler_db ? "export PLASSEMBLER_DB=\"\$PWD/${plassembler_db}\"" : ''
     """
     ${plassembler_db_env}
 
@@ -31,7 +31,6 @@ process AUTOCYCLER_ASSEMBLY {
         --out_prefix ${prefix} \\
         --threads ${task.cpus} \\
         --genome_size \$(head -n1 ${genome_size}) \\
-        --read_type ${read_type} \\
         ${args}
 
     cat <<-END_VERSIONS > versions.yml

@@ -98,6 +98,8 @@ workflow ONT {
             .tokenize(',')
             .collect { item -> item.trim() }
             .findAll { item -> item != 'plassembler' || params.plassembler_db }
+        // staged only into the plassembler tasks
+        def plassembler_db = params.plassembler_db ? file(params.plassembler_db, checkIfExists: true) : []
 
         AUTOCYCLER_SUBSAMPLE.out.subsampled_reads
             .flatMap { meta, subsample_files, genome_size ->
@@ -107,7 +109,8 @@ workflow ONT {
                     .collectMany { subsample_file ->
                         def subsample_id = subsample_file.baseName
                         assembler_list.collect { assembler ->
-                            [ meta, subsample_file, subsample_id, genome_size, assembler ]
+                            [ meta, subsample_file, subsample_id, genome_size, assembler,
+                              assembler == 'plassembler' ? plassembler_db : [] ]
                         }
                     }
             }
