@@ -296,6 +296,228 @@ nextflow_pipeline {
 
     }
 
+    test("Annotation tools read the filtered FASTA, Illumina with Bakta - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "annotation_input"
+
+        options "-stub"
+        config "./config/annotation_input.config"
+
+        when {
+            params {
+                input        = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type     = "illumina"
+                bakta_db     = "${projectDir}/tests/data/stub_db/bakta"
+                amrfinder_db = "${projectDir}/tests/data/stub_db/amrfinderplus"
+                checkm2_db   = "${projectDir}/tests/data/stub_db/checkm2/uniref100.KO.1.dmnd"
+                genomad_db   = "${projectDir}/tests/data/stub_db/genomad"
+                run_gtdbtk   = true
+                gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
+                run_mobsuite = true
+                run_rgi      = true
+                rgi_db       = "${projectDir}/tests/data/stub_db/card"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            // every annotation tool stages the uncompressed SEQKIT_FILTER FASTA of its sample, not the SPAdes .fa.gz (species tools: contig tests)
+            def annotation = AnnotationInput.check(metaDir)
+            assertAll(
+                { assert workflow.success },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA'] as Set },
+                { assert annotation.errors == [] }
+            )
+        }
+
+    }
+
+    test("Annotation tools read the filtered FASTA, Illumina without Bakta - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "annotation_input"
+
+        options "-stub"
+        config "./config/annotation_input.config"
+
+        when {
+            params {
+                input        = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type     = "illumina"
+                checkm2_db   = "${projectDir}/tests/data/stub_db/checkm2/uniref100.KO.1.dmnd"
+                genomad_db   = "${projectDir}/tests/data/stub_db/genomad"
+                run_gtdbtk   = true
+                gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
+                run_mobsuite = true
+                run_rgi      = true
+                rgi_db       = "${projectDir}/tests/data/stub_db/card"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            // every annotation tool stages the uncompressed SEQKIT_FILTER FASTA of its sample, not the SPAdes .fa.gz (species tools: contig tests)
+            def annotation = AnnotationInput.check(metaDir)
+            assertAll(
+                { assert workflow.success },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN'] as Set },
+                { assert annotation.errors == [] }
+            )
+        }
+
+    }
+
+    test("Annotation tools read the filtered FASTA, ONT with Bakta - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "annotation_input"
+
+        options "-stub"
+        config "./config/annotation_input.config"
+
+        when {
+            params {
+                input        = "${projectDir}/assets/samplesheet_test_ont.csv"
+                seq_type     = "ont"
+                bakta_db     = "${projectDir}/tests/data/stub_db/bakta"
+                amrfinder_db = "${projectDir}/tests/data/stub_db/amrfinderplus"
+                checkm2_db   = "${projectDir}/tests/data/stub_db/checkm2/uniref100.KO.1.dmnd"
+                genomad_db   = "${projectDir}/tests/data/stub_db/genomad"
+                run_gtdbtk   = true
+                gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
+                run_mobsuite = true
+                run_rgi      = true
+                rgi_db       = "${projectDir}/tests/data/stub_db/card"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            // every annotation tool stages the uncompressed SEQKIT_FILTER FASTA of its sample (species tools: contig tests)
+            def annotation = AnnotationInput.check(metaDir)
+            assertAll(
+                { assert workflow.success },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA'] as Set },
+                { assert annotation.errors == [] }
+            )
+        }
+
+    }
+
+    test("Annotation tools read the filtered FASTA, ONT without Bakta - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "annotation_input"
+
+        options "-stub"
+        config "./config/annotation_input.config"
+
+        when {
+            params {
+                input        = "${projectDir}/assets/samplesheet_test_ont.csv"
+                seq_type     = "ont"
+                checkm2_db   = "${projectDir}/tests/data/stub_db/checkm2/uniref100.KO.1.dmnd"
+                genomad_db   = "${projectDir}/tests/data/stub_db/genomad"
+                run_gtdbtk   = true
+                gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
+                run_mobsuite = true
+                run_rgi      = true
+                rgi_db       = "${projectDir}/tests/data/stub_db/card"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            // every annotation tool stages the uncompressed SEQKIT_FILTER FASTA of its sample (species tools: contig tests)
+            def annotation = AnnotationInput.check(metaDir)
+            assertAll(
+                { assert workflow.success },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN'] as Set },
+                { assert annotation.errors == [] }
+            )
+        }
+
+    }
+
+    test("Annotation tools read the filtered FASTA, contigs with Bakta - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "annotation_input"
+
+        options "-stub"
+        config "./config/annotation_input.config"
+
+        when {
+            params {
+                input        = "${projectDir}/tests/data/samplesheet_species_routing.csv"
+                seq_type     = "contig"
+                bakta_db     = "${projectDir}/tests/data/stub_db/bakta"
+                amrfinder_db = "${projectDir}/tests/data/stub_db/amrfinderplus"
+                checkm2_db   = "${projectDir}/tests/data/stub_db/checkm2/uniref100.KO.1.dmnd"
+                genomad_db   = "${projectDir}/tests/data/stub_db/genomad"
+                run_gtdbtk   = true
+                gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
+                run_mobsuite = true
+                run_rgi      = true
+                rgi_db       = "${projectDir}/tests/data/stub_db/card"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            // every annotation and species tool stages the uncompressed SEQKIT_FILTER FASTA of its sample; the samplesheet contigs are gzipped
+            def annotation = AnnotationInput.check(metaDir)
+            assertAll(
+                { assert workflow.success },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'KLEBORATE', 'SCCMEC', 'SISTR'] as Set },
+                { assert annotation.errors == [] }
+            )
+        }
+
+    }
+
+    test("Annotation tools read the filtered FASTA, contigs without Bakta - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "annotation_input"
+
+        options "-stub"
+        config "./config/annotation_input.config"
+
+        when {
+            params {
+                input        = "${projectDir}/tests/data/samplesheet_species_routing.csv"
+                seq_type     = "contig"
+                checkm2_db   = "${projectDir}/tests/data/stub_db/checkm2/uniref100.KO.1.dmnd"
+                genomad_db   = "${projectDir}/tests/data/stub_db/genomad"
+                run_gtdbtk   = true
+                gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
+                run_mobsuite = true
+                run_rgi      = true
+                rgi_db       = "${projectDir}/tests/data/stub_db/card"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            // every annotation and species tool stages the uncompressed SEQKIT_FILTER FASTA of its sample; the samplesheet contigs are gzipped
+            def annotation = AnnotationInput.check(metaDir)
+            assertAll(
+                { assert workflow.success },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'KLEBORATE', 'SCCMEC', 'SISTR'] as Set },
+                { assert annotation.errors == [] }
+            )
+        }
+
+    }
+
     test("Duplicate sample names fail at launch - stub") {
 
         tag "pipeline"

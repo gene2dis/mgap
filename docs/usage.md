@@ -266,9 +266,9 @@ singularity build autocycler.sif docker://microds/autocycler:0.6.0
 
 ### Annotation Parameters
 
-| Parameter             | Default | Description                                                                            |
-| --------------------- | ------- | -------------------------------------------------------------------------------------- |
-| `--min_contig_length` | `1000`  | Minimum contig length (bp) for Bakta annotation. Contigs shorter than this are skipped |
+| Parameter             | Default | Description                                                                                                                                                               |
+| --------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--min_contig_length` | `1000`  | Minimum contig length (bp) for annotation. Shorter contigs are removed from the FASTA that every annotation and typing tool reads; QUAST still reports the whole assembly |
 
 ### Dnaapler Contig Reorientation (ONT)
 
@@ -418,7 +418,7 @@ Then provide the directory containing `card.json` via `--rgi_db`. The pipeline r
 
 ### MOB-suite Plasmid Detection
 
-[MOB-suite](https://github.com/phac-nml/mob-suite) performs plasmid identification, typing, and reconstruction from bacterial assemblies. This is an optional step that can be enabled with the `--run_mobsuite` flag. It consumes the Bakta-annotated nucleotide sequences (`.fna`).
+[MOB-suite](https://github.com/phac-nml/mob-suite) performs plasmid identification, typing, and reconstruction from bacterial assemblies. This is an optional step that can be enabled with the `--run_mobsuite` flag. It reads the annotation FASTA (contigs >= `--min_contig_length`, see `docs/output.md`).
 
 **Basic usage:**
 

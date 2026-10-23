@@ -23,8 +23,8 @@ input:
           e.g. [ id:'test', single_end:false ]
     - fasta:
         type: file
-        description: A Salmonella genome assembly in FASTA format (optionally gzipped)
-        pattern: "*.{fasta,fa,fna,fasta.gz,fa.gz,fna.gz}"
+        description: A Salmonella genome assembly in uncompressed FASTA format
+        pattern: "*.{fasta,fa,fna}"
 output:
   tsv:
     - - meta:

@@ -79,6 +79,7 @@ include { samplesheetToList } from 'plugin/nf-schema'
 include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
 include { SPECIES_TYPING } from '../subworkflows/local/species_typing'
+include { SEQKIT_FILTER } from '../modules/local/seqkit/filter/main'
 include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/run/main'
 include { RGI_LOAD } from '../modules/local/rgi/load/main'
@@ -184,12 +185,31 @@ workflow MGAP {
     ch_versions = ch_versions.mix(QUAST.out.versions.first())
     ch_multiqc_files = ch_multiqc_files.mix(QUAST.out.tsv.map { _meta, tsv -> tsv })
 
+    //
+    // Prepare the annotation FASTA once per sample: contigs >= --min_contig_length,
+    // uncompressed, renamed contig_1..N (original header kept as the description).
+    // Every annotation and typing tool reads this file; QUAST above keeps the raw
+    // assembly so assembly stats stay comparable.
+    //
+    SEQKIT_FILTER( genome_assembly )
+    ch_versions = ch_versions.mix(SEQKIT_FILTER.out.versions.first())
+    // A sample with no contig >= --min_contig_length gets an empty file: leave it
+    // out of annotation (GTDB-Tk's batch would fail for every sample) and say so
+    ch_annotation_fasta = SEQKIT_FILTER.out.fasta
+        .filter { meta, fasta ->
+            if (fasta.size() == 0) {
+                log.warn("Sample '${meta.id}': no contig is at least ${params.min_contig_length} bp - the sample is excluded from annotation and typing (QUAST still reports the assembly).")
+                return false
+            }
+            true
+        }
+
     // RUN Checkm2 (only when --checkm2_db is provided)
     if (params.checkm2_db) {
         // nf-core checkm2/predict expects tuple val(dbmeta), path(db) for database
         ch_checkm2_db = channel.value([ [id: 'checkm2_db'], file(params.checkm2_db, checkIfExists: true) ])
         CHECKM2(
-            genome_assembly,
+            ch_annotation_fasta,
             ch_checkm2_db
         )
         ch_versions = ch_versions.mix(CHECKM2.out.versions.first())
@@ -199,7 +219,7 @@ workflow MGAP {
     ch_mlst_blastdb = params.mlst_blastdb ? file(params.mlst_blastdb, checkIfExists: true) : []
     ch_mlst_datadir = params.mlst_datadir ? file(params.mlst_datadir, checkIfExists: true) : []
     MLST(
-        genome_assembly,
+        ch_annotation_fasta,
         ch_mlst_blastdb,
         ch_mlst_datadir
     )
@@ -231,12 +251,11 @@ workflow MGAP {
         .set { species_code_ch }
 
     // RUN ANNOTATION (only when --bakta_db is provided)
-    // Downstream steps that need annotated sequences fall back to the raw
-    // assembly when Bakta is skipped; AMRFinderPlus requires Bakta outputs.
+    // AMRFinderPlus requires Bakta outputs; the other tools read the annotation FASTA.
     if (params.bakta_db) {
         // nf-core bakta expects 6 inputs: fasta, db, proteins, prodigal_tf, regions, hmms
         BAKTA(
-            genome_assembly,
+            ch_annotation_fasta,
             file(params.bakta_db, checkIfExists: true),
             [],  // proteins
             [],  // prodigal_tf
@@ -245,7 +264,6 @@ workflow MGAP {
         )
         ch_versions = ch_versions.mix(BAKTA.out.versions.first())
         ch_multiqc_files = ch_multiqc_files.mix(BAKTA.out.txt.map { _meta, txt -> txt })
-        ch_annotation_fasta = BAKTA.out.fna
 
         // RUN AMRFINDERPLUS (needs Bakta fna/faa/gff; only when --amrfinder_db is provided)
         // Local amrfinderplus/run expects tuple val(meta), path(fasta_nuc), path(fasta_prot), path(gff3), val(species)
@@ -262,16 +280,14 @@ workflow MGAP {
             )
             ch_versions = ch_versions.mix(AMRFINDERPLUS_RUN.out.versions.first())
         }
-    } else {
-        ch_annotation_fasta = genome_assembly
     }
 
 
     // Run GTDB-Tk for taxonomic classification (batch mode)
     if (params.run_gtdbtk) {
         // nf-core gtdbtk/classifywf expects: tuple(meta, bins), tuple(db_name, db), use_pplacer_scratch_dir
-        // Collect all genome assemblies for batch processing
-        genome_assembly
+        // Collect all annotation FASTAs for batch processing
+        ch_annotation_fasta
             .map { _meta, fasta -> fasta }
             .collect()
             .map { fastas -> [ [id: 'gtdbtk_batch'], fastas ] }
@@ -317,7 +333,7 @@ workflow MGAP {
         ch_versions = ch_versions.mix(RGI_LOAD.out.versions)
 
         RGI_MAIN(
-            genome_assembly,
+            ch_annotation_fasta,
             RGI_LOAD.out.db
         )
         ch_versions = ch_versions.mix(RGI_MAIN.out.versions.first())

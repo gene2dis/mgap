@@ -1,0 +1,60 @@
+name: seqkit_filter
+description: |
+  Prepare an assembly for annotation: drop sequences shorter than a minimum
+  length (ext.args, e.g. --min-len 1000) and write the rest uncompressed,
+  optionally renamed by seqkit replace (ext.args2; without it the headers are
+  unchanged). Also reports sequence counts and lengths before and after.
+keywords:
+  - fasta
+  - filter
+  - length
+  - decompress
+tools:
+  - seqkit:
+      description: A cross-platform and ultrafast toolkit for FASTA/Q file manipulation.
+      homepage: https://bioinf.shenwei.me/seqkit/
+      documentation: https://bioinf.shenwei.me/seqkit/usage/
+      tool_dev_url: https://github.com/shenwei356/seqkit
+      doi: "10.1371/journal.pone.0163962"
+      licence: ["MIT"]
+      identifier: biotools:seqkit
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test', single_end:false ]
+    - fasta:
+        type: file
+        description: Genome assembly in FASTA format (plain or gzipped)
+        pattern: "*.{fasta,fa,fna,fasta.gz,fa.gz,fna.gz}"
+output:
+  fasta:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - ${prefix}.fasta:
+          type: file
+          description: Uncompressed FASTA with the sequences that passed the filter, renamed by ext.args2 when set (in MGAP contig_1..N, with the original header kept as the description)
+          pattern: "*.fasta"
+  stats:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - ${prefix}.filter_stats.tsv:
+          type: file
+          description: seqkit stats table (one row for the input, one for the output) with sequence count, total length and N50
+          pattern: "*.filter_stats.tsv"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

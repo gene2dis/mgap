@@ -53,7 +53,10 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 
 ### Genome Annotation
 
-With the assembled genome (or provided contigs), the annotation steps include:
+With the assembled genome (or provided contigs), contigs shorter than `--min_contig_length` (default 1000 bp) are removed
+and the rest written uncompressed and renamed `contig_1`, `contig_2`, ... to one FASTA per sample
+([`SeqKit`](https://github.com/shenwei356/seqkit)). Every annotation step reads that file; QUAST reports the whole
+assembly. The annotation steps include:
 
 1. Quality assessment ([`CheckM2`](https://github.com/chklovski/CheckM2))
 2. MLST analysis ([`MLST`](https://github.com/tseemann/mlst))
@@ -232,9 +235,9 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 #### Annotation
 
-| Parameter             | Default | Description                                     |
-| --------------------- | ------- | ----------------------------------------------- |
-| `--min_contig_length` | `1000`  | Minimum contig length (bp) for Bakta annotation |
+| Parameter             | Default | Description                                                                                        |
+| --------------------- | ------- | -------------------------------------------------------------------------------------------------- |
+| `--min_contig_length` | `1000`  | Minimum contig length (bp) for every annotation and typing tool (QUAST reports the whole assembly) |
 
 > **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
 

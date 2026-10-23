@@ -65,12 +65,13 @@ flowchart TD
 
     %% ── Shared downstream analysis ──
     ASSEMBLY --> QUAST["QUAST<br>(assembly QC)"]
-    ASSEMBLY --> CHECKM2["CheckM2<br>(completeness / contamination)"]
-    ASSEMBLY --> MLST["MLST<br>(sequence typing)"]
-    ASSEMBLY --> BAKTA["Bakta<br>(annotation)"]
+    ASSEMBLY --> ANNOT_IN["SeqKit<br>(contigs >= min_contig_length,<br>uncompressed, renamed contig_N)"]
+    ANNOT_IN --> CHECKM2["CheckM2<br>(completeness / contamination)"]
+    ANNOT_IN --> MLST["MLST<br>(sequence typing)"]
+    ANNOT_IN --> BAKTA["Bakta<br>(annotation)"]
 
     %% ── Taxonomy ──
-    ASSEMBLY --> GTDBTK_CHK{"run_gtdbtk?"}
+    ANNOT_IN --> GTDBTK_CHK{"run_gtdbtk?"}
     GTDBTK_CHK -- yes --> GTDBTK["GTDB-Tk<br>(taxonomic classification)"]
 
     %% ── AMR detection ──
@@ -80,26 +81,26 @@ flowchart TD
     AMR_JOIN --> AMRFINDER["AMRFinderPlus<br>(AMR detection)"]
 
     %% ── Genomad ──
-    BAKTA --> GENOMAD["geNomad<br>(mobile genetic elements)"]
+    ANNOT_IN --> GENOMAD["geNomad<br>(mobile genetic elements)"]
 
     %% ── RGI (optional) ──
-    ASSEMBLY --> RGI_CHK{"run_rgi?"}
+    ANNOT_IN --> RGI_CHK{"run_rgi?"}
     RGI_CHK -- yes --> RGI_LOAD["RGI load<br>(CARD, once per run)"]
     RGI_LOAD --> RGI["RGI<br>(AMR gene prediction)"]
 
     %% ── MOB-suite (optional) ──
-    BAKTA --> MOBSUITE_CHK{"run_mobsuite?"}
+    ANNOT_IN --> MOBSUITE_CHK{"run_mobsuite?"}
     MOBSUITE_CHK -- yes --> MOBSUITE["MOB-suite<br>(plasmid reconstruction)"]
 
     %% ── Taxa-specific tools ──
     SPECIES --> TAXA_BRANCH{"SPECIES_TYPING<br>Species?"}
-    BAKTA --> TAXA_BRANCH
+    ANNOT_IN --> TAXA_BRANCH
     TAXA_BRANCH -- "K. pneumoniae" --> KLEBORATE["Kleborate"]
     TAXA_BRANCH -- "S. aureus" --> SCCMEC["sccmec"]
     TAXA_BRANCH -- "Salmonella" --> SISTR["SISTR<br>(serotype prediction)"]
 
     %% ── Software versions ──
-    QUAST & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD & RGI --> TOOL_VERSIONS["Tool versions"]
+    QUAST & ANNOT_IN & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD & RGI --> TOOL_VERSIONS["Tool versions"]
     KLEBORATE & SCCMEC & SISTR & MOBSUITE --> TOOL_VERSIONS
     QUAST & BAKTA --> MULTIQC["MULTIQC<br>(aggregate QC report)"]
     TOOL_VERSIONS -- "Software Versions section" --> MULTIQC
@@ -114,7 +115,7 @@ flowchart TD
 
     class SEQ_TYPE,KR2_ILL,KR2_ONT,COV_ILL,COV_ONT,ASM_ONT,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,TAXA_BRANCH decision
     class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,MASH_ONT,SEQTK_ONT,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI_LOAD,RGI,MOBSUITE optional
-    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,TOOL_VERSIONS,VERSIONS,SPECIES,AMR_JOIN process
+    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,ANNOT_IN,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,TOOL_VERSIONS,VERSIONS,SPECIES,AMR_JOIN process
     class INPUT input
     class ASSEMBLY merge
 ```
@@ -162,17 +163,18 @@ flowchart TD
 
 ### Shared Downstream Analysis
 
-| Step | Tool              | Description                                                         |
-| ---- | ----------------- | ------------------------------------------------------------------- |
-| 1    | **QUAST**         | Assembly quality metrics                                            |
-| 2    | **CheckM2**       | Genome completeness and contamination assessment                    |
-| 3    | **MLST**          | Multi-locus sequence typing                                         |
-| 4    | **Bakta**         | Genome annotation                                                   |
-| 5    | **GTDB-Tk**       | Taxonomic classification _(optional)_                               |
-| 6    | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta + MLST outputs) |
-| 7    | **geNomad**       | Mobile genetic element identification                               |
-| 8    | **RGI**           | Resistance gene prediction; CARD loaded once per run _(optional)_   |
-| 9    | **MOB-suite**     | Plasmid detection and reconstruction _(optional)_                   |
+| Step | Tool              | Description                                                                                                  |
+| ---- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1    | **QUAST**         | Assembly quality metrics (whole assembly)                                                                    |
+| -    | **SeqKit**        | Annotation FASTA: contigs >= `min_contig_length`, uncompressed, renamed `contig_N`; read by every tool below |
+| 2    | **CheckM2**       | Genome completeness and contamination assessment                                                             |
+| 3    | **MLST**          | Multi-locus sequence typing                                                                                  |
+| 4    | **Bakta**         | Genome annotation                                                                                            |
+| 5    | **GTDB-Tk**       | Taxonomic classification _(optional)_                                                                        |
+| 6    | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta + MLST outputs)                                          |
+| 7    | **geNomad**       | Mobile genetic element identification                                                                        |
+| 8    | **RGI**           | Resistance gene prediction; CARD loaded once per run _(optional)_                                            |
+| 9    | **MOB-suite**     | Plasmid detection and reconstruction _(optional)_                                                            |
 
 ### Taxa-Specific Analysis
 

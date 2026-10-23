@@ -92,8 +92,8 @@ workflow ILLUMINA {
     ch_versions = ch_versions.mix(SPADES.out.versions.first())
 
     emit:
-    // nf-core spades outputs gzipped scaffolds (.fa.gz)
-    // Downstream tools (QUAST, CheckM2, MLST, Bakta, GTDB-Tk) all support gzipped FASTA
+    // nf-core spades outputs gzipped scaffolds (.fa.gz). QUAST reads them as
+    // they are; annotation tools get the uncompressed SEQKIT_FILTER output (mgap.nf)
     assembly = SPADES.out.scaffolds  // channel: [ val(meta), path(fasta.gz) ]
     reports  = ch_reports             // channel: [ path(report) ] for MultiQC
     versions = ch_versions            // channel: [ path(versions.yml) ]
