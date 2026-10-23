@@ -356,7 +356,9 @@ nextflow_pipeline {
                 { assert path("$outputDir/${sample}/read_processing/fastp/${sample}.fastp.json").exists() },
                 { assert path("$outputDir/${sample}/qc/quast/${sample}.tsv").text.readLines().size() > 1 },
                 { assert path("$outputDir/${sample}/annotation/mlst/${sample}.tsv").exists() },
-                { assert path("$outputDir/multiqc/multiqc_report.html").exists() }
+                { assert path("$outputDir/multiqc/multiqc_report.html").exists() },
+                // MultiQC parsed the QUAST report, under the sample ID
+                { assert path("$outputDir/multiqc/multiqc_data/multiqc_quast.txt").readLines()*.split('\t')*.getAt(0) == [ 'Sample', sample ] }
             )
         }
 
