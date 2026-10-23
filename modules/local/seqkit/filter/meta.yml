@@ -2,7 +2,8 @@ name: seqkit_filter
 description: |
   Prepare an assembly for annotation: drop sequences shorter than a minimum
   length (ext.args, e.g. --min-len 1000) and write the rest uncompressed,
-  headers unchanged. Also reports sequence counts and lengths before and after.
+  optionally renamed by seqkit replace (ext.args2; without it the headers are
+  unchanged). Also reports sequence counts and lengths before and after.
 keywords:
   - fasta
   - filter

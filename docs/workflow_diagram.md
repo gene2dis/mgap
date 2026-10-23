@@ -65,7 +65,7 @@ flowchart TD
 
     %% ── Shared downstream analysis ──
     ASSEMBLY --> QUAST["QUAST<br>(assembly QC)"]
-    ASSEMBLY --> ANNOT_IN["SeqKit<br>(contigs >= min_contig_length,<br>uncompressed)"]
+    ASSEMBLY --> ANNOT_IN["SeqKit<br>(contigs >= min_contig_length,<br>uncompressed, renamed contig_N)"]
     ANNOT_IN --> CHECKM2["CheckM2<br>(completeness / contamination)"]
     ANNOT_IN --> MLST["MLST<br>(sequence typing)"]
     ANNOT_IN --> BAKTA["Bakta<br>(annotation)"]
@@ -163,18 +163,18 @@ flowchart TD
 
 ### Shared Downstream Analysis
 
-| Step | Tool              | Description                                                                              |
-| ---- | ----------------- | ---------------------------------------------------------------------------------------- |
-| 1    | **QUAST**         | Assembly quality metrics (whole assembly)                                                |
-| -    | **SeqKit**        | Annotation FASTA: contigs >= `min_contig_length`, uncompressed; read by every tool below |
-| 2    | **CheckM2**       | Genome completeness and contamination assessment                                         |
-| 3    | **MLST**          | Multi-locus sequence typing                                                              |
-| 4    | **Bakta**         | Genome annotation                                                                        |
-| 5    | **GTDB-Tk**       | Taxonomic classification _(optional)_                                                    |
-| 6    | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta + MLST outputs)                      |
-| 7    | **geNomad**       | Mobile genetic element identification                                                    |
-| 8    | **RGI**           | Resistance gene prediction; CARD loaded once per run _(optional)_                        |
-| 9    | **MOB-suite**     | Plasmid detection and reconstruction _(optional)_                                        |
+| Step | Tool              | Description                                                                                                  |
+| ---- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1    | **QUAST**         | Assembly quality metrics (whole assembly)                                                                    |
+| -    | **SeqKit**        | Annotation FASTA: contigs >= `min_contig_length`, uncompressed, renamed `contig_N`; read by every tool below |
+| 2    | **CheckM2**       | Genome completeness and contamination assessment                                                             |
+| 3    | **MLST**          | Multi-locus sequence typing                                                                                  |
+| 4    | **Bakta**         | Genome annotation                                                                                            |
+| 5    | **GTDB-Tk**       | Taxonomic classification _(optional)_                                                                        |
+| 6    | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta + MLST outputs)                                          |
+| 7    | **geNomad**       | Mobile genetic element identification                                                                        |
+| 8    | **RGI**           | Resistance gene prediction; CARD loaded once per run _(optional)_                                            |
+| 9    | **MOB-suite**     | Plasmid detection and reconstruction _(optional)_                                                            |
 
 ### Taxa-Specific Analysis
 
