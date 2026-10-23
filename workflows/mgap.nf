@@ -183,7 +183,9 @@ workflow MGAP {
         [ [:], [] ]   // no gff
     )
     ch_versions = ch_versions.mix(QUAST.out.versions.first())
-    ch_multiqc_files = ch_multiqc_files.mix(QUAST.out.tsv.map { _meta, tsv -> tsv })
+    // MultiQC's QUAST module only reads files named report.tsv, not the <sample>.tsv
+    // link; MULTIQC stages each input in its own folder, so the names do not clash
+    ch_multiqc_files = ch_multiqc_files.mix(QUAST.out.results.map { _meta, dir -> dir.resolve('report.tsv') })
 
     //
     // Prepare the annotation FASTA once per sample: contigs >= --min_contig_length,

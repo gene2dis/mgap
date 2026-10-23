@@ -95,6 +95,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Duplicate sample names in the samplesheet are rejected at launch (`uniqueEntries`); before, joins keyed on the sample could mis-join or drop samples
 - Database paths are checked at launch (`exists` in the schema, `checkIfExists` for Kraken2, Bracken, RGI and MOB-suite)
 - Cloud profiles: resources come from `conf/base.config` with retry scaling (Google Batch machine types no longer smaller than the requested memory), `google.location` replaces the ignored `google.region`, and the dead `google.lifeSciences` block and the AMI-specific AWS CLI default are gone
+- MultiQC shows QUAST: it was given the `<sample>.tsv` link, which its QUAST module does not read (it reads `report.tsv`), so the report never had a QUAST section, and `--seq_type contig` runs without `--bakta_db` failed (MultiQC found no results and wrote no report). QUAST now labels each assembly with the sample ID (`--labels`), so the `Assembly` row of `<sample>/qc/quast/<sample>.tsv` is the sample ID instead of the FASTA file name, and samples whose FASTA files share a name no longer merge into one MultiQC row
 
 ### `Removed`
 

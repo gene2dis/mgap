@@ -304,7 +304,7 @@ This step runs for every `--seq_type`.
 <summary>Output files</summary>
 
 - `<sample_id>/qc/quast/`
-  - `*.tsv`: Tab-separated assembly quality metrics.
+  - `<sample_id>.tsv`: Tab-separated assembly quality metrics; the `Assembly` row is the sample ID.
 
 </details>
 
