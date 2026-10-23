@@ -2,10 +2,8 @@ process AUTOCYCLER_GFA2FASTA {
     tag "$meta.id"
     label 'process_low'
 
+    // container: the autocycler-suite image, pinned by digest in conf/modules.config
     conda "${moduleDir}/../environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'docker://microds/autocycler:0.6.0' :
-        'docker.io/microds/autocycler:0.6.0' }"
 
     input:
     tuple val(meta), path(gfa)

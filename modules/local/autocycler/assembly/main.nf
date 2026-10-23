@@ -2,10 +2,8 @@ process AUTOCYCLER_ASSEMBLY {
     tag "${meta.id}:${assembler}:${subsample_id}"
     label 'process_high'
 
+    // container: the autocycler-suite image, pinned by digest in conf/modules.config
     conda "${moduleDir}/../environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'docker://microds/autocycler:0.6.0' :
-        'docker.io/microds/autocycler:0.6.0' }"
 
     // Note: errorStrategy 'ignore' for this process is set in conf/modules.config
     // (individual assembler failures are tolerated by the consensus step)

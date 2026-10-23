@@ -1,0 +1,45 @@
+name: "autocycler_genome_size"
+description: Estimate genome size from long reads with autocycler helper genome_size (a Raven assembly)
+keywords:
+  - autocycler
+  - genome size
+  - long reads
+tools:
+  - autocycler:
+      description: "Consensus long-read assembly for bacterial genomes"
+      homepage: "https://github.com/rrwick/Autocycler"
+      documentation: "https://github.com/rrwick/Autocycler/wiki/Autocycler-helper"
+      tool_dev_url: "https://github.com/rrwick/Autocycler"
+      licence: ["GPL-3.0"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - reads:
+      type: file
+      description: Long reads
+      pattern: "*.{fastq,fastq.gz,fq,fq.gz}"
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - reads:
+      type: file
+      description: The input reads, passed through for the subsample step
+      pattern: "*.{fastq,fastq.gz,fq,fq.gz}"
+  - genome_size:
+      type: file
+      description: Estimated genome size in bases (one line)
+      pattern: "*_genome_size.txt"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"
