@@ -70,11 +70,11 @@ process AUTOCYCLER_CONSENSUS {
     stub:
     // bare prefix (no def) - it is referenced in the output block
     prefix = task.ext.prefix ?: "${meta.id}"
+    // ext.stub_no_consensus (set by test configs) mimics a sample with no QC-pass cluster
+    def stub_outputs = task.ext.stub_no_consensus ? '' : "touch autocycler_out/consensus_assembly.fasta ${prefix}.fasta ${prefix}.gfa"
     """
     mkdir -p autocycler_out
-    touch autocycler_out/consensus_assembly.fasta
-    touch ${prefix}.fasta
-    touch ${prefix}.gfa
+    ${stub_outputs}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
