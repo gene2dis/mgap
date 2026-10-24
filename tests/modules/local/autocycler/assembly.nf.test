@@ -23,7 +23,8 @@ nextflow_process {
                     file('sample_01.fastq'),
                     '01',
                     file("${baseDir}/tests/data/stub_inputs/genome_size.txt", checkIfExists: true),
-                    'flye'
+                    'flye',
+                    []
                 ]
                 """
             }

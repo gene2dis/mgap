@@ -1,0 +1,50 @@
+name: "autocycler_consensus"
+description: Build the Autocycler consensus assembly in one task (autocycler compress, cluster, trim and resolve per QC-pass cluster, combine). With no QC-pass cluster the task succeeds without a consensus.
+keywords:
+  - autocycler
+  - consensus
+  - assembly
+  - long reads
+tools:
+  - autocycler:
+      description: "Consensus long-read assembly for bacterial genomes"
+      homepage: "https://github.com/rrwick/Autocycler"
+      documentation: "https://github.com/rrwick/Autocycler/wiki/Autocycler-combine"
+      tool_dev_url: "https://github.com/rrwick/Autocycler"
+      licence: ["GPL-3.0"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - assemblies:
+      type: file
+      description: The sample's input assemblies (empty files are skipped)
+      pattern: "*.fasta"
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1' ]
+  - fasta:
+      type: file
+      description: Consensus assembly (absent when no cluster passed QC)
+      pattern: "*.fasta"
+  - gfa:
+      type: file
+      description: Consensus assembly graph (absent when no cluster passed QC)
+      pattern: "*.gfa"
+  - autocycler_dir:
+      type: directory
+      description: Autocycler directory (input_assemblies.gfa, clustering/, consensus_assembly.*)
+      pattern: "autocycler_out"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

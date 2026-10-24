@@ -35,10 +35,7 @@ include { COVERAGE_ADJUST } from './coverage_adjust'
 include { AUTOCYCLER_GENOME_SIZE  } from '../../modules/local/autocycler/genome_size/main'
 include { AUTOCYCLER_SUBSAMPLE    } from '../../modules/local/autocycler/subsample/main'
 include { AUTOCYCLER_ASSEMBLY     } from '../../modules/local/autocycler/assembly/main'
-include { AUTOCYCLER_COMPRESS     } from '../../modules/local/autocycler/compress/main'
-include { AUTOCYCLER_CLUSTER      } from '../../modules/local/autocycler/cluster/main'
-include { AUTOCYCLER_TRIM_RESOLVE } from '../../modules/local/autocycler/trim_resolve/main'
-include { AUTOCYCLER_COMBINE      } from '../../modules/local/autocycler/combine/main'
+include { AUTOCYCLER_CONSENSUS    } from '../../modules/local/autocycler/consensus/main'
 include { AUTOCYCLER_GFA2FASTA    } from '../../modules/local/autocycler/gfa2fasta/main'
 
 workflow ONT {
@@ -101,6 +98,8 @@ workflow ONT {
             .tokenize(',')
             .collect { item -> item.trim() }
             .findAll { item -> item != 'plassembler' || params.plassembler_db }
+        // staged only into the plassembler tasks
+        def plassembler_db = params.plassembler_db ? file(params.plassembler_db, checkIfExists: true) : []
 
         AUTOCYCLER_SUBSAMPLE.out.subsampled_reads
             .flatMap { meta, subsample_files, genome_size ->
@@ -110,7 +109,8 @@ workflow ONT {
                     .collectMany { subsample_file ->
                         def subsample_id = subsample_file.baseName
                         assembler_list.collect { assembler ->
-                            [ meta, subsample_file, subsample_id, genome_size, assembler ]
+                            [ meta, subsample_file, subsample_id, genome_size, assembler,
+                                assembler == 'plassembler' ? plassembler_db : [] ]
                         }
                     }
             }
@@ -120,10 +120,10 @@ workflow ONT {
         ch_versions = ch_versions.mix(AUTOCYCLER_ASSEMBLY.out.versions.first())
 
         //
-        // Step 4: Collect all assemblies per sample and compress into unitig graph
-        // Assembler tasks run with errorStrategy 'ignore' (see conf/modules.config),
-        // so a sample can end up with zero assemblies - report it loudly
-        // instead of letting it vanish from groupTuple.
+        // Step 4: Collect all assemblies per sample
+        // Assembler tasks that still fail after the out-of-memory retry are ignored
+        // (see conf/modules.config), so a sample can end up with zero assemblies -
+        // report it loudly instead of letting it vanish from groupTuple.
         //
         AUTOCYCLER_ASSEMBLY.out.assembly
             .groupTuple(by: 0)
@@ -142,26 +142,25 @@ workflow ONT {
             .filter { _meta, fasta_list -> fasta_list }
             .set { ch_assemblies_per_sample }
 
-        AUTOCYCLER_COMPRESS ( ch_assemblies_per_sample )
-        ch_versions = ch_versions.mix(AUTOCYCLER_COMPRESS.out.versions.first())
+        //
+        // Steps 5-7: compress, cluster, trim/resolve each QC-pass cluster and combine
+        // into the consensus assembly, in one task. A sample with no QC-pass cluster
+        // gets no consensus: report it and leave it out, the other samples continue.
+        //
+        AUTOCYCLER_CONSENSUS ( ch_assemblies_per_sample )
+        ch_versions = ch_versions.mix(AUTOCYCLER_CONSENSUS.out.versions.first())
 
-        //
-        // Step 5: Cluster unitigs into putative genomic sequences
-        //
-        AUTOCYCLER_CLUSTER ( AUTOCYCLER_COMPRESS.out.autocycler_dir )
-        ch_versions = ch_versions.mix(AUTOCYCLER_CLUSTER.out.versions.first())
-
-        //
-        // Step 6: Trim and resolve each QC-pass cluster
-        //
-        AUTOCYCLER_TRIM_RESOLVE ( AUTOCYCLER_CLUSTER.out.autocycler_dir )
-        ch_versions = ch_versions.mix(AUTOCYCLER_TRIM_RESOLVE.out.versions.first())
-
-        //
-        // Step 7: Combine resolved clusters into final consensus assembly
-        //
-        AUTOCYCLER_COMBINE ( AUTOCYCLER_TRIM_RESOLVE.out.autocycler_dir )
-        ch_versions = ch_versions.mix(AUTOCYCLER_COMBINE.out.versions.first())
+        ch_assemblies_per_sample
+            .map { meta, _fasta_list -> [ meta ] }
+            .join(AUTOCYCLER_CONSENSUS.out.fasta, remainder: true)
+            .map { meta, consensus ->
+                if (!consensus) {
+                    log.warn("Sample '${meta.id}': no Autocycler cluster passed QC, so there is no consensus assembly - the sample is excluded from all downstream analysis.")
+                }
+                [ meta, consensus ]
+            }
+            .filter { _meta, consensus -> consensus }
+            .set { ch_consensus_fasta }
 
         //
         // Step 8: Reorient circular contigs with Dnaapler (optional)
@@ -169,7 +168,7 @@ workflow ONT {
         // then converts reoriented GFA back to FASTA via autocycler gfa2fasta
         //
         if (params.run_dnaapler) {
-            DNAAPLER ( AUTOCYCLER_COMBINE.out.gfa )
+            DNAAPLER ( AUTOCYCLER_CONSENSUS.out.gfa )
             ch_versions = ch_versions.mix(DNAAPLER.out.versions.first())
 
             AUTOCYCLER_GFA2FASTA ( DNAAPLER.out.reoriented_gfa )
@@ -177,7 +176,7 @@ workflow ONT {
 
             // dnaapler's outputs are optional - fall back to the combined
             // consensus assembly instead of silently dropping the sample
-            ch_assembly = AUTOCYCLER_COMBINE.out.fasta
+            ch_assembly = ch_consensus_fasta
                 .join(AUTOCYCLER_GFA2FASTA.out.fasta, remainder: true)
                 .map { meta, combined, reoriented ->
                     if (!reoriented) {
@@ -186,7 +185,7 @@ workflow ONT {
                     [ meta, reoriented ?: combined ]
                 }
         } else {
-            ch_assembly = AUTOCYCLER_COMBINE.out.fasta
+            ch_assembly = ch_consensus_fasta
         }
 
     } else {

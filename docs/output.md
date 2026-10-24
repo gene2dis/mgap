@@ -30,7 +30,7 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   │                                #   (ONT, --ont_assembler flye)
 │   │   ├── autocycler/                  # Autocycler consensus assembly
 │   │   │   ├── genome_size/             #   Genome size estimate: *_genome_size.txt
-│   │   │   ├── autocycler_out/          #   Cluster/trim/resolve working directory
+│   │   │   ├── autocycler_out/          #   Compress/cluster/trim/resolve/combine directory
 │   │   │   ├── *.fasta                  #   Final consensus assembly
 │   │   │   └── *.gfa                    #   Final consensus assembly graph
 │   │   │                                #   (ONT, --ont_assembler autocycler)
@@ -250,13 +250,13 @@ This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
 
 - `<sample_id>/assemblies/autocycler/`
   - `genome_size/*_genome_size.txt`: Estimated genome size.
-  - `autocycler_out/`: Autocycler working directory with clustering, trimming, and resolution results (excludes intermediate `input_assemblies/` and `subsampled_reads/` subdirectories).
+  - `autocycler_out/`: Autocycler directory written by compress, cluster, trim, resolve and combine (one task per sample): `input_assemblies.gfa`, `clustering/` (with `clustering.tsv` and one directory per cluster), and `consensus_assembly.{fasta,gfa,yaml}`. A sample with no cluster passing QC has no `qc_pass/` clusters and no consensus files.
   - `*.fasta`: Final consensus assembly in FASTA format.
   - `*.gfa`: Final consensus assembly in GFA format.
 
 </details>
 
-[Autocycler](https://github.com/rrwick/Autocycler) generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results. The pipeline runs the full Autocycler workflow: genome size estimation, subsampling, multi-assembler assembly, compression, clustering, trim/resolve, and combine.
+[Autocycler](https://github.com/rrwick/Autocycler) generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results. The pipeline runs the full Autocycler workflow: genome size estimation, subsampling, multi-assembler assembly, then compression, clustering, trim/resolve and combine in one task per sample.
 
 This step runs for `--seq_type ont` with `--ont_assembler autocycler`.
 

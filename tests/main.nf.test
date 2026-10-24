@@ -176,9 +176,46 @@ nextflow_pipeline {
             assertAll(
                 { assert workflow.success },
                 { assert succeeded.any { it.contains('AUTOCYCLER_ASSEMBLY') } },
-                { assert succeeded.any { it.contains('AUTOCYCLER_COMBINE') } },
+                { assert succeeded.any { it.contains('AUTOCYCLER_CONSENSUS') } },
                 { assert succeeded.any { it.contains('AUTOCYCLER_GFA2FASTA') } },
                 { assert succeeded.any { it.contains('MLST') } }
+            )
+        }
+
+    }
+
+    test("Run pipeline with ONT data (autocycler), one sample without a consensus - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "autocycler"
+
+        options "-stub"
+        config "./config/autocycler_no_consensus.config"
+
+        when {
+            params {
+                input           = "${projectDir}/tests/data/samplesheet_ont_no_consensus.csv"
+                seq_type        = "ont"
+                ont_assembler   = "autocycler"
+                run_kraken2     = false
+                adjust_coverage = false
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            // log.warn reaches only the log file, not the console nf-test captures
+            def nextflow_log = path("${metaDir}/nextflow.log").text
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.count { it.startsWith('GENE2DIS_MGAP:MGAP:ONT:AUTOCYCLER_CONSENSUS') } == 2 },
+                { assert nextflow_log.contains("Sample 'TEST_NO_CONSENSUS': no Autocycler cluster passed QC") },
+                { assert !nextflow_log.contains("Sample 'TEST_CONSENSUS': no Autocycler cluster passed QC") },
+                { assert succeeded.any { it.contains('MLST (TEST_CONSENSUS)') } },
+                { assert !succeeded.any { it.contains('MLST (TEST_NO_CONSENSUS)') } },
+                { assert !succeeded.any { it.contains('DNAAPLER (TEST_NO_CONSENSUS)') } }
             )
         }
 

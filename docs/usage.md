@@ -161,7 +161,7 @@ Any parameters you leave out of the YAML file fall back to the pipeline defaults
 
 ### Autocycler Consensus Assembly (ONT)
 
-For ONT data, the pipeline supports an alternative assembler: [Autocycler](https://github.com/rrwick/Autocycler) (v0.6.0+). Autocycler generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results, producing higher-quality assemblies than any single assembler alone.
+For ONT data, the pipeline supports an alternative assembler: [Autocycler](https://github.com/rrwick/Autocycler) (v0.8.0). Autocycler generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results, producing higher-quality assemblies than any single assembler alone.
 
 **Basic usage:**
 
@@ -208,7 +208,7 @@ nextflow run gene2dis/mgap \
 | `--autocycler_assemblers`  | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler                                                                             |
 | `--autocycler_read_type`   | `ont_r10`                                      | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`                                                                   |
 | `--autocycler_max_contigs` | `50`                                           | Maximum number of contigs to retain per sample during compress and cluster steps                                              |
-| `--plassembler_db`         | `null`                                         | Path to Plassembler database. Plassembler is skipped if not provided                                                          |
+| `--plassembler_db`         | `null`                                         | Path to Plassembler database (staged into the Plassembler tasks). Plassembler is skipped if not provided                      |
 
 **Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
 
@@ -216,25 +216,31 @@ nextflow run gene2dis/mgap \
 
 > **Note:** When using `--ont_assembler autocycler`, the coverage adjustment step (Mash + Seqtk) is automatically skipped, as Autocycler handles its own read subsampling internally.
 
+> **Note:** Autocycler steps tolerate failures per sample: an assembler task killed for lack of memory is retried once with twice the memory, and an assembler that still fails (or fails for any other reason) is reported as an ignored error and left out of the consensus. The genome size step (Raven on all reads, so its memory grows with read depth) is retried twice, up to three times its memory. A sample whose assemblers all fail, or with no cluster that passes Autocycler's QC, gets a warning and no assembly; the other samples continue.
+
 #### Autocycler Docker image
 
 The Autocycler modules require a Docker image containing Autocycler and all supported assemblers. A pre-built image is available on Docker Hub and will be pulled automatically:
 
 ```
-microds/autocycler:0.6.0@sha256:feb81239eac4ac7d660355be66efc9d8eabafbbca726a547d2443051f819369f
+microds/autocycler:0.8.0@sha256:48ca6289d9cced23a4e273dfb4ab7c667603cec3943edf40018ccab5020cbd44
 ```
 
-The pipeline pins this image by digest in `conf/modules.config`, so runs always use the exact image the pipeline was tested with. The image is built from `docker/autocycler-suite/Dockerfile`; because the Dockerfile installs assemblers from bioconda, a rebuild is not bit-identical — rebuilt images must be pushed under a **new tag** and the digest pin in `conf/modules.config` updated accordingly:
+It holds Autocycler 0.8.0, Canu 2.3, Flye 2.9.6, metaMDBG 1.4, miniasm 0.3, minimap2 2.31, Minipolish 0.2.1, Myloasm 0.7.0, NECAT 0.0.1_update20200803, NextDenovo 2.5.2, NextPolish 1.4.1, Plassembler 1.8.5 (with dnaapler 1.4.0), Racon 1.5.0 and Raven 1.8.3. The conda profile installs the same versions from `modules/local/autocycler/environment.yml`.
+
+The pipeline pins this image by digest in `conf/modules.config` (the only container definition for the Autocycler modules), so runs always use the exact image the pipeline was tested with. The image is built from `docker/autocycler-suite/Dockerfile`, which pins every package and the base image exactly; packages' own dependencies are resolved at build time, so a rebuild is still not bit-identical, and rebuilt images must be pushed under a **new tag** and the digest pin in `conf/modules.config` updated accordingly:
 
 ```bash
 cd docker/autocycler-suite
 docker build -t microds/autocycler:<new-tag> .
+docker push microds/autocycler:<new-tag>
+docker inspect --format '{{index .RepoDigests 0}}' microds/autocycler:<new-tag>
 ```
 
-For Singularity users, the image is pulled automatically via `docker://microds/autocycler:0.6.0`. To build manually:
+The pin is the digest alone (`docker.io/microds/autocycler@sha256:…`, without the tag) because Singularity/Apptainer reject a reference with both a tag and a digest. For Singularity users, the image is pulled automatically by that digest (`docker://docker.io/microds/autocycler@sha256:48ca6289d9cced23a4e273dfb4ab7c667603cec3943edf40018ccab5020cbd44`, tag `0.8.0`). To build manually:
 
 ```bash
-singularity build autocycler.sif docker://microds/autocycler:0.6.0
+singularity build autocycler.sif docker://microds/autocycler@sha256:48ca6289d9cced23a4e273dfb4ab7c667603cec3943edf40018ccab5020cbd44
 ```
 
 ### Read QC Parameters
