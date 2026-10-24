@@ -237,7 +237,7 @@ docker push microds/autocycler:<new-tag>
 docker inspect --format '{{index .RepoDigests 0}}' microds/autocycler:<new-tag>
 ```
 
-For Singularity users, the image is pulled automatically by digest (`docker://microds/autocycler@sha256:48ca6289d9cced23a4e273dfb4ab7c667603cec3943edf40018ccab5020cbd44`, tag `0.8.0`). To build manually:
+The pin is the digest alone (`docker.io/microds/autocycler@sha256:…`, without the tag) because Singularity/Apptainer reject a reference with both a tag and a digest. For Singularity users, the image is pulled automatically by that digest (`docker://docker.io/microds/autocycler@sha256:48ca6289d9cced23a4e273dfb4ab7c667603cec3943edf40018ccab5020cbd44`, tag `0.8.0`). To build manually:
 
 ```bash
 singularity build autocycler.sif docker://microds/autocycler@sha256:48ca6289d9cced23a4e273dfb4ab7c667603cec3943edf40018ccab5020cbd44

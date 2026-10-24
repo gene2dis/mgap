@@ -29,27 +29,32 @@ process AUTOCYCLER_ASSEMBLY {
     """
     ${plassembler_db_env}
 
+    # stderr reaches .command.err as it is written (also when the task is killed) and
+    # helper.log, for the checks below; stdout stays on stdout
     status=0
-    autocycler helper ${assembler} \\
+    { autocycler helper ${assembler} \\
         --reads ${subsample_reads} \\
         --out_prefix ${prefix} \\
         --threads ${task.cpus} \\
         --genome_size \$(head -n1 ${genome_size}) \\
         ${args} \\
-        2> helper.log || status=\$?
-    cat helper.log >&2
+        2>&1 1>&3 | tee helper.log >&2; } 3>&1 || status=\$?
 
-    # The helper ignores the assembler's exit status. When the out-of-memory killer
-    # stops the assembler it only prints "<assembler> failed with status signal: 9
-    # (SIGKILL)" and exits 0 without an assembly: exit 137 instead, so the
-    # errorStrategy retries the task with more memory.
-    if grep -q -e 'signal: 9' -e 'SIGKILL' helper.log; then
+    # The helper ignores the assembler's exit status: when the assembler fails it only
+    # prints "<assembler> failed with status ..." and exits 0 without an assembly
+    if [[ \$status -eq 0 && -s ${prefix}.fasta ]]; then
+        :
+    elif grep -q -e 'signal: 9' -e 'SIGKILL' helper.log; then
+        # out-of-memory kill: exit 137, so the errorStrategy retries with more memory
         exit 137
-    fi
-    [[ \$status -eq 0 ]] || exit \$status
-    # Any other exit 0 without an assembly is a failure as well: the errorStrategy
-    # then reports the task as ignored instead of it going unnoticed
-    if [[ ! -s ${prefix}.fasta ]]; then
+    elif [[ \$status -ne 0 ]]; then
+        exit \$status
+    elif [[ ${assembler} == plassembler ]] && ! grep -q 'failed with status' helper.log; then
+        # a genome without plasmids: Plassembler succeeds with no contigs
+        echo "plassembler found no plasmids in ${subsample_id}" >&2
+    else
+        # any other exit 0 without an assembly is a failure: the errorStrategy then
+        # reports the task as ignored instead of it going unnoticed
         echo "autocycler helper ${assembler} wrote no assembly (${prefix}.fasta)" >&2
         exit 1
     fi
