@@ -144,16 +144,16 @@ flowchart TD
 
 ### ONT Subworkflow (Autocycler mode)
 
-| Step | Tool                          | Description                                                                           |
-| ---- | ----------------------------- | ------------------------------------------------------------------------------------- |
-| 1    | **fastplong**                 | Quality filtering and adapter trimming of long reads                                  |
-| 2    | **Kraken2**                   | Contamination detection _(optional, requires `--kraken2db`; Bracken not run for ONT)_ |
-| 3    | **Autocycler genome_size**    | Genome size estimation via Raven                                                      |
-| 4    | **Autocycler subsample**      | Subsample reads into independent subsets                                              |
-| 5    | **Autocycler assembly**       | Fan-out assembly across multiple assemblers × subsamples                              |
-| 6    | **Autocycler consensus**      | One task per sample: compress assemblies into a unitig graph, cluster, trim and resolve each QC-pass cluster, combine into the consensus assembly (FASTA + GFA); a sample with no QC-pass cluster is reported and excluded |
-| 7    | **Dnaapler**                  | Reorient circular contigs using GFA input _(optional, `run_dnaapler`)_                |
-| 8    | **Autocycler gfa2fasta**      | Convert reoriented GFA back to FASTA _(only when Dnaapler is enabled)_                |
+| Step | Tool                       | Description                                                                           |
+| ---- | -------------------------- | ------------------------------------------------------------------------------------- |
+| 1    | **fastplong**              | Quality filtering and adapter trimming of long reads                                  |
+| 2    | **Kraken2**                | Contamination detection _(optional, requires `--kraken2db`; Bracken not run for ONT)_ |
+| 3    | **Autocycler genome_size** | Genome size estimation via Raven                                                      |
+| 4    | **Autocycler subsample**   | Subsample reads into independent subsets                                              |
+| 5    | **Autocycler assembly**    | Fan-out assembly across multiple assemblers × subsamples                              |
+| 6    | **Autocycler consensus**   | Compress, cluster, trim/resolve, combine (one task, FASTA + GFA)                      |
+| 7    | **Dnaapler**               | Reorient circular contigs using GFA input _(optional, `run_dnaapler`)_                |
+| 8    | **Autocycler gfa2fasta**   | Convert reoriented GFA back to FASTA _(only when Dnaapler is enabled)_                |
 
 ### Shared Downstream Analysis
 

@@ -110,7 +110,7 @@ workflow ONT {
                         def subsample_id = subsample_file.baseName
                         assembler_list.collect { assembler ->
                             [ meta, subsample_file, subsample_id, genome_size, assembler,
-                              assembler == 'plassembler' ? plassembler_db : [] ]
+                                assembler == 'plassembler' ? plassembler_db : [] ]
                         }
                     }
             }
