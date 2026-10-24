@@ -216,7 +216,7 @@ nextflow run gene2dis/mgap \
 
 > **Note:** When using `--ont_assembler autocycler`, the coverage adjustment step (Mash + Seqtk) is automatically skipped, as Autocycler handles its own read subsampling internally.
 
-> **Note:** Autocycler steps tolerate failures per sample: an assembler task killed for lack of memory is retried once with twice the memory, and an assembler that still fails is left out of the consensus. A sample whose assemblers all fail, or with no cluster that passes Autocycler's QC, gets a warning and no assembly; the other samples continue.
+> **Note:** Autocycler steps tolerate failures per sample: an assembler task killed for lack of memory is retried once with twice the memory, and an assembler that still fails (or fails for any other reason) is reported as an ignored error and left out of the consensus. The genome size step (Raven on all reads, so its memory grows with read depth) is retried twice, up to three times its memory. A sample whose assemblers all fail, or with no cluster that passes Autocycler's QC, gets a warning and no assembly; the other samples continue.
 
 #### Autocycler Docker image
 

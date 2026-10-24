@@ -1,6 +1,8 @@
 process AUTOCYCLER_ASSEMBLY {
     tag "${meta.id}:${assembler}:${subsample_id}"
-    label 'process_high'
+    // sized from a 5.9 Mb genome: peak 11.6 GB (NECAT), 2-4 cores busy of the 12 that
+    // process_high reserved; the assembler input is subsampled, so it grows with genome size
+    label 'process_medium'
 
     // container: the autocycler-suite image, pinned by digest in conf/modules.config
     conda "${moduleDir}/../environment.yml"
