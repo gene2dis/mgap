@@ -31,7 +31,7 @@ process AUTOCYCLER_GENOME_SIZE {
     # When the out-of-memory killer stops Raven, the helper prints "raven failed with
     # status signal: 9 (SIGKILL)" and exits 1. Exit 137 instead, so the default
     # errorStrategy retries the task with more memory.
-    if grep -q 'failed with status signal: 9' helper.log; then
+    if grep -q -e 'signal: 9' -e 'SIGKILL' helper.log; then
         exit 137
     fi
     [[ \$status -eq 0 ]] || exit \$status

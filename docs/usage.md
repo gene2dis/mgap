@@ -237,10 +237,10 @@ docker push microds/autocycler:<new-tag>
 docker inspect --format '{{index .RepoDigests 0}}' microds/autocycler:<new-tag>
 ```
 
-For Singularity users, the image is pulled automatically via `docker://microds/autocycler:0.8.0`. To build manually:
+For Singularity users, the image is pulled automatically by digest (`docker://microds/autocycler@sha256:48ca6289d9cced23a4e273dfb4ab7c667603cec3943edf40018ccab5020cbd44`, tag `0.8.0`). To build manually:
 
 ```bash
-singularity build autocycler.sif docker://microds/autocycler:0.8.0
+singularity build autocycler.sif docker://microds/autocycler@sha256:48ca6289d9cced23a4e273dfb4ab7c667603cec3943edf40018ccab5020cbd44
 ```
 
 ### Read QC Parameters

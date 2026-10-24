@@ -1,7 +1,7 @@
 process AUTOCYCLER_ASSEMBLY {
     tag "${meta.id}:${assembler}:${subsample_id}"
-    // sized from a 5.9 Mb genome: peak 11.6 GB (NECAT), 2-4 cores busy of the 12 that
-    // process_high reserved; the assembler input is subsampled, so it grows with genome size
+    // resources in conf/base.config (sized from a real run: 2-4 cores busy of the 12
+    // that process_high reserved)
     label 'process_medium'
 
     // container: the autocycler-suite image, pinned by digest in conf/modules.config
@@ -39,16 +39,18 @@ process AUTOCYCLER_ASSEMBLY {
         2> helper.log || status=\$?
     cat helper.log >&2
 
-    # The helper only prints "<assembler> failed with status signal: 9 (SIGKILL)" when
-    # the out-of-memory killer stops the assembler, and exits 0 without an assembly.
-    # Exit 137 instead, so the errorStrategy can retry the task with more memory.
-    if grep -q 'failed with status signal: 9' helper.log; then
+    # The helper ignores the assembler's exit status. When the out-of-memory killer
+    # stops the assembler it only prints "<assembler> failed with status signal: 9
+    # (SIGKILL)" and exits 0 without an assembly: exit 137 instead, so the
+    # errorStrategy retries the task with more memory.
+    if grep -q -e 'signal: 9' -e 'SIGKILL' helper.log; then
         exit 137
     fi
     [[ \$status -eq 0 ]] || exit \$status
-    # Any other assembler failure is also an exit 0 without an assembly: fail the
-    # task so the errorStrategy reports it as ignored instead of it going unnoticed
-    if grep -q 'failed with status' helper.log && [[ ! -s ${prefix}.fasta ]]; then
+    # Any other exit 0 without an assembly is a failure as well: the errorStrategy
+    # then reports the task as ignored instead of it going unnoticed
+    if [[ ! -s ${prefix}.fasta ]]; then
+        echo "autocycler helper ${assembler} wrote no assembly (${prefix}.fasta)" >&2
         exit 1
     fi
 
