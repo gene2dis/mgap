@@ -44,6 +44,11 @@ process AUTOCYCLER_ASSEMBLY {
         exit 137
     fi
     [[ \$status -eq 0 ]] || exit \$status
+    # Any other assembler failure is also an exit 0 without an assembly: fail the
+    # task so the errorStrategy reports it as ignored instead of it going unnoticed
+    if grep -q 'failed with status' helper.log && [[ ! -s ${prefix}.fasta ]]; then
+        exit 1
+    fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
