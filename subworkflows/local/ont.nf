@@ -57,7 +57,7 @@ workflow ONT {
     //
     // MODULE: Run Kraken2 for contamination detection (optional)
     //
-    if (params.run_kraken2 && params.kraken2db) {
+    if (params.run_kraken2.toString().toBoolean() && params.kraken2db) {
         KRAKEN2 (
             FASTPLONG.out.reads,
             file(params.kraken2db, checkIfExists: true),
@@ -167,7 +167,7 @@ workflow ONT {
         // Uses GFA input so only circular contigs are reoriented,
         // then converts reoriented GFA back to FASTA via autocycler gfa2fasta
         //
-        if (params.run_dnaapler) {
+        if (params.run_dnaapler.toString().toBoolean()) {
             DNAAPLER ( AUTOCYCLER_CONSENSUS.out.gfa )
             ch_versions = ch_versions.mix(DNAAPLER.out.versions.first())
 
@@ -197,7 +197,7 @@ workflow ONT {
         //
         // SUBWORKFLOW: Coverage adjustment (optional)
         //
-        if (params.adjust_coverage) {
+        if (params.adjust_coverage.toString().toBoolean()) {
             COVERAGE_ADJUST ( FASTPLONG.out.reads )
             ch_versions = ch_versions.mix(COVERAGE_ADJUST.out.versions)
             ch_reads_for_assembly = COVERAGE_ADJUST.out.reads
@@ -225,7 +225,7 @@ workflow ONT {
         //
         // MODULE: Reorient contigs with Dnaapler (optional)
         //
-        if (params.run_dnaapler) {
+        if (params.run_dnaapler.toString().toBoolean()) {
             DNAAPLER ( MEDAKA.out.polished_fasta )
             ch_versions = ch_versions.mix(DNAAPLER.out.versions.first())
 

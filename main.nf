@@ -35,8 +35,8 @@ workflow GENE2DIS_MGAP {
     PIPELINE_INITIALISATION (
         params.version,
         params.help,
-        params.validate_params,
-        params.monochrome_logs,
+        params.validate_params.toString().toBoolean(),
+        params.monochrome_logs.toString().toBoolean(),
         args,
         params.outdir
     )
@@ -50,7 +50,7 @@ workflow GENE2DIS_MGAP {
     // SUBWORKFLOW: Run completion tasks
     //
     PIPELINE_COMPLETION (
-        params.monochrome_logs
+        params.monochrome_logs.toString().toBoolean()
     )
 }
 

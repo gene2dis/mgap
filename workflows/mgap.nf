@@ -286,7 +286,7 @@ workflow MGAP {
 
 
     // Run GTDB-Tk for taxonomic classification (batch mode)
-    if (params.run_gtdbtk) {
+    if (params.run_gtdbtk.toString().toBoolean()) {
         // nf-core gtdbtk/classifywf expects: tuple(meta, bins), tuple(db_name, db), use_pplacer_scratch_dir
         // Collect all annotation FASTAs for batch processing
         ch_annotation_fasta
@@ -301,7 +301,7 @@ workflow MGAP {
         GTDBTK(
             ch_gtdbtk_input,
             ch_gtdbtk_db,
-            params.gtdbtk_pplacer_scratch
+            params.gtdbtk_pplacer_scratch.toString().toBoolean()
         )
         // one batch task for the whole run, so no .first() needed
         ch_versions = ch_versions.mix(GTDBTK.out.versions)
@@ -318,7 +318,7 @@ workflow MGAP {
     }
 
     // RUN MOB-suite for plasmid detection and reconstruction
-    if (params.run_mobsuite) {
+    if (params.run_mobsuite.toString().toBoolean()) {
         MOBSUITE_RECON(
             ch_annotation_fasta,
             params.mobsuite_db ? file(params.mobsuite_db, checkIfExists: true) : []
@@ -328,7 +328,7 @@ workflow MGAP {
 
     // RUN RGI for antimicrobial resistance gene prediction
     // CARD is loaded once per run; every sample gets the same local database
-    if (params.run_rgi) {
+    if (params.run_rgi.toString().toBoolean()) {
         RGI_LOAD(
             file(params.rgi_db, checkIfExists: true)
         )

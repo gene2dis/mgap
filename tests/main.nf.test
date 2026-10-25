@@ -581,6 +581,67 @@ nextflow_pipeline {
 
     }
 
+    test("Default-true flags switched off on the command line - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        // On the command line, not in params {}: nf-test writes params {} to a
+        // params file, which keeps them typed; the command line passes the
+        // string "false", which is truthy unless read as a boolean
+        options "-stub --adjust_coverage false --run_kraken2 false --run_dnaapler false"
+
+        when {
+            params {
+                input     = "${projectDir}/assets/samplesheet_test_ont.csv"
+                seq_type  = "ont"
+                kraken2db = "${projectDir}/tests/data/stub_db/kraken2"
+                outdir    = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('FLYE') } },
+                { assert !succeeded.any { it.contains('KRAKEN2') } },
+                { assert !succeeded.any { it.contains('DNAAPLER') } },
+                { assert !succeeded.any { it.contains('MASH_SKETCH') } }
+            )
+        }
+
+    }
+
+    test("Default-true flag switched off on the command line, Illumina - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub --adjust_coverage false --run_kraken2 false"
+
+        when {
+            params {
+                input     = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type  = "illumina"
+                kraken2db = "${projectDir}/tests/data/stub_db/kraken2"
+                outdir    = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('SPADES') } },
+                { assert !succeeded.any { it.contains('KRAKEN2') } },
+                { assert !succeeded.any { it.contains('BRACKEN') } },
+                { assert !succeeded.any { it.contains('MASH_SKETCH') } }
+            )
+        }
+
+    }
+
     test("Run pipeline with test data") {
 
         tag "pipeline"

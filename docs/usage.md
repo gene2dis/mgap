@@ -141,6 +141,8 @@ nextflow run gene2dis/mgap \
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
+On/off parameters take `true` or `false` on the command line (`--run_kraken2 false`, `--adjust_coverage false`); a bare flag such as `--run_gtdbtk` means `true`.
+
 ### Using a parameters file
 
 Instead of passing every option on the command line, you can collect them in a YAML (or JSON) file and pass it to Nextflow with `-params-file`:

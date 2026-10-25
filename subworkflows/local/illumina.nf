@@ -49,7 +49,7 @@ workflow ILLUMINA {
     //
     // MODULE: Run Kraken2/Bracken for contamination detection (optional)
     //
-    if (params.run_kraken2 && params.kraken2db) {
+    if (params.run_kraken2.toString().toBoolean() && params.kraken2db) {
         KRAKEN2 (
             FASTP.out.reads,
             file(params.kraken2db, checkIfExists: true),
@@ -71,7 +71,7 @@ workflow ILLUMINA {
     //
     // SUBWORKFLOW: Coverage adjustment (optional)
     //
-    if (params.adjust_coverage) {
+    if (params.adjust_coverage.toString().toBoolean()) {
         COVERAGE_ADJUST ( FASTP.out.reads )
         ch_versions = ch_versions.mix(COVERAGE_ADJUST.out.versions)
         ch_reads_for_assembly = COVERAGE_ADJUST.out.reads

@@ -106,6 +106,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - `--plassembler_db` is staged into the Plassembler tasks; before, only its host path was exported, which a container cannot see
 - A sample whose Autocycler clustering leaves no QC-pass cluster gets a warning and is left out of downstream analysis; before, the trim/resolve step looped over the unmatched glob and failed the run
 - Autocycler's `versions.yml` entry is the version number (`0.8.0`); it was `Autocycler 0.5.2`
+- On/off parameters can be switched off on the command line: Nextflow 26.04 passes `--adjust_coverage false` (and `--run_kraken2 false`, `--run_dnaapler false`, `--validate_params false`, `--rgi_include_loose false`, ...) as the string `"false"`, which counted as true, so the step still ran. Boolean parameters are now read as booleans wherever they are used
 
 ### `Removed`
 
