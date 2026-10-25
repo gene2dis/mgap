@@ -168,15 +168,16 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 #### Pipeline steps
 
-| Parameter           | Default | Description                                                                         |
-| ------------------- | ------- | ----------------------------------------------------------------------------------- |
-| `--run_kraken2`     | `true`  | Enable Kraken2 contamination detection (needs `--kraken2db`)                        |
-| `--adjust_coverage` | `true`  | Subsample Illumina reads above `--max_coverage` (Illumina only)                     |
-| `--max_coverage`    | `150`   | Maximum Illumina coverage (fastp bases ÷ Mash genome size) before subsampling to it |
-| `--run_gtdbtk`      | `false` | Enable GTDB-Tk taxonomic classification                                             |
-| `--run_rgi`         | `false` | Enable RGI antimicrobial resistance gene prediction                                 |
-| `--run_mobsuite`    | `false` | Enable MOB-suite plasmid detection and reconstruction                               |
-| `--run_dnaapler`    | `true`  | Enable contig reorientation with Dnaapler (ONT only)                                |
+| Parameter           | Default    | Description                                                                            |
+| ------------------- | ---------- | -------------------------------------------------------------------------------------- |
+| `--run_kraken2`     | `true`     | Enable Kraken2 contamination detection (needs `--kraken2db`)                           |
+| `--min_bases`       | `50000000` | Minimum bases after fastp/fastplong; samples below it skip assembly (Illumina and ONT) |
+| `--adjust_coverage` | `true`     | Subsample Illumina reads above `--max_coverage` (Illumina only)                        |
+| `--max_coverage`    | `150`      | Maximum Illumina coverage (fastp bases ÷ Mash genome size) before subsampling to it    |
+| `--run_gtdbtk`      | `false`    | Enable GTDB-Tk taxonomic classification                                                |
+| `--run_rgi`         | `false`    | Enable RGI antimicrobial resistance gene prediction                                    |
+| `--run_mobsuite`    | `false`    | Enable MOB-suite plasmid detection and reconstruction                                  |
+| `--run_dnaapler`    | `true`     | Enable contig reorientation with Dnaapler (ONT only)                                   |
 
 #### Databases
 

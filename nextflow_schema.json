@@ -172,6 +172,14 @@
                     "description": "Run Kraken2 for contamination detection.",
                     "fa_icon": "fas fa-search"
                 },
+                "min_bases": {
+                    "type": "integer",
+                    "default": 50000000,
+                    "minimum": 0,
+                    "description": "Minimum bases after fastp/fastplong for a sample to be assembled (Illumina and ONT); samples below it are skipped.",
+                    "help_text": "50,000,000 bases is about 10x of a 5 Mb genome. A skipped sample keeps its fastp/fastplong report and gets a 'skipped' row in pipeline_info/sample_status.tsv; Kraken2/Bracken, coverage adjustment, assembly and annotation do not run for it, and the other samples continue. 0 turns the check off.",
+                    "fa_icon": "fas fa-filter"
+                },
                 "adjust_coverage": {
                     "type": "boolean",
                     "default": true,

@@ -36,6 +36,11 @@ include { AUTOCYCLER_ASSEMBLY     } from '../../modules/local/autocycler/assembl
 include { AUTOCYCLER_CONSENSUS    } from '../../modules/local/autocycler/consensus/main'
 include { AUTOCYCLER_GFA2FASTA    } from '../../modules/local/autocycler/gfa2fasta/main'
 
+//
+// SUBWORKFLOW: Local subworkflows
+//
+include { READ_QC_GATE } from './sample_status'
+
 workflow ONT {
 
     take:
@@ -59,11 +64,17 @@ workflow ONT {
     ch_reports = FASTPLONG.out.json.map { _meta, json -> json }
 
     //
+    // SUBWORKFLOW: samples with fewer than --min_bases bases after fastplong stop here
+    //
+    READ_QC_GATE ( FASTPLONG.out.reads, FASTPLONG.out.json, 'fastplong' )
+    ch_qc_reads = READ_QC_GATE.out.reads
+
+    //
     // MODULE: Run Kraken2 for contamination detection (optional)
     //
     if (params.run_kraken2.toString().toBoolean() && params.kraken2db) {
         KRAKEN2 (
-            FASTPLONG.out.reads,
+            ch_qc_reads,
             file(params.kraken2db, checkIfExists: true),
             false,
             false
@@ -85,7 +96,7 @@ workflow ONT {
         //
         // Step 1: Estimate genome size via Raven
         //
-        AUTOCYCLER_GENOME_SIZE ( FASTPLONG.out.reads )
+        AUTOCYCLER_GENOME_SIZE ( ch_qc_reads )
         ch_versions = ch_versions.mix(AUTOCYCLER_GENOME_SIZE.out.versions.first())
 
         //
@@ -209,9 +220,9 @@ workflow ONT {
         //
         if (params.flye_asm_coverage) {
             if (params.genome_size) {
-                ch_genome_size = FASTPLONG.out.reads.map { meta, _reads -> [ meta, params.genome_size.toString() ] }
+                ch_genome_size = ch_qc_reads.map { meta, _reads -> [ meta, params.genome_size.toString() ] }
             } else {
-                LRGE ( FASTPLONG.out.reads )
+                LRGE ( ch_qc_reads )
                 ch_versions = ch_versions.mix(LRGE.out.versions.first())
                 // lrge writes one integer (bases); anything else runs Flye without --asm-coverage
                 ch_genome_size = LRGE.out.genome_size
@@ -224,13 +235,13 @@ workflow ONT {
                         [ meta, bases ]
                     }
             }
-            ch_flye_input = FASTPLONG.out.reads
+            ch_flye_input = ch_qc_reads
                 .join(ch_genome_size)
                 .map { meta, reads, genome_size ->
                     [ genome_size ? meta + [ genome_size: genome_size ] : meta, reads ]
                 }
         } else {
-            ch_flye_input = FASTPLONG.out.reads
+            ch_flye_input = ch_qc_reads
         }
 
         //
@@ -249,7 +260,7 @@ workflow ONT {
         //
         ch_flye_fasta = FLYE.out.fasta
             .map { meta, fasta -> [ meta.findAll { key, _value -> key != 'genome_size' }, fasta ] }
-        ch_medaka_input = FASTPLONG.out.reads.join(ch_flye_fasta)
+        ch_medaka_input = ch_qc_reads.join(ch_flye_fasta)
         MEDAKA ( ch_medaka_input )
         ch_versions = ch_versions.mix(MEDAKA.out.versions.first())
 
@@ -276,7 +287,9 @@ workflow ONT {
     }
 
     emit:
-    assembly = ch_assembly  // channel: [ val(meta), path(fasta) ]
-    reports  = ch_reports   // channel: [ path(report) ] for MultiQC
-    versions = ch_versions  // channel: [ path(versions.yml) ]
+    assembly   = ch_assembly              // channel: [ val(meta), path(fasta) ]
+    reports    = ch_reports               // channel: [ path(report) ] for MultiQC
+    read_stats = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
+    status     = READ_QC_GATE.out.status  // channel: [ val(meta), map ] skipped samples
+    versions   = ch_versions              // channel: [ path(versions.yml) ]
 }

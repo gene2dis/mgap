@@ -9,6 +9,46 @@
 */
 
 //
+// Sample QC gate after fastp/fastplong (D-7): a sample with fewer bases than
+// --min_bases skips everything after read QC (Kraken2/Bracken, which fails on a
+// report without classified reads, coverage adjustment and assembly) and gets a
+// "skipped" row in sample_status.tsv; the other samples continue. A report without
+// a base count (stub runs) lets the sample through.
+//
+workflow READ_QC_GATE {
+
+    take:
+    ch_reads  // channel: [ val(meta), [ reads ] ] filtered reads
+    ch_json   // channel: [ val(meta), path(json) ] fastp/fastplong report of the same reads
+    tool      // string: fastp or fastplong, for the messages
+
+    main:
+    def min_bases = params.min_bases.toString().toLong()
+
+    ch_reads
+        .join(ch_json)
+        .map { meta, reads, json -> [ meta, reads, json, readQcStats(json) ] }
+        .branch { _meta, _reads, _json, stats ->
+            low: stats.filtered_bases != null && stats.filtered_bases < min_bases
+            pass: true
+        }
+        .set { ch_gate }
+
+    ch_skipped = ch_gate.low
+        .map { meta, _reads, _json, stats ->
+            log.warn("Sample '${meta.id}': ${stats.filtered_bases} bases after ${tool}, fewer than --min_bases ${min_bases} - assembly and everything after it are skipped.")
+            [ meta, [ stage: 'read_qc', status: 'skipped', reason: "${stats.filtered_bases} bases after ${tool}, below --min_bases ${min_bases}" ] ]
+        }
+
+    emit:
+    reads  = ch_gate.pass.map { meta, reads, _json, _stats -> [ meta, reads ] }  // channel: [ val(meta), [ reads ] ]
+    json   = ch_gate.pass.map { meta, _reads, json, _stats -> [ meta, json ] }   // channel: [ val(meta), path(json) ]
+    stats  = ch_gate.low.mix(ch_gate.pass)
+        .map { meta, _reads, _json, stats -> [ meta, stats ] }                    // channel: [ val(meta), map ] every sample
+    status = ch_skipped                                                           // channel: [ val(meta), map ] skipped samples
+}
+
+//
 // Reads and bases before and after filtering, from a fastp or fastplong JSON report.
 // input_mean_length is bases / reads before filtering. input_n50 is ONT only (fastp
 // reports no read length distribution): see histogramN50.
