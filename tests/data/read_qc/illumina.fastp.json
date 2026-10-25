@@ -1,0 +1,35 @@
+{
+    "summary": {
+        "fastp_version": "1.0.1",
+        "before_filtering": {
+            "total_reads": 100000,
+            "total_bases": 12600000,
+            "q20_bases": 12028799,
+            "q30_bases": 11502740,
+            "q20_rate": 0.954667,
+            "q30_rate": 0.912916,
+            "read1_mean_length": 126,
+            "read2_mean_length": 126,
+            "gc_content": 0.467751
+        },
+        "after_filtering": {
+            "total_reads": 99594,
+            "total_bases": 12548238,
+            "q20_bases": 11989670,
+            "q30_bases": 11469406,
+            "q20_rate": 0.955486,
+            "q30_rate": 0.914025,
+            "read1_mean_length": 125,
+            "read2_mean_length": 125,
+            "gc_content": 0.467748
+        }
+    },
+    "read1_before_filtering": {
+        "total_reads": 50000,
+        "total_bases": 6300000,
+        "q20_bases": 6054456,
+        "q30_bases": 5814382,
+        "q40_bases": 0,
+        "total_cycles": 126
+    }
+}

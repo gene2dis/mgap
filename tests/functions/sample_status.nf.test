@@ -1,0 +1,112 @@
+nextflow_function {
+
+    name "Test sample status functions"
+    script "../../subworkflows/local/sample_status.nf"
+
+    tag "functions"
+    tag "sample_status"
+
+    // Reports from the nf-core B. fragilis test reads (fastp 1.0.1 and fastplong
+    // 0.7.1 --length_required 1000), trimmed to the fields the pipeline reads
+
+    test("readQcStats - fastp report") {
+
+        function "readQcStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/read_qc/illumina.fastp.json", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == [ input_reads: 100000, input_bases: 12600000, input_mean_length: 126, input_n50: null, filtered_reads: 99594, filtered_bases: 12548238 ] }
+            )
+        }
+    }
+
+    test("readQcStats - fastplong report, N50 from the length histogram") {
+
+        function "readQcStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/read_qc/ont.fastplong.json", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                // true N50 of these reads: 63,032 bp
+                { assert function.result == [ input_reads: 1000, input_bases: 33343943, input_mean_length: 33344, input_n50: 62494, filtered_reads: 938, filtered_bases: 33311690 ] }
+            )
+        }
+    }
+
+    test("readQcStats - empty report gives no numbers") {
+
+        function "readQcStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/fastp/empty.fastp.json", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result.values().every { it == null } }
+            )
+        }
+    }
+
+    test("assemblyStats - seqkit stats of the assembly and the annotation FASTA") {
+
+        function "assemblyStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/seqkit_filter/contigs.filter_stats.tsv", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == [ assembly_contigs: 3, assembly_length: 3499, assembly_n50: 1000, annotation_contigs: 2, annotation_length: 2500 ] }
+            )
+        }
+    }
+
+    test("assemblyStats - fragmented assembly with no contig kept") {
+
+        function "assemblyStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/fragmented/fragmented.filter_stats.tsv", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == [ assembly_contigs: 400, assembly_length: 120000, assembly_n50: 300, annotation_contigs: 0, annotation_length: 0 ] }
+            )
+        }
+    }
+}
