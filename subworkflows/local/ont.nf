@@ -39,7 +39,8 @@ include { AUTOCYCLER_GFA2FASTA    } from '../../modules/local/autocycler/gfa2fas
 //
 // SUBWORKFLOW: Local subworkflows
 //
-include { READ_QC_GATE } from './sample_status'
+include { READ_QC_GATE   } from './sample_status'
+include { missingOutputs } from './sample_status'
 
 workflow ONT {
 
@@ -147,17 +148,8 @@ workflow ONT {
             .map { meta, fasta_list -> [ meta, fasta_list.flatten() ] }
             .set { ch_grouped_assemblies }
 
-        AUTOCYCLER_GENOME_SIZE.out.genome_size
-            .map { meta, _reads, _genome_size -> [ meta ] }
-            .join(ch_grouped_assemblies, remainder: true)
-            .branch { _meta, fasta_list ->
-                assembled: fasta_list
-                failed: true
-            }
-            .set { ch_assembly_check }
-        ch_assemblies_per_sample = ch_assembly_check.assembled
         ch_failed = ch_failed.mix(
-            ch_assembly_check.failed.map { meta, _fasta_list ->
+            missingOutputs(AUTOCYCLER_GENOME_SIZE.out.genome_size, ch_grouped_assemblies, channel.empty()).map { meta, _has_other ->
                 log.error("Sample '${meta.id}': all Autocycler assembler runs failed - the sample is excluded from all downstream analysis.")
                 [ meta, [ stage: 'assembly', status: 'failed', reason: 'all Autocycler assembler runs failed' ] ]
             }
@@ -168,20 +160,12 @@ workflow ONT {
         // into the consensus assembly, in one task. A sample with no QC-pass cluster
         // gets no consensus: report it and leave it out, the other samples continue.
         //
-        AUTOCYCLER_CONSENSUS ( ch_assemblies_per_sample )
+        AUTOCYCLER_CONSENSUS ( ch_grouped_assemblies )
         ch_versions = ch_versions.mix(AUTOCYCLER_CONSENSUS.out.versions.first())
 
-        ch_assemblies_per_sample
-            .map { meta, _fasta_list -> [ meta ] }
-            .join(AUTOCYCLER_CONSENSUS.out.fasta, remainder: true)
-            .branch { _meta, consensus ->
-                assembled: consensus
-                failed: true
-            }
-            .set { ch_consensus_check }
-        ch_consensus_fasta = ch_consensus_check.assembled
+        ch_consensus_fasta = AUTOCYCLER_CONSENSUS.out.fasta
         ch_failed = ch_failed.mix(
-            ch_consensus_check.failed.map { meta, _consensus ->
+            missingOutputs(ch_grouped_assemblies, AUTOCYCLER_CONSENSUS.out.fasta, channel.empty()).map { meta, _has_other ->
                 log.warn("Sample '${meta.id}': no Autocycler cluster passed QC, so there is no consensus assembly - the sample is excluded from all downstream analysis.")
                 [ meta, [ stage: 'assembly', status: 'failed', reason: 'no Autocycler cluster passed QC (no consensus assembly)' ] ]
             }
@@ -278,16 +262,10 @@ workflow ONT {
         // Flye and Medaka failures are ignored after one out-of-memory retry
         // (conf/modules.config): record each sample that went in and got nothing out
         //
-        ch_flye_failed = ch_qc_reads
-            .map { meta, _reads -> [ meta ] }
-            .join(ch_flye_fasta, remainder: true)
-            .filter { _meta, fasta -> !fasta }
-            .map { meta, _fasta -> [ meta, [ stage: 'assembly', status: 'failed', reason: 'Flye failed (task error; exit status in the run log)' ] ] }
-        ch_medaka_failed = ch_medaka_input
-            .map { meta, _reads, _assembly -> [ meta ] }
-            .join(MEDAKA.out.polished_fasta, remainder: true)
-            .filter { _meta, fasta -> !fasta }
-            .map { meta, _fasta -> [ meta, [ stage: 'polishing', status: 'failed', reason: 'Medaka failed (task error; exit status in the run log)' ] ] }
+        ch_flye_failed = missingOutputs(ch_qc_reads, ch_flye_fasta, channel.empty())
+            .map { meta, _has_other -> [ meta, [ stage: 'assembly', status: 'failed', reason: 'Flye failed (task error; exit status in the run log)' ] ] }
+        ch_medaka_failed = missingOutputs(ch_medaka_input, MEDAKA.out.polished_fasta, channel.empty())
+            .map { meta, _has_other -> [ meta, [ stage: 'polishing', status: 'failed', reason: 'Medaka failed (task error; exit status in the run log)' ] ] }
         ch_failed = ch_failed.mix(ch_flye_failed, ch_medaka_failed)
             .map { meta, row ->
                 log.warn("Sample '${meta.id}': ${row.reason} - the sample is excluded from all downstream analysis.")

@@ -50,7 +50,8 @@ workflow GENE2DIS_MGAP {
     // SUBWORKFLOW: Run completion tasks
     //
     PIPELINE_COMPLETION (
-        params.monochrome_logs.toString().toBoolean()
+        params.monochrome_logs.toString().toBoolean(),
+        MGAP.out
     )
 }
 

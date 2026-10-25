@@ -24,6 +24,7 @@ include { SPADES } from '../../modules/nf-core/spades/main'
 //
 include { COVERAGE_ADJUST } from './coverage_adjust'
 include { READ_QC_GATE    } from './sample_status'
+include { missingOutputs  } from './sample_status'
 
 workflow ILLUMINA {
 
@@ -126,13 +127,9 @@ workflow ILLUMINA {
     // every sample that went into SPAdes and has no scaffolds is recorded as failed,
     // and the other samples continue
     //
-    ch_spades_failed = ch_reads_for_assembly
-        .map { meta, _reads -> [ meta ] }
-        .join(SPADES.out.scaffolds, remainder: true)
-        .join(SPADES.out.log, remainder: true)
-        .filter { _meta, scaffolds, _log -> !scaffolds }
-        .map { meta, _scaffolds, spades_log ->
-            def reason = spades_log ? 'SPAdes finished without scaffolds' : 'SPAdes failed (task error; exit status in the run log)'
+    ch_spades_failed = missingOutputs(ch_reads_for_assembly, SPADES.out.scaffolds, SPADES.out.log)
+        .map { meta, has_log ->
+            def reason = has_log ? 'SPAdes finished without scaffolds' : 'SPAdes failed (task error; exit status in the run log)'
             log.warn("Sample '${meta.id}': ${reason} - the sample is excluded from all downstream analysis.")
             [ meta, [ stage: 'assembly', status: 'failed', reason: reason ] ]
         }

@@ -79,6 +79,8 @@ include { samplesheetToList } from 'plugin/nf-schema'
 include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
 include { SPECIES_TYPING } from '../subworkflows/local/species_typing'
+include { SAMPLE_STATUS } from '../subworkflows/local/sample_status'
+include { missingOutputs } from '../subworkflows/local/sample_status'
 include { SEQKIT_FILTER } from '../modules/local/seqkit/filter/main'
 include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
 include { AMRFINDERPLUS_RUN } from '../modules/local/amrfinderplus/run/main'
@@ -111,6 +113,7 @@ include { MULTIQC } from '../modules/nf-core/multiqc/main'
 
 workflow MGAP {
 
+    main:
     ch_versions = channel.empty()
     ch_multiqc_files = channel.empty()
 
@@ -120,6 +123,9 @@ workflow MGAP {
     //
     ch_samplesheet = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
     genome_assembly = channel.empty()
+    // per-sample numbers and skipped/failed samples for sample_status.tsv
+    ch_read_stats = channel.empty()
+    ch_sample_outcomes = channel.empty()
 
     if (params.seq_type == "illumina") {
         //
@@ -136,6 +142,8 @@ workflow MGAP {
 
         ILLUMINA ( ch_input )
         genome_assembly = ILLUMINA.out.assembly
+        ch_read_stats = ILLUMINA.out.read_stats
+        ch_sample_outcomes = ILLUMINA.out.status
         ch_versions = ch_versions.mix(ILLUMINA.out.versions)
         ch_multiqc_files = ch_multiqc_files.mix(ILLUMINA.out.reports)
 
@@ -153,6 +161,8 @@ workflow MGAP {
 
         ONT ( ch_input )
         genome_assembly = ONT.out.assembly
+        ch_read_stats = ONT.out.read_stats
+        ch_sample_outcomes = ONT.out.status
         ch_versions = ch_versions.mix(ONT.out.versions)
         ch_multiqc_files = ch_multiqc_files.mix(ONT.out.reports)
 
@@ -173,6 +183,7 @@ workflow MGAP {
     } else {
         error("Invalid seq_type: '${params.seq_type}'. Must be 'illumina', 'ont', or 'contig'.")
     }
+    ch_samples = ch_input.map { meta, _files -> meta }
 
 
     // Check assemblies with QUAST
@@ -188,13 +199,10 @@ workflow MGAP {
     ch_multiqc_files = ch_multiqc_files.mix(QUAST.out.results.map { _meta, dir -> dir.resolve('report.tsv') })
     // QUAST failures are ignored (conf/modules.config, issue #2: exit 4 when no
     // contig is >= 500 bp); the sample is still annotated
-    ch_quast_failed = genome_assembly
-        .map { meta, _fasta -> [ meta.id ] }
-        .join(QUAST.out.tsv.map { meta, tsv -> [ meta.id, tsv ] }, remainder: true)
-        .filter { _id, tsv -> !tsv }
-        .map { id, _tsv ->
-            log.warn("Sample '${id}': QUAST failed (exit status in the run log) - the sample is still annotated, without QUAST statistics.")
-            [ id, 'QUAST failed' ]
+    ch_quast_failed = missingOutputs(genome_assembly, QUAST.out.tsv, channel.empty())
+        .map { meta, _has_other ->
+            log.warn("Sample '${meta.id}': QUAST failed (exit status in the run log) - the sample is still annotated, without QUAST statistics.")
+            [ meta.id, 'QUAST failed' ]
         }
 
     //
@@ -365,6 +373,18 @@ workflow MGAP {
     )
     ch_versions = ch_versions.mix(SPECIES_TYPING.out.versions)
 
+    //
+    // SUBWORKFLOW: pipeline_info/sample_status.tsv - pass, skipped or failed per sample
+    //
+    SAMPLE_STATUS(
+        ch_samples,
+        ch_read_stats,
+        ch_sample_outcomes.mix(ch_no_contigs),
+        SEQKIT_FILTER.out.stats,
+        ch_quast_failed,
+        params.seq_type
+    )
+
     // Collate software versions.
     // Dedupe on file CONTENT (each process emits one versions.yml per task,
     // all with distinct paths) and prepend workflow-level versions, so the
@@ -383,12 +403,22 @@ workflow MGAP {
     // it is only known once MULTIQC has run on this file. Groups are the process
     // name alone (GENE2DIS_MGAP:MGAP:ILLUMINA:FASTP -> FASTP) so MultiQC merges
     // them with the versions its own modules detect instead of listing tools twice.
-    ch_multiqc_files = ch_multiqc_files.mix(
-        ch_versions_text
-            .map { text -> text.replaceFirst(/^"(?:[^"]*:)?([^":]+)":/, '"$1":') }
-            .unique()
-            .collectFile(name: 'mgap_software_mqc_versions.yml', sort: true)
-    )
+    ch_multiqc_versions = ch_versions_text
+        .map { text -> text.replaceFirst(/^"(?:[^"]*:)?([^":]+)":/, '"$1":') }
+        .unique()
+        .collectFile(name: 'mgap_software_mqc_versions.yml', sort: true)
+
+    // MultiQC writes no report from the versions alone and the task fails, so with
+    // no QC report at all (contig mode without Bakta, when QUAST failed for every
+    // sample) it is skipped
+    ch_multiqc_input = ch_multiqc_files
+        .collect()
+        .ifEmpty {
+            log.warn("No QC report for MultiQC (QUAST failed for every sample) - MultiQC is skipped.")
+            []
+        }
+        .filter { reports -> reports }
+        .combine(ch_multiqc_versions)
 
     //
     // MODULE: MultiQC - aggregate QC reports across all samples
@@ -402,7 +432,7 @@ workflow MGAP {
     ch_multiqc_logo = params.multiqc_logo ? file(params.multiqc_logo, checkIfExists: true) : []
 
     MULTIQC (
-        ch_multiqc_files.collect(),
+        ch_multiqc_input,
         ch_multiqc_config,
         [],  // extra config
         ch_multiqc_logo,
@@ -415,6 +445,9 @@ workflow MGAP {
         .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
         .mix(ch_versions_text)
         .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info", sort: true)
+
+    emit:
+    SAMPLE_STATUS.out  // channel: [ [ map ] ] sample_status.tsv rows, for the completion log
 }
 
 /*
