@@ -70,6 +70,7 @@ nextflow_pipeline {
         tag "stub"
 
         options "-stub"
+        config "./config/ext_args.config"
 
         when {
             params {
@@ -84,11 +85,14 @@ nextflow_pipeline {
 
         then {
             def succeeded = workflow.trace.succeeded().collect { it.name }
+            def kraken2 = TaskArgs.of(metaDir, 'KRAKEN2')
             assertAll(
                 { assert workflow.success },
                 { assert succeeded.any { it.contains('KRAKEN2') } },
                 { assert succeeded.any { it.contains('BRACKEN') } },
-                { assert succeeded.any { it.contains('SPADES') } }
+                { assert succeeded.any { it.contains('SPADES') } },
+                { assert kraken2.size() == 1 },
+                { assert kraken2.values().every { it == '--memory-mapping' } }
             )
         }
 

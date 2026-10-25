@@ -536,6 +536,14 @@ nextflow run gene2dis/mgap \
 
 > **Note:** Bracken runs only for `--seq_type illumina`. ONT mode runs Kraken2 only (no Bracken re-estimation).
 
+Kraken2 runs with `--memory-mapping`: the database is read through the operating system's page cache instead of being
+loaded into each task's memory, so tasks on the same machine share one copy and later tasks start without reloading it.
+The reports are identical; per-sample time fell from 147–216 s to 46–148 s with the database cached, and from 438 s
+to 178 s from disk ([benchmark](benchmarks/coverage_2026-10-24.md#e4--kraken2---memory-mapping)). The memory request
+stays at 72 GB (`process_high`): a task reading the database from disk is charged for the pages it reads. On AWS Batch
+and Google Batch (`mgap_awsbatch`, `mgap_googlebatch`) every task starts on a fresh machine, so Kraken2 loads the
+database into memory as before.
+
 ### Coverage Adjustment
 
 The pipeline estimates genome coverage using [Mash](https://mash.readthedocs.io/en/latest/) and subsamples reads with [Seqtk](https://github.com/lh3/seqtk) if coverage exceeds the target threshold. This prevents over-assembly and reduces runtime for high-coverage datasets.
@@ -575,7 +583,8 @@ nextflow run gene2dis/mgap \
 
 The pipeline has profiles for AWS Batch (`mgap_awsbatch`) and Google Cloud Batch (`mgap_googlebatch`). Task resources
 come from `conf/base.config`, so a task that runs out of memory is retried with more; on Google Batch, Nextflow picks
-the cheapest N2 machine type that fits each request. Set `--awsregion` (default `us-east-1`) or `--gcp_region` (default
+the cheapest N2 machine type that fits each request. Kraken2 runs without `--memory-mapping` on both executors (see
+[Kraken2](#kraken2-contamination-detection)). Set `--awsregion` (default `us-east-1`) or `--gcp_region` (default
 `us-central1`) as needed, and `--awscli` only if your AMI does not use Fusion and needs the path to the AWS CLI.
 
 The profiles are prefixed with `mgap_` because nf-core's institutional configs define their own `awsbatch` and
