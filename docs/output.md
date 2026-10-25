@@ -24,7 +24,7 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │                                    #   (only when coverage > --max_coverage)
 │   ├── assemblies/
 │   │   ├── *.scaffolds.fa.gz            # SPAdes output (--seq_type illumina)
-│   │   ├── flye/                        # Flye assembly: *.fasta, *.gfa, *.txt, *.log
+│   │   ├── flye/                        # Flye assembly: *.fasta.gz, *.gfa.gz, *.txt, *.log
 │   │   │                                #   (ONT, --ont_assembler flye)
 │   │   ├── medaka/                      # Medaka-polished assembly: *.fasta
 │   │   │                                #   (ONT, --ont_assembler flye)
@@ -218,10 +218,11 @@ This step runs for `--seq_type illumina` only.
 <summary>Output files</summary>
 
 - `<sample_id>/assemblies/flye/`
-  - `*.fasta`: Assembled genome contigs.
-  - `*.gfa`: Assembly graph in GFA format.
-  - `*.log`: Flye log file.
-  - `*.txt`: Assembly info with contig statistics.
+  - `*.assembly.fasta.gz`: Assembled genome contigs (before Medaka polishing).
+  - `*.assembly_graph.gfa.gz`: Assembly graph in GFA format.
+  - `*.flye.log`: Flye log file.
+  - `*.assembly_info.txt`: Assembly info with contig statistics (length, coverage, circularity).
+  - `*.params.json`: Flye run parameters.
 
 </details>
 

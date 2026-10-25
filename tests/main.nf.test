@@ -147,7 +147,10 @@ nextflow_pipeline {
                 { assert succeeded.any { it.contains('FLYE') } },
                 { assert succeeded.any { it.contains('MEDAKA') } },
                 { assert succeeded.any { it.contains('DNAAPLER') } },
-                { assert succeeded.any { it.contains('MLST') } }
+                { assert succeeded.any { it.contains('MLST') } },
+                // nf-core flye gzips the assembly and graph; both are published
+                { assert path("$outputDir/TEST_BFRAGILIS_ONT/assemblies/flye/TEST_BFRAGILIS_ONT.assembly.fasta.gz").exists() },
+                { assert path("$outputDir/TEST_BFRAGILIS_ONT/assemblies/flye/TEST_BFRAGILIS_ONT.assembly_graph.gfa.gz").exists() }
             )
         }
 
