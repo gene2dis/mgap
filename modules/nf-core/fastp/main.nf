@@ -108,11 +108,16 @@ process FASTP {
     def touch_reads         = (discard_trimmed_pass) ? "" : (is_single_output) ? "echo '' | gzip > ${prefix}.fastp.fastq.gz" : "echo '' | gzip > ${prefix}_R1.fastp.fastq.gz ; echo '' | gzip > ${prefix}_R2.fastp.fastq.gz"
     def touch_merged        = (!is_single_output && save_merged) ? "echo '' | gzip >  ${prefix}.merged.fastq.gz" : ""
     def touch_fail_fastq    = (!save_trimmed_fail) ? "" : meta.single_end ? "echo '' | gzip > ${prefix}.fail.fastq.gz" : "echo '' | gzip > ${prefix}.paired.fail.fastq.gz ; echo '' | gzip > ${prefix}_R1.fail.fastq.gz ; echo '' | gzip > ${prefix}_R2.fail.fastq.gz"
+    // mgap: ext.stub_total_bases / ext.stub_total_cycles write the fastp JSON fields the
+    // pipeline reads (coverage, Bracken read length), so stub tests reach those branches
+    def stub_bases          = task.ext.stub_total_bases
+    def stub_cycles         = task.ext.stub_total_cycles
+    def write_json          = (stub_bases == null && stub_cycles == null) ? "touch \"${prefix}.fastp.json\"" : "echo '{\"summary\": {\"after_filtering\": {\"total_bases\": ${stub_bases ?: 0}}}, \"read1_before_filtering\": {\"total_cycles\": ${stub_cycles ?: 0}}}' > ${prefix}.fastp.json"
     """
     $touch_reads
     $touch_fail_fastq
     $touch_merged
-    touch "${prefix}.fastp.json"
+    $write_json
     touch "${prefix}.fastp.html"
     touch "${prefix}.fastp.log"
 

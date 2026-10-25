@@ -23,7 +23,8 @@
                     "fastp": {
                         "branch": "master",
                         "git_sha": "b8f1de0ac853ae5b56c63450d47438f899c553d0",
-                        "installed_by": ["modules"]
+                        "installed_by": ["modules"],
+                        "patch": "modules/nf-core/fastp/fastp.diff"
                     },
                     "fastplong": {
                         "branch": "master",
