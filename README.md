@@ -29,17 +29,16 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 #### Illumina Assembly
 
 1. Read QC, cleaning, and filtering ([`FastP`](https://github.com/OpenGene/fastp))
-2. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
-3. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
+2. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/), [`Bracken`](https://ccb.jhu.edu/software/bracken/))
+3. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/) genome size, fastp bases) and reduction above `--max_coverage` ([`Seqtk`](https://github.com/lh3/seqtk))
 4. Genome assembly ([`SPAdes`](https://github.com/ablab/spades))
 
 #### ONT Assembly (Flye mode, default)
 
 1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
-2. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
-3. Genome assembly ([`Flye`](https://github.com/fenderglass/Flye))
-4. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
-5. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
+2. Genome assembly from all reads ([`Flye`](https://github.com/fenderglass/Flye)); optionally from the longest reads up to `--flye_asm_coverage`, with the genome size from `--genome_size` or [`lrge`](https://github.com/mbhall88/lrge)
+3. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
+4. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
 
 #### ONT Assembly (Autocycler mode)
 
@@ -169,33 +168,34 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 #### Pipeline steps
 
-| Parameter           | Default | Description                                                  |
-| ------------------- | ------- | ------------------------------------------------------------ |
-| `--run_kraken2`     | `true`  | Enable Kraken2 contamination detection (needs `--kraken2db`) |
-| `--adjust_coverage` | `true`  | Enable coverage estimation and read subsampling              |
-| `--max_coverage`    | `110`   | Target maximum coverage (x) for subsampling                  |
-| `--run_gtdbtk`      | `false` | Enable GTDB-Tk taxonomic classification                      |
-| `--run_rgi`         | `false` | Enable RGI antimicrobial resistance gene prediction          |
-| `--run_mobsuite`    | `false` | Enable MOB-suite plasmid detection and reconstruction        |
-| `--run_dnaapler`    | `true`  | Enable contig reorientation with Dnaapler (ONT only)         |
+| Parameter           | Default | Description                                                                         |
+| ------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `--run_kraken2`     | `true`  | Enable Kraken2 contamination detection (needs `--kraken2db`)                        |
+| `--adjust_coverage` | `true`  | Subsample Illumina reads above `--max_coverage` (Illumina only)                     |
+| `--max_coverage`    | `150`   | Maximum Illumina coverage (fastp bases ÷ Mash genome size) before subsampling to it |
+| `--run_gtdbtk`      | `false` | Enable GTDB-Tk taxonomic classification                                             |
+| `--run_rgi`         | `false` | Enable RGI antimicrobial resistance gene prediction                                 |
+| `--run_mobsuite`    | `false` | Enable MOB-suite plasmid detection and reconstruction                               |
+| `--run_dnaapler`    | `true`  | Enable contig reorientation with Dnaapler (ONT only)                                |
 
 #### Databases
 
-| Parameter                  | Default | Description                                                                                   |
-| -------------------------- | ------- | --------------------------------------------------------------------------------------------- |
-| `--bakta_db`               | `null`  | Path to Bakta database (Bakta and AMRFinderPlus are skipped if unset)                         |
-| `--checkm2_db`             | `null`  | Path to CheckM2 database file (CheckM2 is skipped if unset)                                   |
-| `--amrfinder_db`           | `null`  | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset; also needs `--bakta_db`)   |
-| `--genomad_db`             | `null`  | Path to geNomad database (geNomad is skipped if unset)                                        |
-| `--kraken2db`              | `null`  | Path to Kraken2 database (required to run contamination detection)                            |
-| `--brackendb`              | `null`  | Path to Bracken database (Illumina only; falls back to `--kraken2db`)                         |
-| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled)                              |
-| `--gtdbtk_pplacer_scratch` | `true`  | Use a scratch directory for pplacer to reduce GTDB-Tk memory use                              |
-| `--rgi_db`                 | `null`  | Path to RGI/CARD database (required if `--run_rgi` is enabled)                                |
-| `--mobsuite_db`            | `null`  | Path to pre-built MOB-suite database (optional; uses bundled DB if unset)                     |
-| `--mlst_blastdb`           | `null`  | Alternative MLST BLAST database directory containing `mlst.fa` and its index files (optional) |
-| `--mlst_datadir`           | `null`  | Alternative MLST PubMLST data directory (optional; uses the one bundled with mlst if unset)   |
-| `--plassembler_db`         | `null`  | Path to Plassembler database (only needed when `plassembler` is in `--autocycler_assemblers`) |
+| Parameter                  | Default | Description                                                                                                    |
+| -------------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `--bakta_db`               | `null`  | Path to Bakta database (Bakta and AMRFinderPlus are skipped if unset)                                          |
+| `--checkm2_db`             | `null`  | Path to CheckM2 database file (CheckM2 is skipped if unset)                                                    |
+| `--amrfinder_db`           | `null`  | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset; also needs `--bakta_db`)                    |
+| `--genomad_db`             | `null`  | Path to geNomad database (geNomad is skipped if unset)                                                         |
+| `--kraken2db`              | `null`  | Path to Kraken2 database (required to run contamination detection)                                             |
+| `--brackendb`              | `null`  | Path to Bracken database (Illumina only; falls back to `--kraken2db`)                                          |
+| `--bracken_read_length`    | `null`  | Bracken `-r` for every sample; if unset, per sample from the read length and the database's kmer distributions |
+| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled)                                               |
+| `--gtdbtk_pplacer_scratch` | `true`  | Use a scratch directory for pplacer to reduce GTDB-Tk memory use                                               |
+| `--rgi_db`                 | `null`  | Path to RGI/CARD database (required if `--run_rgi` is enabled)                                                 |
+| `--mobsuite_db`            | `null`  | Path to pre-built MOB-suite database (optional; uses bundled DB if unset)                                      |
+| `--mlst_blastdb`           | `null`  | Alternative MLST BLAST database directory containing `mlst.fa` and its index files (optional)                  |
+| `--mlst_datadir`           | `null`  | Alternative MLST PubMLST data directory (optional; uses the one bundled with mlst if unset)                    |
+| `--plassembler_db`         | `null`  | Path to Plassembler database (only needed when `plassembler` is in `--autocycler_assemblers`)                  |
 
 #### Illumina read processing (fastp)
 
@@ -212,17 +212,19 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 #### ONT read processing and assembly
 
-| Parameter                               | Default                                        | Description                                                                                        |
-| --------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `--ont_assembler`                       | `flye`                                         | `flye` (Flye + Medaka) or `autocycler` (consensus of several assemblers)                           |
-| `--fastplong_qualified_quality`         | `15`                                           | Minimum base quality for a base to be qualified (fastplong)                                        |
-| `--fastplong_unqualified_percent_limit` | `40`                                           | Maximum percentage of unqualified bases per read (fastplong)                                       |
-| `--fastplong_min_read_length`           | `1000`                                         | Minimum read length (fastplong)                                                                    |
-| `--flye_mode`                           | `nano-hq`                                      | Flye read mode: `nano-hq`, `nano-raw`, `nano-corr`, `pacbio-raw`, `pacbio-corr`, `pacbio-hifi`     |
-| `--medaka_model`                        | `null`                                         | Medaka model matching the basecaller model (`medaka tools list_models`); medaka's default if unset |
-| `--autocycler_assemblers`               | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Assemblers for Autocycler; also supported: `canu`, `myloasm`, `plassembler`                        |
-| `--autocycler_read_type`                | `ont_r10`                                      | Read type for the Autocycler assembler helper: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`    |
-| `--autocycler_max_contigs`              | `50`                                           | Maximum contigs per assembly in the Autocycler compress and cluster steps                          |
+| Parameter                               | Default                                        | Description                                                                                                                           |
+| --------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `--ont_assembler`                       | `flye`                                         | `flye` (Flye + Medaka) or `autocycler` (consensus of several assemblers)                                                              |
+| `--fastplong_qualified_quality`         | `15`                                           | Minimum base quality for a base to be qualified (fastplong)                                                                           |
+| `--fastplong_unqualified_percent_limit` | `40`                                           | Maximum percentage of unqualified bases per read (fastplong)                                                                          |
+| `--fastplong_min_read_length`           | `1000`                                         | Minimum read length (fastplong)                                                                                                       |
+| `--flye_mode`                           | `nano-hq`                                      | Flye read mode: `nano-hq`, `nano-raw`, `nano-corr`, `pacbio-raw`, `pacbio-corr`, `pacbio-hifi`                                        |
+| `--flye_asm_coverage`                   | `null`                                         | Flye `--asm-coverage` for very deep samples (e.g. `40`): first assembly step from the longest reads up to this coverage; off if unset |
+| `--genome_size`                         | `null`                                         | Genome size for `--flye_asm_coverage`, e.g. `5.5m`; estimated per sample with lrge if unset                                           |
+| `--medaka_model`                        | `null`                                         | Medaka model matching the basecaller model (`medaka tools list_models`); medaka's default if unset                                    |
+| `--autocycler_assemblers`               | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Assemblers for Autocycler; also supported: `canu`, `myloasm`, `plassembler`                                                           |
+| `--autocycler_read_type`                | `ont_r10`                                      | Read type for the Autocycler assembler helper: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`                                       |
+| `--autocycler_max_contigs`              | `50`                                           | Maximum contigs per assembly in the Autocycler compress and cluster steps                                                             |
 
 #### RGI
 

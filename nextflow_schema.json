@@ -175,13 +175,15 @@
                 "adjust_coverage": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Subsample reads to target coverage.",
+                    "description": "Subsample Illumina reads above --max_coverage (Illumina only; ONT reads are not subsampled).",
                     "fa_icon": "fas fa-layer-group"
                 },
                 "max_coverage": {
                     "type": "integer",
-                    "default": 110,
-                    "description": "Target maximum coverage for subsampling.",
+                    "default": 150,
+                    "minimum": 1,
+                    "description": "Maximum Illumina read coverage before subsampling: real base coverage, i.e. bases after fastp divided by Mash's genome size estimate (Illumina only).",
+                    "help_text": "Samples above this coverage are subsampled with Seqtk to about this coverage before SPAdes. In the pipeline's depth sweep, assemblies stopped improving between 110x and 150x; the default leaves samples up to 150x untouched.",
                     "fa_icon": "fas fa-chart-line"
                 },
                 "run_gtdbtk": {
@@ -304,6 +306,13 @@
                     "format": "directory-path",
                     "exists": true,
                     "fa_icon": "fas fa-database"
+                },
+                "bracken_read_length": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Bracken read length (-r) for every sample (Illumina only). If unset, each sample gets the longest read length in the Bracken database at or below its sequenced read length.",
+                    "help_text": "The Bracken database must contain database<N>mers.kmer_distrib for this N. Unset, the pipeline reads each sample's sequenced read length from fastp (read1_before_filtering.total_cycles, e.g. 151) and lists the database's kmer_distrib files (e.g. 100, 150, 300 -> 150); when none is that short it uses the shortest, with a warning.",
+                    "fa_icon": "fas fa-ruler"
                 },
                 "genomad_db": {
                     "type": "string",
@@ -435,6 +444,19 @@
                     "description": "Flye assembly mode for read type.",
                     "enum": ["pacbio-raw", "pacbio-corr", "pacbio-hifi", "nano-raw", "nano-corr", "nano-hq"],
                     "fa_icon": "fas fa-cogs"
+                },
+                "flye_asm_coverage": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Flye --asm-coverage: build the initial assembly from the longest reads up to this coverage (ONT, Flye only; all reads still go to the rest of Flye and to Medaka). Off by default.",
+                    "help_text": "For very deep samples (e.g. 40 for samples above ~150x). In the pipeline's benchmark --asm-coverage 40 made Flye 14-26 % faster but lost the 4-5 kb plasmids of one sample that assembling from all reads kept. Needs a genome size: --genome_size, or else an lrge estimate per sample.",
+                    "fa_icon": "fas fa-compress-alt"
+                },
+                "genome_size": {
+                    "type": "string",
+                    "pattern": "^(?=.*[1-9])[0-9]+(\\.[0-9]+)?[kKmMgG]?$",
+                    "description": "Expected genome size for Flye --asm-coverage, e.g. 5.5m (ONT, used only with --flye_asm_coverage). If unset, lrge estimates it per sample.",
+                    "fa_icon": "fas fa-ruler-horizontal"
                 },
                 "medaka_model": {
                     "type": "string",

@@ -7,10 +7,12 @@ nextflow_workflow {
     tag "subworkflows"
     tag "coverage_adjust"
 
-    // The MASH_SKETCH stub always reports 100x coverage, so max_coverage
-    // decides the branch: below 100 subsamples, at or above keeps the reads.
+    // Coverage = fastp after_filtering.total_bases / Mash genome size. The
+    // MASH_SKETCH stub reports 5,000,000 bp, so the fastp JSON decides the
+    // branch at the default max_coverage of 150: 1 Gb is 200x (subsample),
+    // 500 Mb is 100x (keep).
 
-    test("COVERAGE_ADJUST - above max_coverage, subsample - stub") {
+    test("COVERAGE_ADJUST - 200x above max_coverage, subsample - stub") {
 
         tag "stub"
 
@@ -18,7 +20,7 @@ nextflow_workflow {
 
         when {
             params {
-                max_coverage = 50
+                max_coverage = 150
                 outdir       = "$outputDir"
             }
             workflow {
@@ -26,6 +28,10 @@ nextflow_workflow {
                 input[0] = Channel.of([
                     [ id:'test', single_end:false ],
                     [ file("${baseDir}/tests/data/stub_inputs/reads_1.fastq.gz", checkIfExists: true), file("${baseDir}/tests/data/stub_inputs/reads_2.fastq.gz", checkIfExists: true) ]
+                ])
+                input[1] = Channel.of([
+                    [ id:'test', single_end:false ],
+                    file("${baseDir}/tests/data/fastp/deep.fastp.json", checkIfExists: true)
                 ])
                 """
             }
@@ -45,7 +51,7 @@ nextflow_workflow {
 
     }
 
-    test("COVERAGE_ADJUST - within max_coverage, keep reads - stub") {
+    test("COVERAGE_ADJUST - 100x within max_coverage, keep reads - stub") {
 
         tag "stub"
 
@@ -62,6 +68,10 @@ nextflow_workflow {
                     [ id:'test', single_end:false ],
                     [ file("${baseDir}/tests/data/stub_inputs/reads_1.fastq.gz", checkIfExists: true), file("${baseDir}/tests/data/stub_inputs/reads_2.fastq.gz", checkIfExists: true) ]
                 ])
+                input[1] = Channel.of([
+                    [ id:'test', single_end:false ],
+                    file("${baseDir}/tests/data/fastp/shallow.fastp.json", checkIfExists: true)
+                ])
                 """
             }
         }
@@ -73,7 +83,46 @@ nextflow_workflow {
                 { assert succeeded.any { it.contains('MASH_SKETCH') } },
                 { assert !succeeded.any { it.contains('SEQTK_SAMPLE') } },
                 { assert workflow.out.reads.size() == 1 },
-                { assert workflow.out.reads[0][1].collect { it.tokenize('/').last() } == [ 'reads_1.fastq.gz', 'reads_2.fastq.gz' ] }
+                // the input files themselves, not copies from MASH_SKETCH's work directory
+                { assert workflow.out.reads[0][1].collect { it.tokenize('/').last() } == [ 'reads_1.fastq.gz', 'reads_2.fastq.gz' ] },
+                { assert workflow.out.reads[0][1].every { it.contains('/tests/data/stub_inputs/') } }
+            )
+        }
+
+    }
+
+    test("COVERAGE_ADJUST - unreadable fastp JSON, keep reads - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                max_coverage = 150
+                outdir       = "$outputDir"
+            }
+            workflow {
+                """
+                input[0] = Channel.of([
+                    [ id:'test', single_end:false ],
+                    [ file("${baseDir}/tests/data/stub_inputs/reads_1.fastq.gz", checkIfExists: true), file("${baseDir}/tests/data/stub_inputs/reads_2.fastq.gz", checkIfExists: true) ]
+                ])
+                input[1] = Channel.of([
+                    [ id:'test', single_end:false ],
+                    file("${baseDir}/tests/data/fastp/empty.fastp.json", checkIfExists: true)
+                ])
+                """
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert !succeeded.any { it.contains('SEQTK_SAMPLE') } },
+                { assert workflow.out.reads.size() == 1 },
+                { assert path("$metaDir/nextflow.log").text.contains("Sample 'test': could not estimate read coverage") }
             )
         }
 

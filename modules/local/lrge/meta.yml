@@ -1,0 +1,41 @@
+name: "lrge"
+description: Estimate genome size from long-read overlaps
+keywords:
+  - genome size
+  - long reads
+  - nanopore
+tools:
+  - lrge:
+      description: "Genome size estimation from long read overlaps"
+      homepage: "https://github.com/mbhall88/lrge"
+      documentation: "https://github.com/mbhall88/lrge"
+      tool_dev_url: "https://github.com/mbhall88/lrge"
+      licence: ["MIT"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1', single_end:true ]
+  - reads:
+      type: file
+      description: Long reads (FASTQ, FASTA or unaligned BAM/CRAM/SAM)
+      pattern: "*.{fastq,fq,fastq.gz,fq.gz,fasta,fa,bam,cram,sam}"
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1', single_end:true ]
+  - genome_size:
+      type: file
+      description: Estimated genome size in bases, one integer
+      pattern: "*.genome_size.txt"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

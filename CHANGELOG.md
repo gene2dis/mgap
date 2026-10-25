@@ -28,6 +28,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Single-end Illumina support (detected from the samplesheet)
 - Run-level MultiQC report aggregating fastp/fastplong, Kraken2, QUAST and Bakta results (`--multiqc_config`, `--multiqc_title`, `--multiqc_logo`)
 - `--medaka_model` parameter for basecaller-matched Medaka polishing
+- `--flye_asm_coverage` (off by default) for very deep ONT samples: Flye builds its first assembly step from the longest reads up to that coverage (`--asm-coverage`), with the genome size from `--genome_size` or, if unset, a per-sample estimate by the new local `LRGE` module (lrge 1.0.0, `quay.io/biocontainers/lrge:1.0.0--hf1b6044_0`; published in `<sample>/assemblies/lrge/`). In the benchmark (`docs/benchmarks/coverage_2026-10-24.md`) `--asm-coverage 40` made Flye 14–26 % faster but lost a sample's 3.9–5.2 kb plasmids, so it stays opt-in; a zero `--genome_size` fails at launch
 - `--brackendb` is now actually used by Bracken (falls back to the Kraken2 DB)
 - Per-sample cross-validation of samplesheet columns against `--seq_type` with clear error messages
 - Launch-time warnings for annotation steps skipped because their database was not provided
@@ -58,7 +59,9 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
   - `seqtk/sample`: Updated module with standard config
 - CheckM2, Bakta, AMRFinderPlus and geNomad now run only when their database parameter is set (previously crashed on unset databases)
 - GTDB-Tk receives genomes via a batchfile, so it works for any assembly file extension (the `gtdbtk_extension` parameter is gone)
-- The Mash/Seqtk coverage-adjustment logic is shared by the Illumina and ONT paths (`COVERAGE_ADJUST` subworkflow) and tolerates unparseable coverage estimates
+- The Mash/Seqtk coverage-adjustment logic is in the `COVERAGE_ADJUST` subworkflow (Illumina only) and tolerates unparseable coverage estimates
+- Illumina coverage is now estimated as fastp's output bases ÷ Mash's genome size, with `mash sketch -k 32 -m 3` (was Mash's own coverage line with its defaults, `-k 21` and no k-mer copy filter, which counted sequencing-error k-mers as genome: 5–21 Mb genome sizes and 0.17–0.57× the real coverage, so subsampling never triggered, not even at 244x). The new estimate is within 0.90–1.09× of the coverage over the assembly (13 samples, `docs/benchmarks/coverage_2026-10-24.md`). `--max_coverage` is real base coverage and its default rises from 110 to 150 (in a depth sweep assemblies stopped improving between 110x and 150x). Outputs change for samples above 150x: their reads are subsampled to ~150x before SPAdes. `MASH_SKETCH` runs as `process_single` (Mash ignores `-p` with `-r`), publishes `<sample>.genome_size` instead of `<sample>.mash_coverage`, and no longer re-emits the reads, so `-resume` reuses SPAdes when only the coverage step changes
+- ONT reads are no longer subsampled before Flye: the Flye path does not run `COVERAGE_ADJUST`, so `--adjust_coverage` and `--max_coverage` apply to Illumina only. Mash cannot estimate ONT coverage (genome sizes of 30–115 Mb and 12–15x for samples at 81x and 251x in the benchmark), so ONT reads were in practice never reduced; outputs do not change. A `--max_coverage` other than the default with `--seq_type ont` prints a launch warning
 - The Autocycler container image is pinned by digest; assembler-failure tolerance moved to configuration with loud reporting when all assemblers fail for a sample
 - `software_versions.yml` is valid YAML listing each tool once (MultiQC included), plus pipeline/Nextflow versions; all but MultiQC's own appear as a Software Versions section in the MultiQC report (grouped by process name, so tools MultiQC also detects are listed once)
 - `AMRFINDERPLUS_RUN` reads the tool and database versions once, no longer emits the unused `VER`/`DBVER` env outputs and no longer writes a file named `stdout`
@@ -79,6 +82,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Autocycler image `microds/autocycler:0.8.0` (was `0.6.0`, which despite its tag contained Autocycler 0.5.2), built from `docker/autocycler-suite/Dockerfile` with every package and the base image pinned; `modules/local/autocycler/environment.yml` pins the same versions, and the image is defined once, in `conf/modules.config`. Version changes: Autocycler 0.5.2 → 0.8.0, metaMDBG 1.3 → 1.4, minimap2 2.28 → 2.31, minipolish 0.2.0 → 0.2.1, myloasm 0.4.0 → 0.7.0, Plassembler 1.8.2 → 1.8.5 (Dnaapler 1.3.0 → 1.4.0 inside the image); Canu 2.3, Flye 2.9.6, miniasm 0.3, NECAT, NextDenovo 2.5.2, NextPolish 1.4.1, Racon 1.5.0 and Raven 1.8.3 unchanged
 - Autocycler resources from a real run (5.9 Mb genome, ~100x ONT): `AUTOCYCLER_ASSEMBLY` reserves 6 CPUs and 36 GB (72 GB on the out-of-memory retry, same CPUs; 16 h per attempt as before) instead of `process_high` (12 CPUs, 72 GB) (peak 11.6 GB, NECAT; 2–4 cores busy), so twice as many assemblers run at once; `AUTOCYCLER_GENOME_SIZE`, which runs Raven on all reads, keeps 6 CPUs and retries an out-of-memory exit twice (36, 72, then 108 GB; 12 h per attempt) (#17)
 - `--autocycler_read_type` reaches the assembler helper through `ext.args` of `AUTOCYCLER_ASSEMBLY` (no `params` read inside the module)
+- Bracken gets a read length (`-r`) per sample: the longest `database<N>mers.kmer_distrib` in the Bracken database at or below the sample's sequenced read length (fastp `read1_before_filtering.total_cycles`), or the shortest with a warning when none fits; new `--bracken_read_length` sets it for all samples. Before, no `-r` was passed, so Bracken used its default of 100 for 150 and 300 bp reads. Bracken fractions change slightly (at most 0.49 points in the benchmark; the top species did not change)
+- Kraken2 runs with `--memory-mapping` (identical reports; per-sample time 147–216 s → 46–148 s with the database in the page cache, 438 s → 178 s from disk; `docs/benchmarks/coverage_2026-10-24.md`). The memory request stays `process_high` (72 GB). On the AWS Batch and Google Batch executors (`mgap_awsbatch`, `mgap_googlebatch`), where each task starts on a fresh machine, it stays off
 
 ### `Fixed`
 
@@ -92,7 +97,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Fixed dnaapler version command (was incorrectly calling medaka)
 - Fixed AMRFinderPlus null organism error when MLST scheme not in taxa_map
 - Fixed the misspelled _Burkholderia pseudomallei_ entry in the MLST-to-AMRFinderPlus organism map, and added verified mappings for seven more species
-- Mash coverage estimation no longer crashes on paired-end input (per-file estimates are summed); MLST output is parsed defensively
+- MLST output is parsed defensively
 - Samples no longer vanish silently when dnaapler produces no reoriented assembly (falls back to the unoriented assembly with a warning)
 - SISTR's conditionally-produced outputs are optional, so runs no longer fail over missing novel-allele files
 - `ConsolidateResults.py`: fixed silently-dropped kleborate/sccmec tables, added ONT support and defensive parsing
@@ -106,6 +111,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - `--plassembler_db` is staged into the Plassembler tasks; before, only its host path was exported, which a container cannot see
 - A sample whose Autocycler clustering leaves no QC-pass cluster gets a warning and is left out of downstream analysis; before, the trim/resolve step looped over the unmatched glob and failed the run
 - Autocycler's `versions.yml` entry is the version number (`0.8.0`); it was `Autocycler 0.5.2`
+- Flye's assembly and graph are published (`<sample>/assemblies/flye/*.assembly.fasta.gz`, `*.assembly_graph.gfa.gz`): nf-core flye gzips them, and the publish pattern had no `.gz`, so only the log, assembly info and parameters were published
+- On/off parameters can be switched off on the command line: Nextflow 26.04 passes `--adjust_coverage false` (and `--run_kraken2 false`, `--run_dnaapler false`, `--validate_params false`, `--rgi_include_loose false`, ...) as the string `"false"`, which counted as true, so the step still ran. Boolean parameters are now read as booleans wherever they are used
 
 ### `Removed`
 
@@ -121,6 +128,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Nextflow: `>=26.04.0` (minimum version; the version the pipeline is developed and CI-tested on)
 - nf-schema: `2.2.0` (replacing nf-validation)
 - Autocycler suite image: `microds/autocycler:0.8.0` (digest-pinned; see `docs/usage.md` for the full version list)
+- fastplong: `0.3.0` → `0.7.1` (`biocontainers/fastplong:0.7.1`, bioconda build `h43da1c4_0`; biocontainers publishes 0.7.1 only under this tag). nf-core module updated (0.4.1 upstream, now reporting its version through a topic tuple) and patched to 0.7.1 (`modules/nf-core/fastplong/fastplong.diff`). Filter thresholds unchanged; in the benchmark 0.7.1 kept the same bases within 0.1 point on current R10.4.1 sup data and 0.3 points fewer on an older R10.4 sample
 
 ## v1.0dev - [date]
 

@@ -1,0 +1,44 @@
+Changes in component 'nf-core/fastplong'
+Changes in 'fastplong/main.nf':
+--- modules/nf-core/fastplong/main.nf
++++ modules/nf-core/fastplong/main.nf
+@@ -4,8 +4,8 @@
+ 
+     conda "${moduleDir}/environment.yml"
+     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
+-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/e5/e53f2d854500cba9b85619f1ae987371c2890f28a6059f4957b1b95a7317b4c7/data':
+-        'community.wave.seqera.io/library/fastplong:0.4.1--73e8274104613b58' }"
++        'https://depot.galaxyproject.org/singularity/fastplong:0.7.1':
++        'biocontainers/fastplong:0.7.1' }"
+ 
+     input:
+     tuple val(meta), path(reads)
+
+Changes in 'fastplong/environment.yml':
+--- modules/nf-core/fastplong/environment.yml
++++ modules/nf-core/fastplong/environment.yml
+@@ -4,4 +4,4 @@
+   - conda-forge
+   - bioconda
+ dependencies:
+-  - "bioconda::fastplong=0.4.1"
++  - "bioconda::fastplong=0.7.1"
+
+Changes in 'fastplong/meta.yml':
+--- modules/nf-core/fastplong/meta.yml
++++ modules/nf-core/fastplong/meta.yml
+@@ -11,8 +11,8 @@
+   - "fastplong":
+       description: "Ultra-fast preprocessing and quality control for long-read sequencing
+         data."
+-      homepage: "https://github.com/OpenGene/fastplong/blob/v0.4.1/README.md"
+-      documentation: "https://github.com/OpenGene/fastplong/blob/v0.4.1/README.md"
++      homepage: "https://github.com/OpenGene/fastplong/blob/v0.7.1/README.md"
++      documentation: "https://github.com/OpenGene/fastplong/blob/v0.7.1/README.md"
+       tool_dev_url: "https://github.com/OpenGene/fastplong"
+       doi: 10.1002/imt2.107
+       licence: ["MIT"]
+
+'modules/nf-core/fastplong/tests/main.nf.test' is unchanged
+'modules/nf-core/fastplong/tests/main.nf.test.snap' is unchanged
+************************************************************

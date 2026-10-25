@@ -20,12 +20,16 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   │                                #   (requires --run_kraken2 true and --kraken2db)
 │   │   ├── bracken/                     # Abundance re-estimation: *.tsv
 │   │   │                                #   (Illumina only; requires --brackendb)
+│   │   ├── mash/                        # Coverage estimate: *.msh, *.mash_stats, *.genome_size
+│   │   │                                #   (Illumina, --adjust_coverage true [default])
 │   │   └── subsampled/                  # Subsampled reads: *.fastq.gz
 │   │                                    #   (only when coverage > --max_coverage)
 │   ├── assemblies/
 │   │   ├── *.scaffolds.fa.gz            # SPAdes output (--seq_type illumina)
-│   │   ├── flye/                        # Flye assembly: *.fasta, *.gfa, *.txt, *.log
+│   │   ├── flye/                        # Flye assembly: *.fasta.gz, *.gfa.gz, *.txt, *.log
 │   │   │                                #   (ONT, --ont_assembler flye)
+│   │   ├── lrge/                        # Genome size estimate for Flye: *.genome_size.txt
+│   │   │                                #   (ONT, --flye_asm_coverage without --genome_size)
 │   │   ├── medaka/                      # Medaka-polished assembly: *.fasta
 │   │   │                                #   (ONT, --ont_assembler flye)
 │   │   ├── autocycler/                  # Autocycler consensus assembly
@@ -169,7 +173,7 @@ This step runs for `--seq_type ont` only.
 
 </details>
 
-[Kraken2](https://ccb.jhu.edu/software/kraken2/) classifies reads against a reference database for contamination detection. [Bracken](https://ccb.jhu.edu/software/bracken/) refines Kraken2 abundance estimates at a specified taxonomic level.
+[Kraken2](https://ccb.jhu.edu/software/kraken2/) classifies reads against a reference database for contamination detection. [Bracken](https://ccb.jhu.edu/software/bracken/) refines Kraken2 abundance estimates at a specified taxonomic level, with the database read length (`-r`) matched to each sample's reads (or `--bracken_read_length`).
 
 This step is optional and runs when `--run_kraken2` is enabled and `--kraken2db` is provided.
 
@@ -180,16 +184,16 @@ This step is optional and runs when `--run_kraken2` is enabled and `--kraken2db`
 
 - `<sample_id>/read_processing/mash/`
   - `*.msh`: Mash sketch file.
-  - `*.mash_stats`: Mash sketch statistics.
-  - `*.mash_coverage`: Estimated genome coverage.
+  - `*.mash_stats`: Mash sketch statistics (estimated genome size and k-mer coverage).
+  - `*.genome_size`: Mash's genome size estimate in bases, used for the coverage.
 - `<sample_id>/read_processing/subsampled/`
   - `*.fastq.gz`: Subsampled reads (only present when coverage exceeded `--max_coverage`).
 
 </details>
 
-[Mash](https://mash.readthedocs.io/en/latest/) estimates genome coverage from read sketches. If coverage exceeds the `--max_coverage` threshold (default: 110x), [Seqtk](https://github.com/lh3/seqtk) subsamples reads to the target coverage.
+[Mash](https://mash.readthedocs.io/en/latest/) estimates the genome size from the reads' k-mers; the read coverage is the number of bases fastp kept divided by that size. If coverage exceeds `--max_coverage` (default: 150x), [Seqtk](https://github.com/lh3/seqtk) subsamples the reads to that coverage.
 
-This step is optional and runs when `--adjust_coverage` is enabled (default: true). It is skipped when using `--ont_assembler autocycler`, as Autocycler handles its own read subsampling.
+This step is optional and runs when `--adjust_coverage` is enabled (default: true), for `--seq_type illumina` only: ONT reads are not subsampled.
 
 ---
 
@@ -218,16 +222,20 @@ This step runs for `--seq_type illumina` only.
 <summary>Output files</summary>
 
 - `<sample_id>/assemblies/flye/`
-  - `*.fasta`: Assembled genome contigs.
-  - `*.gfa`: Assembly graph in GFA format.
-  - `*.log`: Flye log file.
-  - `*.txt`: Assembly info with contig statistics.
+  - `*.assembly.fasta.gz`: Assembled genome contigs (before Medaka polishing).
+  - `*.assembly_graph.gfa.gz`: Assembly graph in GFA format.
+  - `*.flye.log`: Flye log file.
+  - `*.assembly_info.txt`: Assembly info with contig statistics (length, coverage, circularity).
+  - `*.params.json`: Flye run parameters.
 
 </details>
 
-[Flye](https://github.com/fenderglass/Flye) performs _de novo_ assembly of long reads. The assembly mode is controlled by `--flye_mode` (default: `nano-hq`).
+[Flye](https://github.com/fenderglass/Flye) performs _de novo_ assembly of long reads. The assembly mode is controlled by `--flye_mode` (default: `nano-hq`). Flye uses all reads that pass fastplong; with `--flye_asm_coverage` its first step (disjointigs) uses only the longest reads up to that coverage.
 
 This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
+
+- `<sample_id>/assemblies/lrge/`
+  - `*.genome_size.txt`: Genome size in bases estimated by [lrge](https://github.com/mbhall88/lrge) from the fastplong reads, passed to Flye as `--genome-size`. Only with `--flye_asm_coverage` and no `--genome_size`.
 
 ### Medaka
 

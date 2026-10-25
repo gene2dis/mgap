@@ -31,8 +31,8 @@ run_rgi: false # Run RGI / CARD AMR prediction (requires rgi_db)
 run_mobsuite: false # Run MOB-suite plasmid detection
 run_dnaapler: true # Reorient ONT contigs with dnaapler
 
-adjust_coverage: true # Subsample reads to target coverage (Illumina / ONT)
-max_coverage: 110 # Target maximum coverage for subsampling
+adjust_coverage: true # Subsample reads above max_coverage (Illumina only)
+max_coverage: 150 # Maximum Illumina coverage (fastp bases / Mash genome size) before subsampling
 
 # ----------------------------------------------------------------------------
 # Databases (all optional — set to enable the corresponding step)
@@ -42,6 +42,7 @@ bakta_db: null # Bakta database directory
 checkm2_db: null # CheckM2 database file
 kraken2db: null # Kraken2 database directory
 brackendb: null # Bracken database directory (Illumina only; falls back to kraken2db if unset)
+bracken_read_length: null # Bracken -r for all samples; null = per sample from the read length and the database
 amrfinder_db: null # AMRFinderPlus database directory (also needs bakta_db — AMRFinderPlus runs on Bakta outputs)
 genomad_db: null # geNomad database directory
 mobsuite_db: null # MOB-suite database directory (optional)
@@ -102,6 +103,8 @@ fastplong_min_read_length: 1000
 ont_assembler: flye # flye | autocycler
 flye_mode: nano-hq # pacbio-raw | pacbio-corr | pacbio-hifi | nano-raw | nano-corr | nano-hq
 medaka_model: null # Medaka polishing model; should match the basecaller model (see `medaka tools list_models`). null = medaka default
+flye_asm_coverage: null # Flye --asm-coverage for very deep samples (e.g. 40); null = all reads for every Flye step
+genome_size: null # Genome size for flye_asm_coverage, e.g. 5.5m; null = lrge estimate per sample
 
 # Autocycler (only used when ont_assembler == 'autocycler')
 autocycler_assemblers: raven,miniasm,flye,metamdbg,necat,nextdenovo

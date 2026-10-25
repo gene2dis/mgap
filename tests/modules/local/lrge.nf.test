@@ -1,0 +1,62 @@
+nextflow_process {
+
+    name "Test LRGE module"
+    script "../../../modules/local/lrge/main.nf"
+    process "LRGE"
+
+    tag "modules"
+    tag "modules_local"
+    tag "lrge"
+
+    test("LRGE - estimate genome size") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/nanopore/fastq/test.fastq.gz', checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                // lrge writes the estimate as one integer (bases)
+                { assert path(process.out.genome_size[0][1]).text ==~ /[1-9][0-9]*\n/ },
+                { assert path(process.out.versions[0]).text.contains('lrge: 1.0.0') }
+            )
+        }
+
+    }
+
+    test("LRGE - estimate genome size - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    file("${baseDir}/tests/data/stub_inputs/reads.fastq.gz", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.genome_size[0][1]).text.trim() == '5000000' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

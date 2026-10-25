@@ -141,6 +141,8 @@ nextflow run gene2dis/mgap \
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
+On/off parameters take `true` or `false` on the command line (`--run_kraken2 false`, `--adjust_coverage false`); a bare flag such as `--run_gtdbtk` means `true`.
+
 ### Using a parameters file
 
 Instead of passing every option on the command line, you can collect them in a YAML (or JSON) file and pass it to Nextflow with `-params-file`:
@@ -158,6 +160,30 @@ nextflow run gene2dis/mgap -params-file my_run_params.yaml -profile docker
 ```
 
 Any parameters you leave out of the YAML file fall back to the pipeline defaults defined in `nextflow.config`. Values passed on the command line (e.g. `--outdir results_v2`) override values in the params file.
+
+### Flye assembly of deep ONT samples
+
+ONT reads are not subsampled: Flye and Medaka use all reads that pass fastplong (Mash cannot estimate ONT coverage, so
+the Illumina coverage step does not apply). For very deep samples, `--flye_asm_coverage` makes Flye build its first
+assembly step (disjointigs) from the longest reads up to that coverage; the later Flye steps and Medaka still use all
+reads. Flye then needs the genome size: give it with `--genome_size` (e.g. `5.5m`), or leave it unset and the pipeline
+estimates it per sample with [lrge](https://github.com/mbhall88/lrge) 1.0.0 (1–2 minutes, within 10 % of the assembled
+size in the [benchmark](benchmarks/coverage_2026-10-24.md)), published in `<sample>/assemblies/lrge/`.
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --flye_asm_coverage 40 \
+    -profile docker
+```
+
+> [!WARNING]
+> In the benchmark, `--flye_asm_coverage 40` made Flye 14–26 % faster on samples at 81x and 251x but lost all of
+> one sample's 3.9–5.2 kb plasmids, which assembling from all reads kept. It is off by default.
+
+Both parameters apply only to `--ont_assembler flye`; Autocycler estimates the genome size and subsamples reads itself.
 
 ### Autocycler Consensus Assembly (ONT)
 
@@ -213,8 +239,6 @@ nextflow run gene2dis/mgap \
 **Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
 
 > **Note:** The default assembler set excludes slow assemblers (Canu) and those requiring external databases (Plassembler). Add them explicitly via `--autocycler_assemblers` if needed.
-
-> **Note:** When using `--ont_assembler autocycler`, the coverage adjustment step (Mash + Seqtk) is automatically skipped, as Autocycler handles its own read subsampling internally.
 
 > **Note:** Autocycler steps tolerate failures per sample: an assembler task killed for lack of memory is retried once with twice the memory, and an assembler that still fails (or fails for any other reason) is reported as an ignored error and left out of the consensus. The genome size step (Raven on all reads, so its memory grows with read depth) is retried twice, up to three times its memory. A sample whose assemblers all fail, or with no cluster that passes Autocycler's QC, gets a warning and no assembly; the other samples continue.
 
@@ -503,11 +527,12 @@ This step is **enabled by default** but requires a database (`--kraken2db`). If 
 
 **Kraken2/Bracken parameters:**
 
-| Parameter       | Default | Description                                                                                                                                       |
-| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--run_kraken2` | `true`  | Enable Kraken2 contamination detection                                                                                                            |
-| `--kraken2db`   | `null`  | Path to Kraken2 database directory (required to run)                                                                                              |
-| `--brackendb`   | `null`  | Path to Bracken database directory (Illumina only). Falls back to `--kraken2db` if unset, which then must contain Bracken kmer distribution files |
+| Parameter               | Default | Description                                                                                                                                       |
+| ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--run_kraken2`         | `true`  | Enable Kraken2 contamination detection                                                                                                            |
+| `--kraken2db`           | `null`  | Path to Kraken2 database directory (required to run)                                                                                              |
+| `--brackendb`           | `null`  | Path to Bracken database directory (Illumina only). Falls back to `--kraken2db` if unset, which then must contain Bracken kmer distribution files |
+| `--bracken_read_length` | `null`  | Bracken read length (`-r`) for every sample. If unset, chosen per sample (see below)                                                              |
 
 **Basic usage with contamination detection:**
 
@@ -534,18 +559,43 @@ nextflow run gene2dis/mgap \
 
 > **Note:** Bracken runs only for `--seq_type illumina`. ONT mode runs Kraken2 only (no Bracken re-estimation).
 
+Bracken re-estimates abundances with k-mer distributions built for one read length (`database<N>mers.kmer_distrib`
+in the Bracken database, e.g. N = 50, 75, 100, 150, 200, 250, 300). For each sample the pipeline takes the sequenced
+read length from fastp (`read1_before_filtering.total_cycles`, e.g. 151 or 301) and passes the longest N at or below
+it as `-r` (150 or 300). If every N is longer than the reads, the shortest is used, with a warning.
+`--bracken_read_length` sets one N for all samples instead; the database must have it. In the
+[benchmark](benchmarks/coverage_2026-10-24.md#b10--bracken-read-length) the matched length changed species fractions by
+at most 0.49 points compared with Bracken's default of 100, and never the top species.
+
+Kraken2 runs with `--memory-mapping`: the database is read through the operating system's page cache instead of being
+loaded into each task's memory, so tasks on the same machine share one copy and later tasks start without reloading it.
+The reports are identical; per-sample time fell from 147–216 s to 46–148 s with the database cached, and from 438 s
+to 178 s from disk ([benchmark](benchmarks/coverage_2026-10-24.md#e4--kraken2---memory-mapping)). The memory request
+stays at 72 GB (`process_high`): a task reading the database from disk is charged for the pages it reads. On AWS Batch
+and Google Batch (`mgap_awsbatch`, `mgap_googlebatch`) every task starts on a fresh machine, so Kraken2 loads the
+database into memory as before.
+
 ### Coverage Adjustment
 
-The pipeline estimates genome coverage using [Mash](https://mash.readthedocs.io/en/latest/) and subsamples reads with [Seqtk](https://github.com/lh3/seqtk) if coverage exceeds the target threshold. This prevents over-assembly and reduces runtime for high-coverage datasets.
+For Illumina data, the pipeline estimates each sample's read coverage and subsamples the reads with
+[Seqtk](https://github.com/lh3/seqtk) to `--max_coverage` when the coverage is higher. Coverage is the number of bases
+fastp kept divided by the genome size, which [Mash](https://mash.readthedocs.io/en/latest/) estimates from the reads
+(`mash sketch -k 32 -m 3 -r`: k-mers seen at least three times, so sequencing errors are not counted as genome). In the
+[benchmark](benchmarks/coverage_2026-10-24.md) this was within 0.90–1.09× of the coverage over the finished assembly.
+The default of 150x is real base coverage: in a depth sweep, SPAdes assemblies stopped improving between 110x and
+150x, and samples at 237x and 244x assembled the same at 110x as at full depth. Deeper samples save some SPAdes time,
+but Seqtk itself takes several minutes on them.
 
-This step is **enabled by default** and applies to both Illumina (after FastP) and ONT Flye mode (after fastplong). It is automatically **skipped** for `--ont_assembler autocycler`, as Autocycler handles its own read subsampling internally.
+This step is **enabled by default** and applies to `--seq_type illumina` only: ONT reads are not subsampled (see
+[Flye assembly of deep ONT samples](#flye-assembly-of-deep-ont-samples)). If the coverage cannot be estimated, the
+sample keeps all its reads, with a warning.
 
 **Coverage adjustment parameters:**
 
-| Parameter           | Default | Description                                                                      |
-| ------------------- | ------- | -------------------------------------------------------------------------------- |
-| `--adjust_coverage` | `true`  | Enable coverage estimation and subsampling                                       |
-| `--max_coverage`    | `110`   | Target maximum coverage (x). Reads are subsampled if coverage exceeds this value |
+| Parameter           | Default | Description                                                                                                     |
+| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| `--adjust_coverage` | `true`  | Enable coverage estimation and subsampling (Illumina only)                                                      |
+| `--max_coverage`    | `150`   | Maximum coverage (x, fastp bases ÷ Mash genome size). Reads are subsampled to it if coverage exceeds this value |
 
 **Disable coverage adjustment:**
 
@@ -564,8 +614,8 @@ nextflow run gene2dis/mgap \
 nextflow run gene2dis/mgap \
     --input samplesheet.csv \
     --outdir results \
-    --seq_type ont \
-    --max_coverage 60 \
+    --seq_type illumina \
+    --max_coverage 100 \
     -profile docker
 ```
 
@@ -573,7 +623,8 @@ nextflow run gene2dis/mgap \
 
 The pipeline has profiles for AWS Batch (`mgap_awsbatch`) and Google Cloud Batch (`mgap_googlebatch`). Task resources
 come from `conf/base.config`, so a task that runs out of memory is retried with more; on Google Batch, Nextflow picks
-the cheapest N2 machine type that fits each request. Set `--awsregion` (default `us-east-1`) or `--gcp_region` (default
+the cheapest N2 machine type that fits each request. Kraken2 runs without `--memory-mapping` on both executors (see
+[Kraken2](#kraken2-contamination-detection)). Set `--awsregion` (default `us-east-1`) or `--gcp_region` (default
 `us-central1`) as needed, and `--awscli` only if your AMI does not use Fusion and needs the path to the AWS CLI.
 
 The profiles are prefixed with `mgap_` because nf-core's institutional configs define their own `awsbatch` and

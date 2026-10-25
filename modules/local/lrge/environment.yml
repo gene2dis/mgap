@@ -1,0 +1,6 @@
+name: lrge
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconda::lrge=1.0.0
