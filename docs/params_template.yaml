@@ -31,8 +31,8 @@ run_rgi: false # Run RGI / CARD AMR prediction (requires rgi_db)
 run_mobsuite: false # Run MOB-suite plasmid detection
 run_dnaapler: true # Reorient ONT contigs with dnaapler
 
-adjust_coverage: true # Subsample reads to target coverage (Illumina / ONT)
-max_coverage: 110 # Target maximum coverage for subsampling
+adjust_coverage: true # Subsample reads above max_coverage (Illumina only)
+max_coverage: 150 # Maximum Illumina coverage (fastp bases / Mash genome size) before subsampling
 
 # ----------------------------------------------------------------------------
 # Databases (all optional — set to enable the corresponding step)

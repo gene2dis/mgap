@@ -60,6 +60,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - CheckM2, Bakta, AMRFinderPlus and geNomad now run only when their database parameter is set (previously crashed on unset databases)
 - GTDB-Tk receives genomes via a batchfile, so it works for any assembly file extension (the `gtdbtk_extension` parameter is gone)
 - The Mash/Seqtk coverage-adjustment logic is in the `COVERAGE_ADJUST` subworkflow (Illumina only) and tolerates unparseable coverage estimates
+- Illumina coverage is now estimated as fastp's output bases ÷ Mash's genome size, with `mash sketch -k 32 -m 3` (was Mash's own coverage line with its defaults, `-k 21` and no k-mer copy filter, which counted sequencing-error k-mers as genome: 5–21 Mb genome sizes and 0.17–0.57× the real coverage, so subsampling never triggered, not even at 244x). The new estimate is within 0.90–1.09× of the coverage over the assembly (13 samples, `docs/benchmarks/coverage_2026-10-24.md`). `--max_coverage` is real base coverage and its default rises from 110 to 150 (in a depth sweep assemblies stopped improving between 110x and 150x). Outputs change for samples above 150x: their reads are subsampled to ~150x before SPAdes. `MASH_SKETCH` runs as `process_single` (Mash ignores `-p` with `-r`), publishes `<sample>.genome_size` instead of `<sample>.mash_coverage`, and no longer re-emits the reads, so `-resume` reuses SPAdes when only the coverage step changes
 - ONT reads are no longer subsampled before Flye: the Flye path does not run `COVERAGE_ADJUST`, so `--adjust_coverage` and `--max_coverage` apply to Illumina only. Mash cannot estimate ONT coverage (genome sizes of 30–115 Mb and 12–15x for samples at 81x and 251x in the benchmark), so ONT reads were in practice never reduced; outputs do not change
 - The Autocycler container image is pinned by digest; assembler-failure tolerance moved to configuration with loud reporting when all assemblers fail for a sample
 - `software_versions.yml` is valid YAML listing each tool once (MultiQC included), plus pipeline/Nextflow versions; all but MultiQC's own appear as a Software Versions section in the MultiQC report (grouped by process name, so tools MultiQC also detects are listed once)
@@ -95,7 +96,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Fixed dnaapler version command (was incorrectly calling medaka)
 - Fixed AMRFinderPlus null organism error when MLST scheme not in taxa_map
 - Fixed the misspelled _Burkholderia pseudomallei_ entry in the MLST-to-AMRFinderPlus organism map, and added verified mappings for seven more species
-- Mash coverage estimation no longer crashes on paired-end input (per-file estimates are summed); MLST output is parsed defensively
+- MLST output is parsed defensively
 - Samples no longer vanish silently when dnaapler produces no reoriented assembly (falls back to the unoriented assembly with a warning)
 - SISTR's conditionally-produced outputs are optional, so runs no longer fail over missing novel-allele files
 - `ConsolidateResults.py`: fixed silently-dropped kleborate/sccmec tables, added ONT support and defensive parsing

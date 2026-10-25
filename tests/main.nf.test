@@ -39,6 +39,8 @@ nextflow_pipeline {
         tag "stub"
 
         options "-stub"
+        // fastp stub reports 1 Gb, the MASH_SKETCH stub a 5 Mb genome: 200x
+        config "./config/fastp_stub_stats.config"
 
         when {
             params {
@@ -46,8 +48,6 @@ nextflow_pipeline {
                 seq_type        = "illumina"
                 run_kraken2     = false
                 adjust_coverage = true
-                // the MASH_SKETCH stub reports 100x, so 50x forces subsampling
-                max_coverage    = 50
                 outdir          = "$outputDir"
             }
         }

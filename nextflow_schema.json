@@ -175,13 +175,15 @@
                 "adjust_coverage": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Subsample reads to target coverage.",
+                    "description": "Subsample Illumina reads above --max_coverage (Illumina only; ONT reads are not subsampled).",
                     "fa_icon": "fas fa-layer-group"
                 },
                 "max_coverage": {
                     "type": "integer",
-                    "default": 110,
-                    "description": "Target maximum coverage for subsampling.",
+                    "default": 150,
+                    "minimum": 1,
+                    "description": "Maximum Illumina read coverage before subsampling: real base coverage, i.e. bases after fastp divided by Mash's genome size estimate (Illumina only).",
+                    "help_text": "Samples above this coverage are subsampled with Seqtk to about this coverage before SPAdes. In the pipeline's depth sweep, assemblies stopped improving between 110x and 150x; the default leaves samples up to 150x untouched.",
                     "fa_icon": "fas fa-chart-line"
                 },
                 "run_gtdbtk": {

@@ -35,6 +35,10 @@ output:
       type: file
       description: Sketch statistics
       pattern: "*.{mash_stats}"
+  - genome_size:
+      type: file
+      description: Mash's genome size estimate in bases (one integer; 0 if Mash reported none)
+      pattern: "*.{genome_size}"
   - versions:
       type: file
       description: File containing software versions

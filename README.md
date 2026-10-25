@@ -29,8 +29,8 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 #### Illumina Assembly
 
 1. Read QC, cleaning, and filtering ([`FastP`](https://github.com/OpenGene/fastp))
-2. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
-3. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/))
+2. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/), [`Bracken`](https://ccb.jhu.edu/software/bracken/))
+3. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/) genome size, fastp bases) and reduction above `--max_coverage` ([`Seqtk`](https://github.com/lh3/seqtk))
 4. Genome assembly ([`SPAdes`](https://github.com/ablab/spades))
 
 #### ONT Assembly (Flye mode, default)
@@ -168,15 +168,15 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 #### Pipeline steps
 
-| Parameter           | Default | Description                                                  |
-| ------------------- | ------- | ------------------------------------------------------------ |
-| `--run_kraken2`     | `true`  | Enable Kraken2 contamination detection (needs `--kraken2db`) |
-| `--adjust_coverage` | `true`  | Enable coverage estimation and read subsampling              |
-| `--max_coverage`    | `110`   | Target maximum coverage (x) for subsampling                  |
-| `--run_gtdbtk`      | `false` | Enable GTDB-Tk taxonomic classification                      |
-| `--run_rgi`         | `false` | Enable RGI antimicrobial resistance gene prediction          |
-| `--run_mobsuite`    | `false` | Enable MOB-suite plasmid detection and reconstruction        |
-| `--run_dnaapler`    | `true`  | Enable contig reorientation with Dnaapler (ONT only)         |
+| Parameter           | Default | Description                                                                         |
+| ------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `--run_kraken2`     | `true`  | Enable Kraken2 contamination detection (needs `--kraken2db`)                        |
+| `--adjust_coverage` | `true`  | Subsample Illumina reads above `--max_coverage` (Illumina only)                     |
+| `--max_coverage`    | `150`   | Maximum Illumina coverage (fastp bases ÷ Mash genome size) before subsampling to it |
+| `--run_gtdbtk`      | `false` | Enable GTDB-Tk taxonomic classification                                             |
+| `--run_rgi`         | `false` | Enable RGI antimicrobial resistance gene prediction                                 |
+| `--run_mobsuite`    | `false` | Enable MOB-suite plasmid detection and reconstruction                               |
+| `--run_dnaapler`    | `true`  | Enable contig reorientation with Dnaapler (ONT only)                                |
 
 #### Databases
 

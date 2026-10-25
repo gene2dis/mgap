@@ -72,7 +72,7 @@ workflow ILLUMINA {
     // SUBWORKFLOW: Coverage adjustment (optional)
     //
     if (params.adjust_coverage.toString().toBoolean()) {
-        COVERAGE_ADJUST ( FASTP.out.reads )
+        COVERAGE_ADJUST ( FASTP.out.reads, FASTP.out.json )
         ch_versions = ch_versions.mix(COVERAGE_ADJUST.out.versions)
         ch_reads_for_assembly = COVERAGE_ADJUST.out.reads
     } else {

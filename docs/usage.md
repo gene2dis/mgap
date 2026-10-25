@@ -568,16 +568,25 @@ database into memory as before.
 
 ### Coverage Adjustment
 
-The pipeline estimates genome coverage using [Mash](https://mash.readthedocs.io/en/latest/) and subsamples reads with [Seqtk](https://github.com/lh3/seqtk) if coverage exceeds the target threshold. This prevents over-assembly and reduces runtime for high-coverage datasets.
+For Illumina data, the pipeline estimates each sample's read coverage and subsamples the reads with
+[Seqtk](https://github.com/lh3/seqtk) to `--max_coverage` when the coverage is higher. Coverage is the number of bases
+fastp kept divided by the genome size, which [Mash](https://mash.readthedocs.io/en/latest/) estimates from the reads
+(`mash sketch -k 32 -m 3 -r`: k-mers seen at least three times, so sequencing errors are not counted as genome). In the
+[benchmark](benchmarks/coverage_2026-10-24.md) this was within 0.90–1.09× of the coverage over the finished assembly.
+The default of 150x is real base coverage: in a depth sweep, SPAdes assemblies stopped improving between 110x and
+150x, and samples at 237x and 244x assembled the same at 110x as at full depth. Deeper samples save some SPAdes time,
+but Seqtk itself takes several minutes on them.
 
-This step is **enabled by default** and applies to both Illumina (after FastP) and ONT Flye mode (after fastplong). It is automatically **skipped** for `--ont_assembler autocycler`, as Autocycler handles its own read subsampling internally.
+This step is **enabled by default** and applies to `--seq_type illumina` only: ONT reads are not subsampled (see
+[Flye assembly of deep ONT samples](#flye-assembly-of-deep-ont-samples)). If the coverage cannot be estimated, the
+sample keeps all its reads, with a warning.
 
 **Coverage adjustment parameters:**
 
-| Parameter           | Default | Description                                                                      |
-| ------------------- | ------- | -------------------------------------------------------------------------------- |
-| `--adjust_coverage` | `true`  | Enable coverage estimation and subsampling                                       |
-| `--max_coverage`    | `110`   | Target maximum coverage (x). Reads are subsampled if coverage exceeds this value |
+| Parameter           | Default | Description                                                                                                     |
+| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| `--adjust_coverage` | `true`  | Enable coverage estimation and subsampling (Illumina only)                                                      |
+| `--max_coverage`    | `150`   | Maximum coverage (x, fastp bases ÷ Mash genome size). Reads are subsampled to it if coverage exceeds this value |
 
 **Disable coverage adjustment:**
 
@@ -596,8 +605,8 @@ nextflow run gene2dis/mgap \
 nextflow run gene2dis/mgap \
     --input samplesheet.csv \
     --outdir results \
-    --seq_type ont \
-    --max_coverage 60 \
+    --seq_type illumina \
+    --max_coverage 100 \
     -profile docker
 ```
 

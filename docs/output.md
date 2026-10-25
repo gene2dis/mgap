@@ -20,6 +20,8 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   │                                #   (requires --run_kraken2 true and --kraken2db)
 │   │   ├── bracken/                     # Abundance re-estimation: *.tsv
 │   │   │                                #   (Illumina only; requires --brackendb)
+│   │   ├── mash/                        # Coverage estimate: *.msh, *.mash_stats, *.genome_size
+│   │   │                                #   (Illumina, --adjust_coverage true [default])
 │   │   └── subsampled/                  # Subsampled reads: *.fastq.gz
 │   │                                    #   (only when coverage > --max_coverage)
 │   ├── assemblies/
@@ -182,14 +184,14 @@ This step is optional and runs when `--run_kraken2` is enabled and `--kraken2db`
 
 - `<sample_id>/read_processing/mash/`
   - `*.msh`: Mash sketch file.
-  - `*.mash_stats`: Mash sketch statistics.
-  - `*.mash_coverage`: Estimated genome coverage.
+  - `*.mash_stats`: Mash sketch statistics (estimated genome size and k-mer coverage).
+  - `*.genome_size`: Mash's genome size estimate in bases, used for the coverage.
 - `<sample_id>/read_processing/subsampled/`
   - `*.fastq.gz`: Subsampled reads (only present when coverage exceeded `--max_coverage`).
 
 </details>
 
-[Mash](https://mash.readthedocs.io/en/latest/) estimates genome coverage from read sketches. If coverage exceeds the `--max_coverage` threshold (default: 110x), [Seqtk](https://github.com/lh3/seqtk) subsamples reads to the target coverage.
+[Mash](https://mash.readthedocs.io/en/latest/) estimates the genome size from the reads' k-mers; the read coverage is the number of bases fastp kept divided by that size. If coverage exceeds `--max_coverage` (default: 150x), [Seqtk](https://github.com/lh3/seqtk) subsamples the reads to that coverage.
 
 This step is optional and runs when `--adjust_coverage` is enabled (default: true), for `--seq_type illumina` only: ONT reads are not subsampled.
 
