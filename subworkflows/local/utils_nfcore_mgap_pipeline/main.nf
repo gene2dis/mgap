@@ -79,6 +79,16 @@ workflow PIPELINE_INITIALISATION {
     }
 
     //
+    // Warn about options that have no effect with the chosen inputs
+    //
+    if ((params.flye_asm_coverage || params.genome_size) && (params.seq_type != 'ont' || params.ont_assembler == 'autocycler')) {
+        log.warn("--flye_asm_coverage and --genome_size apply only to --seq_type ont with --ont_assembler flye: ignored.")
+    }
+    else if (params.genome_size && !params.flye_asm_coverage) {
+        log.warn("--genome_size is used only with --flye_asm_coverage: ignored.")
+    }
+
+    //
     // Warn about annotation steps skipped because their database is not provided
     //
     if (!params.checkm2_db) {

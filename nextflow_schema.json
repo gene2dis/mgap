@@ -436,6 +436,19 @@
                     "enum": ["pacbio-raw", "pacbio-corr", "pacbio-hifi", "nano-raw", "nano-corr", "nano-hq"],
                     "fa_icon": "fas fa-cogs"
                 },
+                "flye_asm_coverage": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Flye --asm-coverage: build the initial assembly from the longest reads up to this coverage (ONT, Flye only; all reads still go to the rest of Flye and to Medaka). Off by default.",
+                    "help_text": "For very deep samples (e.g. 40 for samples above ~150x). In the pipeline's benchmark --asm-coverage 40 made Flye 14-26 % faster but lost the 4-5 kb plasmids of one sample that assembling from all reads kept. Needs a genome size: --genome_size, or else an lrge estimate per sample.",
+                    "fa_icon": "fas fa-compress-alt"
+                },
+                "genome_size": {
+                    "type": "string",
+                    "pattern": "^[0-9]+(\\.[0-9]+)?[kKmMgG]?$",
+                    "description": "Expected genome size for Flye --asm-coverage, e.g. 5.5m (ONT, used only with --flye_asm_coverage). If unset, lrge estimates it per sample.",
+                    "fa_icon": "fas fa-ruler-horizontal"
+                },
                 "medaka_model": {
                     "type": "string",
                     "description": "Medaka polishing model. Should match the basecaller model used for the reads; see `medaka tools list_models` (medaka 1.11.3). If unset, medaka uses its built-in default.",

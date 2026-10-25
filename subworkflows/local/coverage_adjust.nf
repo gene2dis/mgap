@@ -1,6 +1,6 @@
 //
 // Estimate read coverage with Mash and subsample with Seqtk when it
-// exceeds params.max_coverage. Used by both the Illumina and ONT paths.
+// exceeds params.max_coverage. Illumina only (ONT reads are not subsampled).
 //
 
 include { MASH_SKETCH } from '../../modules/local/mash/sketch/main'

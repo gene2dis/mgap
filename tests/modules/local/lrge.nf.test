@@ -1,0 +1,38 @@
+nextflow_process {
+
+    name "Test LRGE module"
+    script "../../../modules/local/lrge/main.nf"
+    process "LRGE"
+
+    tag "modules"
+    tag "modules_local"
+    tag "lrge"
+
+    test("LRGE - estimate genome size - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:true ],
+                    file("${baseDir}/tests/data/stub_inputs/reads.fastq.gz", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.genome_size[0][1]).text.trim() == '5000000' },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

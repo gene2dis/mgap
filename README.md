@@ -36,10 +36,9 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 #### ONT Assembly (Flye mode, default)
 
 1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
-2. Optional coverage estimation ([`Mash`](https://mash.readthedocs.io/en/latest/)) and reduction ([`Seqtk`](https://github.com/lh3/seqtk))
-3. Genome assembly ([`Flye`](https://github.com/fenderglass/Flye))
-4. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
-5. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
+2. Genome assembly from all reads ([`Flye`](https://github.com/fenderglass/Flye)); optionally from the longest reads up to `--flye_asm_coverage`, with the genome size from `--genome_size` or [`lrge`](https://github.com/mbhall88/lrge)
+3. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
+4. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
 
 #### ONT Assembly (Autocycler mode)
 
@@ -212,17 +211,19 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 #### ONT read processing and assembly
 
-| Parameter                               | Default                                        | Description                                                                                        |
-| --------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `--ont_assembler`                       | `flye`                                         | `flye` (Flye + Medaka) or `autocycler` (consensus of several assemblers)                           |
-| `--fastplong_qualified_quality`         | `15`                                           | Minimum base quality for a base to be qualified (fastplong)                                        |
-| `--fastplong_unqualified_percent_limit` | `40`                                           | Maximum percentage of unqualified bases per read (fastplong)                                       |
-| `--fastplong_min_read_length`           | `1000`                                         | Minimum read length (fastplong)                                                                    |
-| `--flye_mode`                           | `nano-hq`                                      | Flye read mode: `nano-hq`, `nano-raw`, `nano-corr`, `pacbio-raw`, `pacbio-corr`, `pacbio-hifi`     |
-| `--medaka_model`                        | `null`                                         | Medaka model matching the basecaller model (`medaka tools list_models`); medaka's default if unset |
-| `--autocycler_assemblers`               | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Assemblers for Autocycler; also supported: `canu`, `myloasm`, `plassembler`                        |
-| `--autocycler_read_type`                | `ont_r10`                                      | Read type for the Autocycler assembler helper: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`    |
-| `--autocycler_max_contigs`              | `50`                                           | Maximum contigs per assembly in the Autocycler compress and cluster steps                          |
+| Parameter                               | Default                                        | Description                                                                                                                           |
+| --------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `--ont_assembler`                       | `flye`                                         | `flye` (Flye + Medaka) or `autocycler` (consensus of several assemblers)                                                              |
+| `--fastplong_qualified_quality`         | `15`                                           | Minimum base quality for a base to be qualified (fastplong)                                                                           |
+| `--fastplong_unqualified_percent_limit` | `40`                                           | Maximum percentage of unqualified bases per read (fastplong)                                                                          |
+| `--fastplong_min_read_length`           | `1000`                                         | Minimum read length (fastplong)                                                                                                       |
+| `--flye_mode`                           | `nano-hq`                                      | Flye read mode: `nano-hq`, `nano-raw`, `nano-corr`, `pacbio-raw`, `pacbio-corr`, `pacbio-hifi`                                        |
+| `--flye_asm_coverage`                   | `null`                                         | Flye `--asm-coverage` for very deep samples (e.g. `40`): first assembly step from the longest reads up to this coverage; off if unset |
+| `--genome_size`                         | `null`                                         | Genome size for `--flye_asm_coverage`, e.g. `5.5m`; estimated per sample with lrge if unset                                           |
+| `--medaka_model`                        | `null`                                         | Medaka model matching the basecaller model (`medaka tools list_models`); medaka's default if unset                                    |
+| `--autocycler_assemblers`               | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Assemblers for Autocycler; also supported: `canu`, `myloasm`, `plassembler`                                                           |
+| `--autocycler_read_type`                | `ont_r10`                                      | Read type for the Autocycler assembler helper: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`                                       |
+| `--autocycler_max_contigs`              | `50`                                           | Maximum contigs per assembly in the Autocycler compress and cluster steps                                                             |
 
 #### RGI
 

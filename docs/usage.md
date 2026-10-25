@@ -161,6 +161,30 @@ nextflow run gene2dis/mgap -params-file my_run_params.yaml -profile docker
 
 Any parameters you leave out of the YAML file fall back to the pipeline defaults defined in `nextflow.config`. Values passed on the command line (e.g. `--outdir results_v2`) override values in the params file.
 
+### Flye assembly of deep ONT samples
+
+ONT reads are not subsampled: Flye and Medaka use all reads that pass fastplong (Mash cannot estimate ONT coverage, so
+the Illumina coverage step does not apply). For very deep samples, `--flye_asm_coverage` makes Flye build its first
+assembly step (disjointigs) from the longest reads up to that coverage; the later Flye steps and Medaka still use all
+reads. Flye then needs the genome size: give it with `--genome_size` (e.g. `5.5m`), or leave it unset and the pipeline
+estimates it per sample with [lrge](https://github.com/mbhall88/lrge) 1.0.0 (1–2 minutes, within 10 % of the assembled
+size in the [benchmark](benchmarks/coverage_2026-10-24.md)), published in `<sample>/assemblies/lrge/`.
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --flye_asm_coverage 40 \
+    -profile docker
+```
+
+> [!WARNING]
+> In the benchmark, `--flye_asm_coverage 40` made Flye 14–26 % faster on samples at 81x and 251x but lost all of
+> one sample's 3.9–5.2 kb plasmids, which assembling from all reads kept. It is off by default.
+
+Both parameters apply only to `--ont_assembler flye`; Autocycler estimates the genome size and subsamples reads itself.
+
 ### Autocycler Consensus Assembly (ONT)
 
 For ONT data, the pipeline supports an alternative assembler: [Autocycler](https://github.com/rrwick/Autocycler) (v0.8.0). Autocycler generates consensus long-read assemblies by running multiple assemblers on subsampled reads and combining the results, producing higher-quality assemblies than any single assembler alone.
@@ -215,8 +239,6 @@ nextflow run gene2dis/mgap \
 **Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
 
 > **Note:** The default assembler set excludes slow assemblers (Canu) and those requiring external databases (Plassembler). Add them explicitly via `--autocycler_assemblers` if needed.
-
-> **Note:** When using `--ont_assembler autocycler`, the coverage adjustment step (Mash + Seqtk) is automatically skipped, as Autocycler handles its own read subsampling internally.
 
 > **Note:** Autocycler steps tolerate failures per sample: an assembler task killed for lack of memory is retried once with twice the memory, and an assembler that still fails (or fails for any other reason) is reported as an ignored error and left out of the consensus. The genome size step (Raven on all reads, so its memory grows with read depth) is retried twice, up to three times its memory. A sample whose assemblers all fail, or with no cluster that passes Autocycler's QC, gets a warning and no assembly; the other samples continue.
 

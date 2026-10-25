@@ -26,6 +26,8 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   ├── *.scaffolds.fa.gz            # SPAdes output (--seq_type illumina)
 │   │   ├── flye/                        # Flye assembly: *.fasta.gz, *.gfa.gz, *.txt, *.log
 │   │   │                                #   (ONT, --ont_assembler flye)
+│   │   ├── lrge/                        # Genome size estimate for Flye: *.genome_size.txt
+│   │   │                                #   (ONT, --flye_asm_coverage without --genome_size)
 │   │   ├── medaka/                      # Medaka-polished assembly: *.fasta
 │   │   │                                #   (ONT, --ont_assembler flye)
 │   │   ├── autocycler/                  # Autocycler consensus assembly
@@ -189,7 +191,7 @@ This step is optional and runs when `--run_kraken2` is enabled and `--kraken2db`
 
 [Mash](https://mash.readthedocs.io/en/latest/) estimates genome coverage from read sketches. If coverage exceeds the `--max_coverage` threshold (default: 110x), [Seqtk](https://github.com/lh3/seqtk) subsamples reads to the target coverage.
 
-This step is optional and runs when `--adjust_coverage` is enabled (default: true). It is skipped when using `--ont_assembler autocycler`, as Autocycler handles its own read subsampling.
+This step is optional and runs when `--adjust_coverage` is enabled (default: true), for `--seq_type illumina` only: ONT reads are not subsampled.
 
 ---
 
@@ -226,9 +228,12 @@ This step runs for `--seq_type illumina` only.
 
 </details>
 
-[Flye](https://github.com/fenderglass/Flye) performs _de novo_ assembly of long reads. The assembly mode is controlled by `--flye_mode` (default: `nano-hq`).
+[Flye](https://github.com/fenderglass/Flye) performs _de novo_ assembly of long reads. The assembly mode is controlled by `--flye_mode` (default: `nano-hq`). Flye uses all reads that pass fastplong; with `--flye_asm_coverage` its first step (disjointigs) uses only the longest reads up to that coverage.
 
 This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
+
+- `<sample_id>/assemblies/lrge/`
+  - `*.genome_size.txt`: Genome size in bases estimated by [lrge](https://github.com/mbhall88/lrge) from the fastplong reads, passed to Flye as `--genome-size`. Only with `--flye_asm_coverage` and no `--genome_size`.
 
 ### Medaka
 

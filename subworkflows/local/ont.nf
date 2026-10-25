@@ -3,7 +3,9 @@
     SUBWORKFLOW: ONT
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Oxford Nanopore Technology (ONT) read processing and assembly subworkflow.
-    Includes quality filtering, adapter removal, coverage adjustment, and assembly.
+    Includes quality filtering, adapter removal, and assembly. Reads are not
+    reduced before assembly (Flye can assemble deep samples from a subset of
+    reads with --flye_asm_coverage instead).
 ----------------------------------------------------------------------------------------
 */
 
@@ -21,13 +23,9 @@ include { FLYE                       } from '../../modules/nf-core/flye/main'
 //
 // MODULE: Local modules (no nf-core equivalent yet)
 //
+include { LRGE         } from '../../modules/local/lrge/main'
 include { MEDAKA       } from '../../modules/local/medaka/main'
 include { DNAAPLER     } from '../../modules/local/dnaapler/main'
-
-//
-// SUBWORKFLOW: Local subworkflows
-//
-include { COVERAGE_ADJUST } from './coverage_adjust'
 
 //
 // MODULE: Autocycler modules for consensus long-read assembly
@@ -75,7 +73,7 @@ workflow ONT {
 
         //
         // AUTOCYCLER CONSENSUS ASSEMBLY PIPELINE
-        // Autocycler handles its own read subsampling — skip coverage adjustment
+        // Autocycler handles its own read subsampling
         //
 
         //
@@ -195,14 +193,38 @@ workflow ONT {
         //
 
         //
-        // SUBWORKFLOW: Coverage adjustment (optional)
+        // All reads go to Flye and Medaka, with no Mash/Seqtk reduction: Mash
+        // cannot estimate ONT coverage (docs/benchmarks/coverage_2026-10-24.md).
+        // Optional --flye_asm_coverage (off by default; Flye --asm-coverage 40
+        // lost 4-5 kb plasmids that all reads kept) makes Flye build its first
+        // disjointigs from the longest reads up to that coverage, which needs the
+        // genome size: --genome_size, or else an lrge estimate per sample. The
+        // size reaches FLYE's ext.args through meta.genome_size.
         //
-        if (params.adjust_coverage.toString().toBoolean()) {
-            COVERAGE_ADJUST ( FASTPLONG.out.reads )
-            ch_versions = ch_versions.mix(COVERAGE_ADJUST.out.versions)
-            ch_reads_for_assembly = COVERAGE_ADJUST.out.reads
+        if (params.flye_asm_coverage) {
+            if (params.genome_size) {
+                ch_genome_size = FASTPLONG.out.reads.map { meta, _reads -> [ meta, params.genome_size.toString() ] }
+            } else {
+                LRGE ( FASTPLONG.out.reads )
+                ch_versions = ch_versions.mix(LRGE.out.versions.first())
+                // lrge writes one integer (bases); anything else runs Flye without --asm-coverage
+                ch_genome_size = LRGE.out.genome_size
+                    .map { meta, estimate ->
+                        def bases = estimate.text.trim()
+                        if (!(bases ==~ /[1-9][0-9]*/)) {
+                            log.warn("Sample '${meta.id}': lrge gave no genome size estimate ('${bases}') - running Flye without --asm-coverage.")
+                            return [ meta, null ]
+                        }
+                        [ meta, bases ]
+                    }
+            }
+            ch_flye_input = FASTPLONG.out.reads
+                .join(ch_genome_size)
+                .map { meta, reads, genome_size ->
+                    [ genome_size ? meta + [ genome_size: genome_size ] : meta, reads ]
+                }
         } else {
-            ch_reads_for_assembly = FASTPLONG.out.reads
+            ch_flye_input = FASTPLONG.out.reads
         }
 
         //
@@ -210,15 +232,18 @@ workflow ONT {
         // nf-core flye expects mode with -- prefix (e.g., --nano-hq)
         //
         FLYE (
-            ch_reads_for_assembly,
+            ch_flye_input,
             "--${params.flye_mode}"
         )
         ch_versions = ch_versions.mix(FLYE.out.versions.first())
 
         //
         // MODULE: Polish assembly with Medaka
+        // genome_size is dropped from meta so the assembly joins the reads again
         //
-        ch_medaka_input = ch_reads_for_assembly.join(FLYE.out.fasta)
+        ch_flye_fasta = FLYE.out.fasta
+            .map { meta, fasta -> [ meta.findAll { key, _value -> key != 'genome_size' }, fasta ] }
+        ch_medaka_input = FASTPLONG.out.reads.join(ch_flye_fasta)
         MEDAKA ( ch_medaka_input )
         ch_versions = ch_versions.mix(MEDAKA.out.versions.first())
 

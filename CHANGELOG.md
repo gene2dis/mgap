@@ -28,6 +28,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Single-end Illumina support (detected from the samplesheet)
 - Run-level MultiQC report aggregating fastp/fastplong, Kraken2, QUAST and Bakta results (`--multiqc_config`, `--multiqc_title`, `--multiqc_logo`)
 - `--medaka_model` parameter for basecaller-matched Medaka polishing
+- `--flye_asm_coverage` (off by default) for very deep ONT samples: Flye builds its first assembly step from the longest reads up to that coverage (`--asm-coverage`), with the genome size from `--genome_size` or, if unset, a per-sample estimate by the new local `LRGE` module (lrge 1.0.0, `quay.io/biocontainers/lrge:1.0.0--hf1b6044_0`; published in `<sample>/assemblies/lrge/`). In the benchmark (`docs/benchmarks/coverage_2026-10-24.md`) `--asm-coverage 40` made Flye 14–26 % faster but lost a sample's 3.9–5.2 kb plasmids, so it stays opt-in
 - `--brackendb` is now actually used by Bracken (falls back to the Kraken2 DB)
 - Per-sample cross-validation of samplesheet columns against `--seq_type` with clear error messages
 - Launch-time warnings for annotation steps skipped because their database was not provided
@@ -58,7 +59,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
   - `seqtk/sample`: Updated module with standard config
 - CheckM2, Bakta, AMRFinderPlus and geNomad now run only when their database parameter is set (previously crashed on unset databases)
 - GTDB-Tk receives genomes via a batchfile, so it works for any assembly file extension (the `gtdbtk_extension` parameter is gone)
-- The Mash/Seqtk coverage-adjustment logic is shared by the Illumina and ONT paths (`COVERAGE_ADJUST` subworkflow) and tolerates unparseable coverage estimates
+- The Mash/Seqtk coverage-adjustment logic is in the `COVERAGE_ADJUST` subworkflow (Illumina only) and tolerates unparseable coverage estimates
+- ONT reads are no longer subsampled before Flye: the Flye path does not run `COVERAGE_ADJUST`, so `--adjust_coverage` and `--max_coverage` apply to Illumina only. Mash cannot estimate ONT coverage (genome sizes of 30–115 Mb and 12–15x for samples at 81x and 251x in the benchmark), so ONT reads were in practice never reduced; outputs do not change
 - The Autocycler container image is pinned by digest; assembler-failure tolerance moved to configuration with loud reporting when all assemblers fail for a sample
 - `software_versions.yml` is valid YAML listing each tool once (MultiQC included), plus pipeline/Nextflow versions; all but MultiQC's own appear as a Software Versions section in the MultiQC report (grouped by process name, so tools MultiQC also detects are listed once)
 - `AMRFINDERPLUS_RUN` reads the tool and database versions once, no longer emits the unused `VER`/`DBVER` env outputs and no longer writes a file named `stdout`
