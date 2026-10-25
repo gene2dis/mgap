@@ -28,8 +28,9 @@
                     },
                     "fastplong": {
                         "branch": "master",
-                        "git_sha": "a331ecfd1aa48b2b2298aab23bb4516c800e410b",
-                        "installed_by": ["modules"]
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
+                        "installed_by": ["modules"],
+                        "patch": "modules/nf-core/fastplong/fastplong.diff"
                     },
                     "flye": {
                         "branch": "master",

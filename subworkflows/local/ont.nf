@@ -49,7 +49,13 @@ workflow ONT {
     // Replaces NANOQ + Porechop ABI with a single long-read preprocessing step
     //
     FASTPLONG ( ch_reads, [], false, false )
-    ch_versions = ch_versions.mix(FASTPLONG.out.versions.first())
+    // nf-core fastplong reports its version as an eval tuple, not a versions.yml
+    ch_versions = ch_versions.mix(
+        FASTPLONG.out.versions_fastplong
+            .first()
+            .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
+            .collectFile(name: 'fastplong_versions.yml')
+    )
     ch_reports = FASTPLONG.out.json.map { _meta, json -> json }
 
     //

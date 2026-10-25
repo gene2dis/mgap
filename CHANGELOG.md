@@ -128,6 +128,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Nextflow: `>=26.04.0` (minimum version; the version the pipeline is developed and CI-tested on)
 - nf-schema: `2.2.0` (replacing nf-validation)
 - Autocycler suite image: `microds/autocycler:0.8.0` (digest-pinned; see `docs/usage.md` for the full version list)
+- fastplong: `0.3.0` → `0.7.1` (`biocontainers/fastplong:0.7.1`, bioconda build `h43da1c4_0`; biocontainers publishes 0.7.1 only under this tag). nf-core module updated (0.4.1 upstream, now reporting its version through a topic tuple) and patched to 0.7.1 (`modules/nf-core/fastplong/fastplong.diff`). Filter thresholds unchanged; in the benchmark 0.7.1 kept the same bases within 0.1 point on current R10.4.1 sup data and 0.3 points fewer on an older R10.4 sample
 
 ## v1.0dev - [date]
 
