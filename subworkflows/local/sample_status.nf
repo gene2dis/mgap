@@ -67,6 +67,7 @@ workflow SAMPLE_STATUS {
 
     main:
     def columns = sampleStatusColumns()
+    def stage_order = [ 'read_qc', 'assembly', 'polishing', 'annotation_input' ]
 
     // Gathered by sample ID (steps add keys to meta, such as single_end), as tagged
     // parts: join(remainder: true) pads nothing for an empty channel (contig mode
@@ -84,10 +85,13 @@ workflow SAMPLE_STATUS {
             def read_stats = parts.findResult { part -> part.read_stats } ?: [:]
             def outcomes = parts.findResults { part -> part.outcome }
             def assembly_stats = parts.findResult { part -> part.assembly_stats }
-            def notes = parts.findResults { part -> part.note }
+            def notes = parts.findResults { part -> part.note }.sort()
             // an assembly step that returned nothing without a recorded reason
             def unrecorded = [ stage: 'assembly', status: 'failed', reason: 'no assembly returned' ]
-            def outcome = outcomes ? outcomes[0] : (assembly_stats ? [ stage: 'annotation', status: 'pass', reason: '' ] : unrecorded)
+            // groupTuple order varies between runs: with more than one outcome the
+            // earliest stage decides
+            def first_outcome = outcomes.min { recorded -> stage_order.indexOf(recorded.stage) }
+            def outcome = first_outcome ?: (assembly_stats ? [ stage: 'annotation', status: 'pass', reason: '' ] : unrecorded)
             def reason = ([ outcome.reason ] + notes).findAll { text -> text }.join('; ')
             [ sample: id, seq_type: seq_type ] + read_stats + (assembly_stats ?: [:]) + outcome + [ reason: reason ]
         }
