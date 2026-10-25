@@ -9,6 +9,34 @@ nextflow_process {
     tag "mash"
     tag "mash/sketch"
 
+    test("MASH_SKETCH - estimate genome size") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test', single_end:false ],
+                    [
+                        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_1.fastq.gz', checkIfExists: true),
+                        file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/illumina/fastq/test1_2.fastq.gz', checkIfExists: true)
+                    ]
+                ]
+                """
+            }
+        }
+
+        then {
+            // one integer (bases) parsed from Mash's 'Estimated genome size' line
+            def genome_size = path(process.out.genome_size[0][1]).text
+            assertAll(
+                { assert process.success },
+                { assert genome_size ==~ /[1-9][0-9]*\n/ },
+                { assert path(process.out.stats[0][1]).text.contains('Estimated genome size') }
+            )
+        }
+
+    }
+
     test("MASH_SKETCH - estimate genome size - stub") {
 
         tag "stub"

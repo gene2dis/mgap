@@ -31,7 +31,7 @@ process MASH_SKETCH {
 
     # Mash's genome size estimate from the read k-mers (bases); 0 when the
     # line is missing so downstream can detect the failure
-    awk '/Estimated genome size/ {printf "%.0f\n", \$4; found=1} END {if (!found) print 0}' ${prefix}.mash_stats > ${prefix}.genome_size
+    awk '/Estimated genome size/ {printf "%.0f\\n", \$4; found=1} END {if (!found) print 0}' ${prefix}.mash_stats > ${prefix}.genome_size
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
