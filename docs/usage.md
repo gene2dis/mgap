@@ -294,6 +294,25 @@ singularity build autocycler.sif docker://microds/autocycler@sha256:48ca6289d9cc
 | `--fastplong_unqualified_percent_limit` | `40`    | Maximum percentage of unqualified bases allowed per read (0–100)                |
 | `--fastplong_min_read_length`           | `1000`  | Minimum read length after filtering. Shorter reads are discarded                |
 
+### Sample QC gate and failed samples
+
+One sample with too few reads or a failed assembly no longer stops the run (issues #14, #3 and #2):
+
+- **Too few reads.** After fastp (Illumina) or fastplong (ONT), a sample with fewer bases than `--min_bases` (default `50000000`, about 10x of a 5 Mb genome) is _skipped_: it keeps its fastp/fastplong report, and Kraken2/Bracken, coverage adjustment, assembly and annotation do not run for it. Set `--min_bases 0` to turn the check off. The `test` profile sets `--min_bases 5000000`: its tiny test reads keep about 11 Mb after fastp.
+- **Assembly failures.** SPAdes, Flye and Medaka retry a task once when it ran out of memory (with the next attempt's memory, as set in `conf/base.config`), and otherwise ignore the failure: the sample is recorded as _failed_ and the other samples continue. Out of memory is recognised from the exit status (137 and the other kill signals; from SPAdes 12 when a step reaches the `--memory` limit it is given from the task's memory, the usual case, and 247 when a step is killed), from Flye's "Looks like the system ran out of memory" message, and for Medaka from the task's cgroup out-of-memory counter (cgroup v2 hosts; on cgroup v1 a Medaka out-of-memory kill is not recognised, so it is not retried). Autocycler samples with no assembly or no QC-pass cluster are recorded the same way.
+- **QUAST failures** (for example exit status 4 when no contig is at least 500 bp, in a highly fragmented assembly) are a warning: the sample is still annotated, without QUAST statistics.
+- A sample with no contig of at least `--min_contig_length` is recorded as failed at `annotation_input`.
+
+Every sample gets a row in `<outdir>/pipeline_info/sample_status.tsv` (pass, skipped or failed, with the stage, the reason and its read and assembly numbers; see [docs/output.md](output.md#pipeline-information)), and the completion log prints one summary line, for example:
+
+```console
+Samples: 4 (2 pass, 1 skipped, 1 failed) - skipped: S2 (read_qc); failed: S3 (assembly). Details: results/pipeline_info/sample_status.tsv
+```
+
+A QUAST failure leaves the sample as _pass_, so the line counts it separately, out of the samples with an assembly: `QUAST failed: 3 of 3 samples with an assembly (S1, S2, S4)`. QUAST failing for every sample usually means a problem with QUAST itself (its container or environment), not with the assemblies.
+
+The run exits 0 when samples were skipped or failed. It fails only when every sample that went into assembly failed there (samples skipped by `--min_bases` do not count; a run where all samples were skipped exits 0). The exit status and work directory of a failed task are in `.nextflow.log` (`NOTE: Process ... terminated with an error exit status (N) -- Error is ignored`).
+
 ### Annotation Parameters
 
 | Parameter             | Default | Description                                                                                                                                                               |

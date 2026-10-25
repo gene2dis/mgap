@@ -1,0 +1,218 @@
+nextflow_function {
+
+    name "Test sample status functions"
+    script "../../subworkflows/local/sample_status.nf"
+
+    tag "functions"
+    tag "sample_status"
+
+    // Reports from the nf-core B. fragilis test reads (fastp 1.0.1 and fastplong
+    // 0.7.1 --length_required 1000), trimmed to the fields the pipeline reads
+
+    test("readQcStats - fastp report") {
+
+        function "readQcStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/read_qc/illumina.fastp.json", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == [ input_reads: 100000, input_bases: 12600000, input_mean_length: 126, input_n50: null, filtered_reads: 99594, filtered_bases: 12548238 ] }
+            )
+        }
+    }
+
+    test("readQcStats - fastplong report, N50 from the length histogram") {
+
+        function "readQcStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/read_qc/ont.fastplong.json", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                // true N50 of these reads: 63,032 bp
+                { assert function.result == [ input_reads: 1000, input_bases: 33343943, input_mean_length: 33344, input_n50: 62494, filtered_reads: 938, filtered_bases: 33311690 ] }
+            )
+        }
+    }
+
+    test("readQcStats - empty report gives no numbers") {
+
+        function "readQcStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/fastp/empty.fastp.json", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result.values().every { it == null } }
+            )
+        }
+    }
+
+    test("assemblyStats - seqkit stats of the assembly and the annotation FASTA") {
+
+        function "assemblyStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/seqkit_filter/contigs.filter_stats.tsv", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == [ assembly_contigs: 3, assembly_length: 3499, assembly_n50: 1000, annotation_contigs: 2, annotation_length: 2500 ] }
+            )
+        }
+    }
+
+    test("assemblyStats - fragmented assembly with no contig kept") {
+
+        function "assemblyStats"
+
+        when {
+            function {
+                """
+                input[0] = file("${baseDir}/tests/data/fragmented/fragmented.filter_stats.tsv", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == [ assembly_contigs: 400, assembly_length: 120000, assembly_n50: 300, annotation_contigs: 0, annotation_length: 0 ] }
+            )
+        }
+    }
+
+    test("sampleStatusSummary - QUAST failed for every sample with an assembly") {
+
+        function "sampleStatusSummary"
+
+        when {
+            params {
+                outdir = "results"
+            }
+            function {
+                """
+                input[0] = [
+                    [ sample: 'S1', status: 'pass', stage: 'annotation', notes: [ 'QUAST failed' ] ],
+                    [ sample: 'S2', status: 'failed', stage: 'annotation_input', notes: [ 'QUAST failed' ] ],
+                    [ sample: 'S3', status: 'skipped', stage: 'read_qc', notes: [] ],
+                    [ sample: 'S4', status: 'failed', stage: 'assembly', notes: [] ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == 'Samples: 4 (1 pass, 1 skipped, 2 failed) - skipped: S3 (read_qc); failed: S2 (annotation_input), S4 (assembly); QUAST failed: 2 of 2 samples with an assembly (S1, S2). Details: results/pipeline_info/sample_status.tsv' }
+            )
+        }
+    }
+
+    test("sampleStatusSummary - every sample passed without notes") {
+
+        function "sampleStatusSummary"
+
+        when {
+            params {
+                outdir = "results"
+            }
+            function {
+                """
+                input[0] = [ [ sample: 'S1', status: 'pass', stage: 'annotation', notes: [] ] ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == 'Samples: 1 (1 pass, 0 skipped, 0 failed). Details: results/pipeline_info/sample_status.tsv' }
+            )
+        }
+    }
+
+    test("assemblyFailure - every attempted sample failed at assembly or polishing") {
+
+        function "assemblyFailure"
+
+        when {
+            params {
+                outdir = "results"
+            }
+            function {
+                """
+                input[0] = [
+                    [ sample: 'S1', seq_type: 'ont', status: 'failed', stage: 'assembly' ],
+                    [ sample: 'S2', seq_type: 'ont', status: 'failed', stage: 'polishing' ],
+                    [ sample: 'S3', seq_type: 'ont', status: 'skipped', stage: 'read_qc' ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == 'Every sample that went into assembly failed there (2) - see results/pipeline_info/sample_status.tsv.' }
+            )
+        }
+    }
+
+    test("assemblyFailure - no failure when one attempted sample has an assembly") {
+
+        function "assemblyFailure"
+
+        when {
+            params {
+                outdir = "results"
+            }
+            function {
+                """
+                // S2 failed after assembly (no contig >= --min_contig_length), so it has one
+                input[0] = [
+                    [ sample: 'S1', seq_type: 'illumina', status: 'skipped', stage: 'read_qc' ],
+                    [ sample: 'S2', seq_type: 'illumina', status: 'failed', stage: 'annotation_input' ],
+                    [ sample: 'S3', seq_type: 'illumina', status: 'failed', stage: 'assembly' ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == null }
+            )
+        }
+    }
+}

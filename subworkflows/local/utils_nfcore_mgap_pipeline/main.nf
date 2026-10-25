@@ -9,6 +9,8 @@
 
 include { paramsSummaryLog       } from 'plugin/nf-schema'
 include { validateParameters     } from 'plugin/nf-schema'
+include { sampleStatusSummary    } from '../sample_status'
+include { assemblyFailure        } from '../sample_status'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -129,11 +131,23 @@ workflow PIPELINE_COMPLETION {
 
     take:
     monochrome_logs   // boolean: Disable coloured log outputs
+    sample_status     // channel: [ [ map ] ] sample_status.tsv rows, once the table is written
 
     main:
+    // Filled when the status table is written, printed on completion. The D-7
+    // check that fails the run is in the same callback, after the line is
+    // filled, so a failed run still prints it
+    def status_summary = []
+    sample_status.subscribe { rows ->
+        status_summary << sampleStatusSummary(rows)
+        def failure = assemblyFailure(rows)
+        if (failure) {
+            error(failure)
+        }
+    }
 
     workflow.onComplete {
-        completionSummary(monochrome_logs)
+        completionSummary(monochrome_logs, status_summary)
     }
 
     workflow.onError {
@@ -228,13 +242,14 @@ def logColours(monochrome_logs) {
 //
 // Print pipeline completion summary
 //
-def completionSummary(monochrome_logs) {
+def completionSummary(monochrome_logs, status_summary) {
     Map colors = logColours(monochrome_logs)
     if (workflow.success) {
         log.info "${colors.green}Pipeline completed successfully!${colors.reset}"
     } else {
         log.info "${colors.red}Pipeline completed with errors.${colors.reset}"
     }
+    status_summary.each { line -> log.info line }
     log.info ""
     log.info "Results are available in: ${params.outdir}"
     log.info "Execution time: ${workflow.duration}"

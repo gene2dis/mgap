@@ -53,7 +53,8 @@ process SEQKIT_FILTER {
     """
     echo ">${prefix}_stub" > ${prefix}.fasta
     echo "ACGT" >> ${prefix}.fasta
-    touch ${prefix}.filter_stats.tsv
+    printf 'file\\tformat\\ttype\\tnum_seqs\\tsum_len\\tmin_len\\tavg_len\\tmax_len\\tQ1\\tQ2\\tQ3\\tsum_gap\\tN50\\n' > ${prefix}.filter_stats.tsv
+    printf '%s\\tFASTA\\tDNA\\t1\\t4\\t4\\t4.0\\t4\\t4\\t4\\t4\\t0\\t4\\n' input ${prefix}.fasta >> ${prefix}.filter_stats.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

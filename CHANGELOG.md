@@ -33,6 +33,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Per-sample cross-validation of samplesheet columns against `--seq_type` with clear error messages
 - Launch-time warnings for annotation steps skipped because their database was not provided
 - Stub blocks in every local module (fast `-stub` runs cover all three input modes)
+- Sample QC gate (issues #14, #3, #2; D-7): samples with fewer than `--min_bases` (default 50,000,000) bases after fastp/fastplong skip Kraken2/Bracken, assembly and annotation; SPAdes, Flye and Medaka retry an out-of-memory failure once and then ignore it, so one failed sample no longer stops the run; QUAST failures are a warning. `pipeline_info/sample_status.tsv` lists every sample as pass, skipped or failed with the stage, reason and read and assembly numbers (reads, bases, mean and, for ONT, approximate N50 read length from the fastp/fastplong reports; contigs, length and N50 from `seqkit stats`), and the completion log prints a summary line (with how many samples with an assembly QUAST failed for). The run exits 0 unless every sample that went into assembly failed
 
 ### `Changed`
 
@@ -87,6 +88,8 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 
 ### `Fixed`
 
+- A run no longer stops when one sample has too few reads to assemble (SPAdes exit 21, "Invalid kmer coverage histogram", issue #3) or when QUAST finds no contig of at least 500 bp in a highly fragmented assembly (exit 4, issue #2); with QUAST failed for every sample in contig mode without Bakta, MultiQC (which then has no report to read and fails) is skipped with a warning
+- Medaka's out-of-memory kills are retried: `medaka_consensus` exits 1 when a step is killed, so the module now exits 137 when the task's cgroup counted an out-of-memory kill
 - RGI's version is recorded in `software_versions.yml` (it was empty: the container's busybox `grep` has no `-P`)
 - Annotation tools no longer receive gzipped assemblies: without `--bakta_db`, Kleborate, sccmec, MOB-suite and geNomad got SPAdes' `.fa.gz` (or gzipped samplesheet contigs) directly. The assembly is decompressed once by `SEQKIT_FILTER`; SISTR's own gunzip step is removed
 - `AMRFINDERPLUS_RUN` passes `--organism` only when the given AMRFinderPlus database lists it, and otherwise runs without it with a warning, instead of failing the sample (e.g. an older `--amrfinder_db`)

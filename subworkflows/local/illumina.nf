@@ -23,6 +23,8 @@ include { SPADES } from '../../modules/nf-core/spades/main'
 // SUBWORKFLOW: Local subworkflows
 //
 include { COVERAGE_ADJUST } from './coverage_adjust'
+include { READ_QC_GATE    } from './sample_status'
+include { missingOutputs  } from './sample_status'
 
 workflow ILLUMINA {
 
@@ -47,11 +49,18 @@ workflow ILLUMINA {
     ch_reports = FASTP.out.json.map { _meta, json -> json }
 
     //
+    // SUBWORKFLOW: samples with fewer than --min_bases bases after fastp stop here
+    //
+    READ_QC_GATE ( FASTP.out.reads, FASTP.out.json, 'fastp' )
+    ch_qc_reads = READ_QC_GATE.out.reads
+    ch_qc_json  = READ_QC_GATE.out.json
+
+    //
     // MODULE: Run Kraken2/Bracken for contamination detection (optional)
     //
     if (params.run_kraken2.toString().toBoolean() && params.kraken2db) {
         KRAKEN2 (
-            FASTP.out.reads,
+            ch_qc_reads,
             file(params.kraken2db, checkIfExists: true),
             false,
             false
@@ -77,7 +86,7 @@ workflow ILLUMINA {
             error("--bracken_read_length ${bracken_override}: the Bracken database ${bracken_db} has no database${bracken_override}mers.kmer_distrib (it has read lengths ${bracken_lengths.join(', ')}).")
         }
         ch_bracken_input = KRAKEN2.out.report
-            .join(FASTP.out.json)
+            .join(ch_qc_json)
             .map { meta, report, fastp_json ->
                 def read_length = bracken_override ?: brackenReadLength(meta.id, fastpReadCycles(fastp_json), bracken_lengths)
                 [ meta + [ bracken_read_length: read_length ], report ]
@@ -94,11 +103,11 @@ workflow ILLUMINA {
     // SUBWORKFLOW: Coverage adjustment (optional)
     //
     if (params.adjust_coverage.toString().toBoolean()) {
-        COVERAGE_ADJUST ( FASTP.out.reads, FASTP.out.json )
+        COVERAGE_ADJUST ( ch_qc_reads, ch_qc_json )
         ch_versions = ch_versions.mix(COVERAGE_ADJUST.out.versions)
         ch_reads_for_assembly = COVERAGE_ADJUST.out.reads
     } else {
-        ch_reads_for_assembly = FASTP.out.reads
+        ch_reads_for_assembly = ch_qc_reads
     }
 
     //
@@ -113,12 +122,26 @@ workflow ILLUMINA {
     )
     ch_versions = ch_versions.mix(SPADES.out.versions.first())
 
+    //
+    // SPAdes failures are ignored after one out-of-memory retry (conf/modules.config):
+    // every sample that went into SPAdes and has no scaffolds is recorded as failed,
+    // and the other samples continue
+    //
+    ch_spades_failed = missingOutputs(ch_reads_for_assembly, SPADES.out.scaffolds, SPADES.out.log)
+        .map { meta, has_log ->
+            def reason = has_log ? 'SPAdes finished without scaffolds' : 'SPAdes failed (task error; exit status in the run log)'
+            log.warn("Sample '${meta.id}': ${reason} - the sample is excluded from all downstream analysis.")
+            [ meta, [ stage: 'assembly', status: 'failed', reason: reason ] ]
+        }
+
     emit:
     // nf-core spades outputs gzipped scaffolds (.fa.gz). QUAST reads them as
     // they are; annotation tools get the uncompressed SEQKIT_FILTER output (mgap.nf)
-    assembly = SPADES.out.scaffolds  // channel: [ val(meta), path(fasta.gz) ]
-    reports  = ch_reports             // channel: [ path(report) ] for MultiQC
-    versions = ch_versions            // channel: [ path(versions.yml) ]
+    assembly   = SPADES.out.scaffolds     // channel: [ val(meta), path(fasta.gz) ]
+    reports    = ch_reports               // channel: [ path(report) ] for MultiQC
+    read_stats = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
+    status     = READ_QC_GATE.out.status.mix(ch_spades_failed)  // channel: [ val(meta), map ] skipped and failed samples
+    versions   = ch_versions              // channel: [ path(versions.yml) ]
 }
 
 //

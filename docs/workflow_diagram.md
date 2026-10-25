@@ -13,11 +13,13 @@ flowchart TD
 
     %% ── Illumina subworkflow ──
     SEQ_TYPE -- "illumina" --> FASTP["Fastp<br>(quality trimming)"]
-    FASTP --> KR2_ILL{"run_kraken2?"}
+    FASTP --> GATE_ILL{"bases ≥ min_bases?"}
+    GATE_ILL -- no --> STATUS
+    GATE_ILL -- yes --> KR2_ILL{"run_kraken2?"}
     KR2_ILL -- yes --> KRAKEN2_ILL["Kraken2"] --> BRACKEN["Bracken<br>(Illumina only)"]
     KR2_ILL -- no --> COV_ILL
     BRACKEN --> COV_ILL{"adjust_coverage?"}
-    FASTP --> COV_ILL
+    GATE_ILL -- yes --> COV_ILL
     COV_ILL -- yes --> MASH_ILL["Mash Sketch<br>(genome size;<br>coverage = fastp bases / size)"]
     MASH_ILL --> SEQTK_ILL["Seqtk Sample<br>(subsample if > max_coverage)"]
     SEQTK_ILL --> SPADES
@@ -25,11 +27,13 @@ flowchart TD
 
     %% ── ONT subworkflow ──
     SEQ_TYPE -- "ont" --> FASTPLONG["fastplong<br>(QC + adapter trimming)"]
-    FASTPLONG --> KR2_ONT{"run_kraken2?"}
+    FASTPLONG --> GATE_ONT{"bases ≥ min_bases?"}
+    GATE_ONT -- no --> STATUS
+    GATE_ONT -- yes --> KR2_ONT{"run_kraken2?"}
     KR2_ONT -- yes --> KRAKEN2_ONT["Kraken2<br>(ONT: no Bracken)"]
     KR2_ONT -- no --> ASM_ONT
     KRAKEN2_ONT --> ASM_ONT
-    FASTPLONG --> ASM_ONT{"ont_assembler?"}
+    GATE_ONT -- yes --> ASM_ONT{"ont_assembler?"}
 
     %% ── Flye branch ──
     ASM_ONT -- "flye" --> ASMCOV_ONT{"flye_asm_coverage?"}
@@ -102,6 +106,9 @@ flowchart TD
     TOOL_VERSIONS -- "Software Versions section" --> MULTIQC
     TOOL_VERSIONS & MULTIQC --> VERSIONS["software_versions.yml<br>(tools + MultiQC)"]
 
+    %% ── Sample status ──
+    ASSEMBLY & ANNOT_IN -- "pass / failed" --> STATUS["sample_status.tsv<br>(pass, skipped, failed)"]
+
     %% ── Styling ──
     classDef decision fill:#ffd966,stroke:#333,color:#000
     classDef optional fill:#d5e8d4,stroke:#82b366,color:#000
@@ -109,9 +116,9 @@ flowchart TD
     classDef input fill:#f8cecc,stroke:#b85450,color:#000
     classDef merge fill:#e1d5e7,stroke:#9673a6,color:#000
 
-    class SEQ_TYPE,KR2_ILL,KR2_ONT,COV_ILL,ASMCOV_ONT,ASM_ONT,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,TAXA_BRANCH decision
+    class SEQ_TYPE,GATE_ILL,GATE_ONT,KR2_ILL,KR2_ONT,COV_ILL,ASMCOV_ONT,ASM_ONT,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,TAXA_BRANCH decision
     class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,LRGE,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI_LOAD,RGI,MOBSUITE optional
-    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,ANNOT_IN,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,TOOL_VERSIONS,VERSIONS,SPECIES,AMR_JOIN process
+    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,ANNOT_IN,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,TOOL_VERSIONS,VERSIONS,STATUS,SPECIES,AMR_JOIN process
     class INPUT input
     class ASSEMBLY merge
 ```
@@ -122,7 +129,7 @@ flowchart TD
 
 | Step | Tool             | Description                                                                                      |
 | ---- | ---------------- | ------------------------------------------------------------------------------------------------ |
-| 1    | **Fastp**        | Quality trimming of paired-end reads                                                             |
+| 1    | **Fastp**        | Quality trimming of paired-end reads; samples below `--min_bases` stop here (skipped)            |
 | 2    | **Kraken2**      | Contamination detection _(optional, requires `--kraken2db`)_                                     |
 | 2b   | **Bracken**      | Abundance re-estimation, read length (`-r`) matched to the reads _(requires a Bracken database)_ |
 | 3    | **Mash Sketch**  | Genome size for the coverage estimate (fastp bases ÷ size) _(optional, if `--adjust_coverage`)_  |

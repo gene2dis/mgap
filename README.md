@@ -50,6 +50,12 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 
 - Direct annotation workflow (skips assembly steps)
 
+#### Sample QC
+
+Samples with fewer than `--min_bases` bases after fastp/fastplong skip assembly, and a sample whose assembly fails is
+recorded and left out while the others continue; `pipeline_info/sample_status.tsv` lists each sample as pass, skipped
+or failed with the reason (see [docs/usage.md](docs/usage.md#sample-qc-gate-and-failed-samples)).
+
 ### Genome Annotation
 
 With the assembled genome (or provided contigs), contigs shorter than `--min_contig_length` (default 1000 bp) are removed
@@ -168,15 +174,16 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 #### Pipeline steps
 
-| Parameter           | Default | Description                                                                         |
-| ------------------- | ------- | ----------------------------------------------------------------------------------- |
-| `--run_kraken2`     | `true`  | Enable Kraken2 contamination detection (needs `--kraken2db`)                        |
-| `--adjust_coverage` | `true`  | Subsample Illumina reads above `--max_coverage` (Illumina only)                     |
-| `--max_coverage`    | `150`   | Maximum Illumina coverage (fastp bases ÷ Mash genome size) before subsampling to it |
-| `--run_gtdbtk`      | `false` | Enable GTDB-Tk taxonomic classification                                             |
-| `--run_rgi`         | `false` | Enable RGI antimicrobial resistance gene prediction                                 |
-| `--run_mobsuite`    | `false` | Enable MOB-suite plasmid detection and reconstruction                               |
-| `--run_dnaapler`    | `true`  | Enable contig reorientation with Dnaapler (ONT only)                                |
+| Parameter           | Default    | Description                                                                            |
+| ------------------- | ---------- | -------------------------------------------------------------------------------------- |
+| `--run_kraken2`     | `true`     | Enable Kraken2 contamination detection (needs `--kraken2db`)                           |
+| `--min_bases`       | `50000000` | Minimum bases after fastp/fastplong; samples below it skip assembly (Illumina and ONT) |
+| `--adjust_coverage` | `true`     | Subsample Illumina reads above `--max_coverage` (Illumina only)                        |
+| `--max_coverage`    | `150`      | Maximum Illumina coverage (fastp bases ÷ Mash genome size) before subsampling to it    |
+| `--run_gtdbtk`      | `false`    | Enable GTDB-Tk taxonomic classification                                                |
+| `--run_rgi`         | `false`    | Enable RGI antimicrobial resistance gene prediction                                    |
+| `--run_mobsuite`    | `false`    | Enable MOB-suite plasmid detection and reconstruction                                  |
+| `--run_dnaapler`    | `true`     | Enable contig reorientation with Dnaapler (ONT only)                                   |
 
 #### Databases
 
