@@ -18,8 +18,8 @@ flowchart TD
     KR2_ILL -- no --> COV_ILL
     BRACKEN --> COV_ILL{"adjust_coverage?"}
     FASTP --> COV_ILL
-    COV_ILL -- yes --> MASH_ILL["Mash Sketch<br>(estimate coverage)"]
-    MASH_ILL --> SEQTK_ILL["Seqtk Sample<br>(subsample if needed)"]
+    COV_ILL -- yes --> MASH_ILL["Mash Sketch<br>(genome size;<br>coverage = fastp bases / size)"]
+    MASH_ILL --> SEQTK_ILL["Seqtk Sample<br>(subsample if > max_coverage)"]
     SEQTK_ILL --> SPADES
     COV_ILL -- no --> SPADES["SPAdes<br>(assembly)"]
 
@@ -32,11 +32,10 @@ flowchart TD
     FASTPLONG --> ASM_ONT{"ont_assembler?"}
 
     %% ── Flye branch ──
-    ASM_ONT -- "flye" --> COV_ONT{"adjust_coverage?"}
-    COV_ONT -- yes --> MASH_ONT["Mash Sketch<br>(estimate coverage)"]
-    MASH_ONT --> SEQTK_ONT["Seqtk Sample<br>(subsample if needed)"]
-    SEQTK_ONT --> FLYE
-    COV_ONT -- no --> FLYE["Flye<br>(assembly)"]
+    ASM_ONT -- "flye" --> ASMCOV_ONT{"flye_asm_coverage?"}
+    ASMCOV_ONT -- "yes, no genome_size" --> LRGE["lrge<br>(genome size)"]
+    LRGE --> FLYE
+    ASMCOV_ONT -- "no, or genome_size given" --> FLYE["Flye<br>(assembly, all reads)"]
     FLYE --> MEDAKA["Medaka<br>(polishing)"]
     MEDAKA --> DNAAPLER_FLYE{"run_dnaapler?"}
     DNAAPLER_FLYE -- yes --> DNAAPLER_F["Dnaapler<br>(reorientation, FASTA)"]
@@ -110,8 +109,8 @@ flowchart TD
     classDef input fill:#f8cecc,stroke:#b85450,color:#000
     classDef merge fill:#e1d5e7,stroke:#9673a6,color:#000
 
-    class SEQ_TYPE,KR2_ILL,KR2_ONT,COV_ILL,COV_ONT,ASM_ONT,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,TAXA_BRANCH decision
-    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,MASH_ONT,SEQTK_ONT,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI_LOAD,RGI,MOBSUITE optional
+    class SEQ_TYPE,KR2_ILL,KR2_ONT,COV_ILL,ASMCOV_ONT,ASM_ONT,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,TAXA_BRANCH decision
+    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,LRGE,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI_LOAD,RGI,MOBSUITE optional
     class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,ANNOT_IN,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,TOOL_VERSIONS,VERSIONS,SPECIES,AMR_JOIN process
     class INPUT input
     class ASSEMBLY merge
@@ -121,26 +120,25 @@ flowchart TD
 
 ### Illumina Subworkflow
 
-| Step | Tool             | Description                                                       |
-| ---- | ---------------- | ----------------------------------------------------------------- |
-| 1    | **Fastp**        | Quality trimming of paired-end reads                              |
-| 2    | **Kraken2**      | Contamination detection _(optional, requires `--kraken2db`)_      |
-| 2b   | **Bracken**      | Abundance re-estimation _(Illumina only; requires `--brackendb`)_ |
-| 3    | **Mash Sketch**  | Coverage estimation _(optional, if `--adjust_coverage`)_          |
-| 4    | **Seqtk Sample** | Read subsampling when coverage exceeds `--max_coverage`           |
-| 5    | **SPAdes**       | _De novo_ genome assembly                                         |
+| Step | Tool             | Description                                                                                      |
+| ---- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| 1    | **Fastp**        | Quality trimming of paired-end reads                                                             |
+| 2    | **Kraken2**      | Contamination detection _(optional, requires `--kraken2db`)_                                     |
+| 2b   | **Bracken**      | Abundance re-estimation, read length (`-r`) matched to the reads _(requires a Bracken database)_ |
+| 3    | **Mash Sketch**  | Genome size for the coverage estimate (fastp bases ÷ size) _(optional, if `--adjust_coverage`)_  |
+| 4    | **Seqtk Sample** | Read subsampling when coverage exceeds `--max_coverage` (default 150x)                           |
+| 5    | **SPAdes**       | _De novo_ genome assembly                                                                        |
 
 ### ONT Subworkflow (Flye mode, default)
 
-| Step | Tool             | Description                                                                           |
-| ---- | ---------------- | ------------------------------------------------------------------------------------- |
-| 1    | **fastplong**    | Quality filtering and adapter trimming of long reads                                  |
-| 2    | **Kraken2**      | Contamination detection _(optional, requires `--kraken2db`; Bracken not run for ONT)_ |
-| 3    | **Mash Sketch**  | Coverage estimation _(optional, if `--adjust_coverage`)_                              |
-| 4    | **Seqtk Sample** | Read subsampling when coverage exceeds `--max_coverage`                               |
-| 5    | **Flye**         | _De novo_ long-read assembly                                                          |
-| 6    | **Medaka**       | Assembly polishing                                                                    |
-| 7    | **Dnaapler**     | Contig reorientation using FASTA input _(optional, `--run_dnaapler`)_                 |
+| Step | Tool          | Description                                                                               |
+| ---- | ------------- | ----------------------------------------------------------------------------------------- |
+| 1    | **fastplong** | Quality filtering and adapter trimming of long reads                                      |
+| 2    | **Kraken2**   | Contamination detection _(optional, requires `--kraken2db`; Bracken not run for ONT)_     |
+| 3    | **lrge**      | Genome size for Flye _(only with `--flye_asm_coverage` and no `--genome_size`)_           |
+| 4    | **Flye**      | _De novo_ long-read assembly from all reads (`--asm-coverage` with `--flye_asm_coverage`) |
+| 5    | **Medaka**    | Assembly polishing                                                                        |
+| 6    | **Dnaapler**  | Contig reorientation using FASTA input _(optional, `--run_dnaapler`)_                     |
 
 ### ONT Subworkflow (Autocycler mode)
 

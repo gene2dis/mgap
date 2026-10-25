@@ -18,6 +18,10 @@
 
   > Chaumeil PA, Mussig AJ, Hugenholtz P, Parks DH. GTDB-Tk: a toolkit to classify genomes with the Genome Taxonomy Database. Bioinformatics. 2020 Mar 15;36(6):1925-1927. doi: 10.1093/bioinformatics/btz848. PubMed PMID: 31730192; PubMed Central PMCID: PMC7703759.
 
+- [LRGE](https://doi.org/10.1093/bioinformatics/btaf593)
+
+  > Hall MB, Zhou C, Coin LJM. Genome size estimation from long read overlaps. Bioinformatics. 2025 Nov;41(11):btaf593. doi: 10.1093/bioinformatics/btaf593.
+
 - [MOB-suite](https://pubmed.ncbi.nlm.nih.gov/30052170/)
 
   > Robertson J, Nash JHE. MOB-suite: software tools for clustering, reconstruction and typing of plasmids from draft assemblies. Microb Genom. 2018 Aug;4(8):e000206. doi: 10.1099/mgen.0.000206. PubMed PMID: 30052170; PubMed Central PMCID: PMC6159552.
