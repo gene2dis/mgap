@@ -26,7 +26,8 @@ process MEDAKA {
 
     # medaka_consensus exits 1 when a step it runs is killed for memory; exit 137
     # instead when the task's cgroup counted an out-of-memory kill, so the
-    # errorStrategy can retry with more memory
+    # errorStrategy can retry with more memory (cgroup v2 memory.events; on a
+    # cgroup v1 host the kill is not recognised and the failure is not retried)
     medaka_consensus \\
         -t $task.cpus \\
         $args \\
