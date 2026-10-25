@@ -85,7 +85,9 @@ workflow ONT {
 
     //
     // ASSEMBLY BRANCHING: Flye (default) or Autocycler
+    // ch_failed collects the samples whose assembly failed, for sample_status.tsv
     //
+    ch_failed = channel.empty()
     if (params.ont_assembler == 'autocycler') {
 
         //
@@ -148,14 +150,18 @@ workflow ONT {
         AUTOCYCLER_GENOME_SIZE.out.genome_size
             .map { meta, _reads, _genome_size -> [ meta ] }
             .join(ch_grouped_assemblies, remainder: true)
-            .map { meta, fasta_list ->
-                if (!fasta_list) {
-                    log.error("Sample '${meta.id}': all Autocycler assembler runs failed - the sample is excluded from all downstream analysis.")
-                }
-                [ meta, fasta_list ]
+            .branch { _meta, fasta_list ->
+                assembled: fasta_list
+                failed: true
             }
-            .filter { _meta, fasta_list -> fasta_list }
-            .set { ch_assemblies_per_sample }
+            .set { ch_assembly_check }
+        ch_assemblies_per_sample = ch_assembly_check.assembled
+        ch_failed = ch_failed.mix(
+            ch_assembly_check.failed.map { meta, _fasta_list ->
+                log.error("Sample '${meta.id}': all Autocycler assembler runs failed - the sample is excluded from all downstream analysis.")
+                [ meta, [ stage: 'assembly', status: 'failed', reason: 'all Autocycler assembler runs failed' ] ]
+            }
+        )
 
         //
         // Steps 5-7: compress, cluster, trim/resolve each QC-pass cluster and combine
@@ -168,14 +174,18 @@ workflow ONT {
         ch_assemblies_per_sample
             .map { meta, _fasta_list -> [ meta ] }
             .join(AUTOCYCLER_CONSENSUS.out.fasta, remainder: true)
-            .map { meta, consensus ->
-                if (!consensus) {
-                    log.warn("Sample '${meta.id}': no Autocycler cluster passed QC, so there is no consensus assembly - the sample is excluded from all downstream analysis.")
-                }
-                [ meta, consensus ]
+            .branch { _meta, consensus ->
+                assembled: consensus
+                failed: true
             }
-            .filter { _meta, consensus -> consensus }
-            .set { ch_consensus_fasta }
+            .set { ch_consensus_check }
+        ch_consensus_fasta = ch_consensus_check.assembled
+        ch_failed = ch_failed.mix(
+            ch_consensus_check.failed.map { meta, _consensus ->
+                log.warn("Sample '${meta.id}': no Autocycler cluster passed QC, so there is no consensus assembly - the sample is excluded from all downstream analysis.")
+                [ meta, [ stage: 'assembly', status: 'failed', reason: 'no Autocycler cluster passed QC (no consensus assembly)' ] ]
+            }
+        )
 
         //
         // Step 8: Reorient circular contigs with Dnaapler (optional)
@@ -265,6 +275,26 @@ workflow ONT {
         ch_versions = ch_versions.mix(MEDAKA.out.versions.first())
 
         //
+        // Flye and Medaka failures are ignored after one out-of-memory retry
+        // (conf/modules.config): record each sample that went in and got nothing out
+        //
+        ch_flye_failed = ch_qc_reads
+            .map { meta, _reads -> [ meta ] }
+            .join(ch_flye_fasta, remainder: true)
+            .filter { _meta, fasta -> !fasta }
+            .map { meta, _fasta -> [ meta, [ stage: 'assembly', status: 'failed', reason: 'Flye failed (task error; exit status in the run log)' ] ] }
+        ch_medaka_failed = ch_medaka_input
+            .map { meta, _reads, _assembly -> [ meta ] }
+            .join(MEDAKA.out.polished_fasta, remainder: true)
+            .filter { _meta, fasta -> !fasta }
+            .map { meta, _fasta -> [ meta, [ stage: 'polishing', status: 'failed', reason: 'Medaka failed (task error; exit status in the run log)' ] ] }
+        ch_failed = ch_failed.mix(ch_flye_failed, ch_medaka_failed)
+            .map { meta, row ->
+                log.warn("Sample '${meta.id}': ${row.reason} - the sample is excluded from all downstream analysis.")
+                [ meta, row ]
+            }
+
+        //
         // MODULE: Reorient contigs with Dnaapler (optional)
         //
         if (params.run_dnaapler.toString().toBoolean()) {
@@ -290,6 +320,6 @@ workflow ONT {
     assembly   = ch_assembly              // channel: [ val(meta), path(fasta) ]
     reports    = ch_reports               // channel: [ path(report) ] for MultiQC
     read_stats = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
-    status     = READ_QC_GATE.out.status  // channel: [ val(meta), map ] skipped samples
+    status     = READ_QC_GATE.out.status.mix(ch_failed)  // channel: [ val(meta), map ] skipped and failed samples
     versions   = ch_versions              // channel: [ path(versions.yml) ]
 }

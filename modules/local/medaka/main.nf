@@ -24,12 +24,24 @@ process MEDAKA {
     """
     ${is_compressed ? "gzip -cd ${assembly} > assembly_uncompressed.fa" : ""}
 
+    # medaka_consensus exits 1 when a step it runs is killed for memory; exit 137
+    # instead when the task's cgroup counted an out-of-memory kill, so the
+    # errorStrategy can retry with more memory
     medaka_consensus \\
         -t $task.cpus \\
         $args \\
         -i $reads \\
         -d ${is_compressed ? "assembly_uncompressed.fa" : assembly} \\
-        -o ./
+        -o ./ \\
+    || {
+        status=\$?
+        events="/sys/fs/cgroup\$(sed -n 's/^0:://p' /proc/self/cgroup)/memory.events"
+        if [ -r "\$events" ] && grep -q '^oom_kill [1-9]' "\$events"; then
+            echo "medaka: a step was killed for memory (\$events)" >&2
+            exit 137
+        fi
+        exit \$status
+    }
 
     mv consensus.fasta ${prefix}_polished.fasta
 

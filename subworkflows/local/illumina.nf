@@ -121,13 +121,29 @@ workflow ILLUMINA {
     )
     ch_versions = ch_versions.mix(SPADES.out.versions.first())
 
+    //
+    // SPAdes failures are ignored after one out-of-memory retry (conf/modules.config):
+    // every sample that went into SPAdes and has no scaffolds is recorded as failed,
+    // and the other samples continue
+    //
+    ch_spades_failed = ch_reads_for_assembly
+        .map { meta, _reads -> [ meta ] }
+        .join(SPADES.out.scaffolds, remainder: true)
+        .join(SPADES.out.log, remainder: true)
+        .filter { _meta, scaffolds, _log -> !scaffolds }
+        .map { meta, _scaffolds, spades_log ->
+            def reason = spades_log ? 'SPAdes finished without scaffolds' : 'SPAdes failed (task error; exit status in the run log)'
+            log.warn("Sample '${meta.id}': ${reason} - the sample is excluded from all downstream analysis.")
+            [ meta, [ stage: 'assembly', status: 'failed', reason: reason ] ]
+        }
+
     emit:
     // nf-core spades outputs gzipped scaffolds (.fa.gz). QUAST reads them as
     // they are; annotation tools get the uncompressed SEQKIT_FILTER output (mgap.nf)
     assembly   = SPADES.out.scaffolds     // channel: [ val(meta), path(fasta.gz) ]
     reports    = ch_reports               // channel: [ path(report) ] for MultiQC
     read_stats = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
-    status     = READ_QC_GATE.out.status  // channel: [ val(meta), map ] skipped samples
+    status     = READ_QC_GATE.out.status.mix(ch_spades_failed)  // channel: [ val(meta), map ] skipped and failed samples
     versions   = ch_versions              // channel: [ path(versions.yml) ]
 }
 

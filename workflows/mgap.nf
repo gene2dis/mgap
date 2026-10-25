@@ -186,6 +186,16 @@ workflow MGAP {
     // MultiQC's QUAST module only reads files named report.tsv, not the <sample>.tsv
     // link; MULTIQC stages each input in its own folder, so the names do not clash
     ch_multiqc_files = ch_multiqc_files.mix(QUAST.out.results.map { _meta, dir -> dir.resolve('report.tsv') })
+    // QUAST failures are ignored (conf/modules.config, issue #2: exit 4 when no
+    // contig is >= 500 bp); the sample is still annotated
+    ch_quast_failed = genome_assembly
+        .map { meta, _fasta -> [ meta.id ] }
+        .join(QUAST.out.tsv.map { meta, tsv -> [ meta.id, tsv ] }, remainder: true)
+        .filter { _id, tsv -> !tsv }
+        .map { id, _tsv ->
+            log.warn("Sample '${id}': QUAST failed (exit status in the run log) - the sample is still annotated, without QUAST statistics.")
+            [ id, 'QUAST failed' ]
+        }
 
     //
     // Prepare the annotation FASTA once per sample: contigs >= --min_contig_length,
@@ -197,13 +207,17 @@ workflow MGAP {
     ch_versions = ch_versions.mix(SEQKIT_FILTER.out.versions.first())
     // A sample with no contig >= --min_contig_length gets an empty file: leave it
     // out of annotation (GTDB-Tk's batch would fail for every sample) and say so
-    ch_annotation_fasta = SEQKIT_FILTER.out.fasta
-        .filter { meta, fasta ->
-            if (fasta.size() == 0) {
-                log.warn("Sample '${meta.id}': no contig is at least ${params.min_contig_length} bp - the sample is excluded from annotation and typing (QUAST still reports the assembly).")
-                return false
-            }
-            true
+    SEQKIT_FILTER.out.fasta
+        .branch { _meta, fasta ->
+            annotate: fasta.size() > 0
+            empty: true
+        }
+        .set { ch_filtered }
+    ch_annotation_fasta = ch_filtered.annotate
+    ch_no_contigs = ch_filtered.empty
+        .map { meta, _fasta ->
+            log.warn("Sample '${meta.id}': no contig is at least ${params.min_contig_length} bp - the sample is excluded from annotation and typing (QUAST still reports the assembly).")
+            [ meta, [ stage: 'annotation_input', status: 'failed', reason: "no contig >= --min_contig_length ${params.min_contig_length} bp" ] ]
         }
 
     // RUN Checkm2 (only when --checkm2_db is provided)
