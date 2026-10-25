@@ -262,6 +262,7 @@ nextflow_pipeline {
                 run_kraken2 = false
                 // default true: applies to Illumina only
                 adjust_coverage = true
+                max_coverage    = 100
                 outdir      = "$outputDir"
             }
         }
@@ -271,6 +272,7 @@ nextflow_pipeline {
             def flye = TaskArgs.of(metaDir, 'FLYE')
             assertAll(
                 { assert workflow.success },
+                { assert path("$metaDir/nextflow.log").text.contains("--max_coverage applies only to --seq_type illumina") },
                 { assert !succeeded.any { it.contains('MASH_SKETCH') } },
                 { assert !succeeded.any { it.contains('SEQTK_SAMPLE') } },
                 { assert !succeeded.any { it.contains('LRGE') } },
@@ -769,6 +771,34 @@ nextflow_pipeline {
                 { assert workflow.failed },
                 { assert workflow.trace.tasks().size() == 0 },
                 { assert output.contains('Detected duplicate entries: [sample:TEST_BFRAGILIS]') }
+            )
+        }
+
+    }
+
+    test("Zero --genome_size fails at launch - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        // On the command line: "0" there is not caught by the schema pattern
+        options "-stub --genome_size 0"
+
+        when {
+            params {
+                input             = "${projectDir}/assets/samplesheet_test_ont.csv"
+                seq_type          = "ont"
+                run_kraken2       = false
+                flye_asm_coverage = 40
+                outdir            = "$outputDir"
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.failed },
+                { assert workflow.trace.tasks().size() == 0 },
+                { assert path("$metaDir/nextflow.log").text.contains("--genome_size 0: the genome size must be greater than zero.") }
             )
         }
 

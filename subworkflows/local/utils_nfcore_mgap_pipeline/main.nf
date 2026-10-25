@@ -77,6 +77,11 @@ workflow PIPELINE_INITIALISATION {
     if (params.run_rgi.toString().toBoolean() && !params.rgi_db) {
         error("--run_rgi is set but no CARD database was provided. Please provide it via --rgi_db.")
     }
+    // The schema pattern also rejects zero, but a CLI value such as "0" can
+    // reach here unvalidated
+    if (params.genome_size && !(params.genome_size.toString() =~ /[1-9]/)) {
+        error("--genome_size ${params.genome_size}: the genome size must be greater than zero.")
+    }
 
     //
     // Warn about options that have no effect with the chosen inputs
@@ -86,6 +91,11 @@ workflow PIPELINE_INITIALISATION {
     }
     else if (params.genome_size && !params.flye_asm_coverage) {
         log.warn("--genome_size is used only with --flye_asm_coverage: ignored.")
+    }
+    // ONT reads are no longer subsampled before assembly (D-17); 150 is the
+    // nextflow.config default
+    if (params.seq_type == 'ont' && params.max_coverage.toString().toFloat() != 150) {
+        log.warn("--max_coverage applies only to --seq_type illumina: ONT reads are not subsampled (for Flye, see --flye_asm_coverage). Ignored.")
     }
 
     //

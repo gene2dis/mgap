@@ -70,7 +70,8 @@ workflow ILLUMINA {
         def bracken_lengths = brackenReadLengths(bracken_db)
         def bracken_override = params.bracken_read_length ? params.bracken_read_length.toString().toInteger() : null
         if (!bracken_lengths) {
-            log.warn("No database<N>mers.kmer_distrib file in the Bracken database ${bracken_db}: Bracken runs without -r (its default, 100).")
+            def bracken_r = bracken_override ? "with -r ${bracken_override} (--bracken_read_length, not checked against the database)" : "without -r (its default, 100)"
+            log.warn("No database<N>mers.kmer_distrib file in the Bracken database ${bracken_db}: Bracken runs ${bracken_r}.")
         }
         else if (bracken_override && !(bracken_override in bracken_lengths)) {
             error("--bracken_read_length ${bracken_override}: the Bracken database ${bracken_db} has no database${bracken_override}mers.kmer_distrib (it has read lengths ${bracken_lengths.join(', ')}).")

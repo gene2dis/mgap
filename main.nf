@@ -33,8 +33,8 @@ workflow GENE2DIS_MGAP {
     // SUBWORKFLOW: Run initialisation tasks
     //
     PIPELINE_INITIALISATION (
-        params.version,
-        params.help,
+        params.version.toString().toBoolean(),
+        params.help.toString().toBoolean(),
         params.validate_params.toString().toBoolean(),
         params.monochrome_logs.toString().toBoolean(),
         args,

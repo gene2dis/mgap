@@ -454,7 +454,7 @@
                 },
                 "genome_size": {
                     "type": "string",
-                    "pattern": "^[0-9]+(\\.[0-9]+)?[kKmMgG]?$",
+                    "pattern": "^(?=.*[1-9])[0-9]+(\\.[0-9]+)?[kKmMgG]?$",
                     "description": "Expected genome size for Flye --asm-coverage, e.g. 5.5m (ONT, used only with --flye_asm_coverage). If unset, lrge estimates it per sample.",
                     "fa_icon": "fas fa-ruler-horizontal"
                 },
