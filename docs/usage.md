@@ -309,6 +309,8 @@ Every sample gets a row in `<outdir>/pipeline_info/sample_status.tsv` (pass, ski
 Samples: 4 (2 pass, 1 skipped, 1 failed) - skipped: S2 (read_qc); failed: S3 (assembly). Details: results/pipeline_info/sample_status.tsv
 ```
 
+A QUAST failure leaves the sample as _pass_, so the line counts it separately, out of the samples with an assembly: `QUAST failed: 3 of 3 samples with an assembly (S1, S2, S4)`. QUAST failing for every sample usually means a problem with QUAST itself (its container or environment), not with the assemblies.
+
 The run exits 0 when samples were skipped or failed. It fails only when every sample that went into assembly failed there (samples skipped by `--min_bases` do not count; a run where all samples were skipped exits 0). The exit status and work directory of a failed task are in `.nextflow.log` (`NOTE: Process ... terminated with an error exit status (N) -- Error is ignored`).
 
 ### Annotation Parameters

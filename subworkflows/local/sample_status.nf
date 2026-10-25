@@ -93,7 +93,8 @@ workflow SAMPLE_STATUS {
             def first_outcome = outcomes.min { recorded -> stage_order.indexOf(recorded.stage) }
             def outcome = first_outcome ?: (assembly_stats ? [ stage: 'annotation', status: 'pass', reason: '' ] : unrecorded)
             def reason = ([ outcome.reason ] + notes).findAll { text -> text }.join('; ')
-            [ sample: id, seq_type: seq_type ] + read_stats + (assembly_stats ?: [:]) + outcome + [ reason: reason ]
+            // notes is not a column: the completion summary counts them
+            [ sample: id, seq_type: seq_type ] + read_stats + (assembly_stats ?: [:]) + outcome + [ reason: reason, notes: notes ]
         }
 
     ch_status_tsv = ch_rows
@@ -105,8 +106,7 @@ workflow SAMPLE_STATUS {
         .combine(ch_rows.toList().map { rows -> [ rows ] })
         .subscribe { _tsv, rows ->
             def attempted = rows.findAll { row -> row.seq_type != 'contig' && row.status != 'skipped' }
-            def assembled = attempted.findAll { row -> !(row.status == 'failed' && row.stage in [ 'assembly', 'polishing' ]) }
-            if (attempted && !assembled) {
+            if (attempted && !attempted.any { row -> hasAssembly(row) }) {
                 error("Every sample that went into assembly failed there (${attempted.size()}) - see ${params.outdir}/pipeline_info/sample_status.tsv.")
             }
         }
@@ -148,16 +148,41 @@ def sampleStatusColumns() {
 }
 
 //
-// One line for the completion log: counts by status and the samples that did not pass
+// One line for the completion log: counts by status, the samples that did not pass,
+// and each note (a warning for a sample that went on, such as "QUAST failed") as a
+// count of the samples with an assembly, so a step failing for all of them (a broken
+// container, for example) stands out although every sample passed
 //
 def sampleStatusSummary(rows) {
     def by_status = rows.groupBy { row -> row.status }
     def counts = [ 'pass', 'skipped', 'failed' ].collect { status -> "${by_status[status]?.size() ?: 0} ${status}" }.join(', ')
     def listed = [ 'skipped', 'failed' ].findAll { status -> by_status[status] }.collect { status ->
         def samples = by_status[status].sort { row -> row.sample }.collect { row -> "${row.sample} (${row.stage})" }
-        "${status}: ${samples.take(10).join(', ')}${samples.size() > 10 ? ", and ${samples.size() - 10} more" : ''}"
+        "${status}: ${sampleList(samples)}"
     }
-    return "Samples: ${rows.size()} (${counts})${listed ? ' - ' + listed.join('; ') : ''}. Details: ${params.outdir}/pipeline_info/sample_status.tsv"
+    def assembled = rows.findAll { row -> hasAssembly(row) }
+    def noted = assembled.collectMany { row -> (row.notes ?: []).collect { note -> [ note, row.sample ] } }.groupBy { pair -> pair[0] }
+    def warned = noted.keySet().sort().collect { note ->
+        def samples = noted[note].collect { pair -> pair[1] }.sort()
+        "${note}: ${samples.size()} of ${assembled.size()} samples with an assembly (${sampleList(samples)})"
+    }
+    def details = listed + warned
+    return "Samples: ${rows.size()} (${counts})${details ? ' - ' + details.join('; ') : ''}. Details: ${params.outdir}/pipeline_info/sample_status.tsv"
+}
+
+//
+// A sample_status.tsv row whose sample has an assembly (or input contigs): not skipped
+// and not failed at assembly or polishing
+//
+def hasAssembly(row) {
+    return row.status != 'skipped' && !(row.status == 'failed' && row.stage in [ 'assembly', 'polishing' ])
+}
+
+//
+// At most 10 sample names, then how many more
+//
+def sampleList(samples) {
+    return "${samples.take(10).join(', ')}${samples.size() > 10 ? ", and ${samples.size() - 10} more" : ''}"
 }
 
 //

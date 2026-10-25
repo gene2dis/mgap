@@ -114,7 +114,8 @@ nextflow_pipeline {
                 { assert status.TEST_PASS.subMap('seq_type', 'status', 'stage', 'reason', 'input_reads', 'assembly_contigs', 'assembly_length') == [ seq_type: 'contig', status: 'pass', stage: 'annotation', reason: '', input_reads: '', assembly_contigs: '1', assembly_length: '4' ] },
                 { assert status.TEST_QUAST_FAIL.subMap('status', 'stage', 'reason') == [ status: 'pass', stage: 'annotation', reason: 'QUAST failed' ] },
                 { assert succeeded.any { it.contains('MLST (TEST_QUAST_FAIL)') } },
-                { assert path("$metaDir/nextflow.log").text.contains("Sample 'TEST_QUAST_FAIL': QUAST failed") }
+                { assert path("$metaDir/nextflow.log").text.contains("Sample 'TEST_QUAST_FAIL': QUAST failed") },
+                { assert path("$metaDir/nextflow.log").text.contains('Samples: 2 (2 pass, 0 skipped, 0 failed) - QUAST failed: 1 of 2 samples with an assembly (TEST_QUAST_FAIL).') }
             )
         }
     }
@@ -247,6 +248,7 @@ nextflow_pipeline {
                 // trace.csv column 6: exit
                 { assert quast[0].split('\t')[5] == '4' },
                 { assert path("$metaDir/nextflow.log").text.contains('MultiQC is skipped') },
+                { assert path("$metaDir/nextflow.log").text.contains('Samples: 1 (0 pass, 0 skipped, 1 failed) - failed: TEST_FRAGMENTED (annotation_input); QUAST failed: 1 of 1 samples with an assembly (TEST_FRAGMENTED).') },
                 { assert SampleStatus.of(outputDir).TEST_FRAGMENTED.subMap('status', 'stage', 'reason', 'assembly_contigs', 'assembly_length', 'assembly_n50', 'annotation_contigs') == [ status: 'failed', stage: 'annotation_input', reason: 'no contig >= --min_contig_length 1000 bp; QUAST failed', assembly_contigs: '400', assembly_length: '120000', assembly_n50: '300', annotation_contigs: '0' ] }
             )
         }

@@ -109,4 +109,55 @@ nextflow_function {
             )
         }
     }
+
+    test("sampleStatusSummary - QUAST failed for every sample with an assembly") {
+
+        function "sampleStatusSummary"
+
+        when {
+            params {
+                outdir = "results"
+            }
+            function {
+                """
+                input[0] = [
+                    [ sample: 'S1', status: 'pass', stage: 'annotation', notes: [ 'QUAST failed' ] ],
+                    [ sample: 'S2', status: 'failed', stage: 'annotation_input', notes: [ 'QUAST failed' ] ],
+                    [ sample: 'S3', status: 'skipped', stage: 'read_qc', notes: [] ],
+                    [ sample: 'S4', status: 'failed', stage: 'assembly', notes: [] ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == 'Samples: 4 (1 pass, 1 skipped, 2 failed) - skipped: S3 (read_qc); failed: S2 (annotation_input), S4 (assembly); QUAST failed: 2 of 2 samples with an assembly (S1, S2). Details: results/pipeline_info/sample_status.tsv' }
+            )
+        }
+    }
+
+    test("sampleStatusSummary - every sample passed without notes") {
+
+        function "sampleStatusSummary"
+
+        when {
+            params {
+                outdir = "results"
+            }
+            function {
+                """
+                input[0] = [ [ sample: 'S1', status: 'pass', stage: 'annotation', notes: [] ] ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == 'Samples: 1 (1 pass, 0 skipped, 0 failed). Details: results/pipeline_info/sample_status.tsv' }
+            )
+        }
+    }
 }
