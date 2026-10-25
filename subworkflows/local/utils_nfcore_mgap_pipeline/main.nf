@@ -10,6 +10,7 @@
 include { paramsSummaryLog       } from 'plugin/nf-schema'
 include { validateParameters     } from 'plugin/nf-schema'
 include { sampleStatusSummary    } from '../sample_status'
+include { assemblyFailure        } from '../sample_status'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,12 +131,20 @@ workflow PIPELINE_COMPLETION {
 
     take:
     monochrome_logs   // boolean: Disable coloured log outputs
-    sample_status     // channel: [ [ map ] ] sample_status.tsv rows
+    sample_status     // channel: [ [ map ] ] sample_status.tsv rows, once the table is written
 
     main:
-    // filled when the status table is complete, printed on completion
+    // Filled when the status table is written, printed on completion. The D-7
+    // check that fails the run is in the same callback, after the line is
+    // filled, so a failed run still prints it
     def status_summary = []
-    sample_status.subscribe { rows -> status_summary << sampleStatusSummary(rows) }
+    sample_status.subscribe { rows ->
+        status_summary << sampleStatusSummary(rows)
+        def failure = assemblyFailure(rows)
+        if (failure) {
+            error(failure)
+        }
+    }
 
     workflow.onComplete {
         completionSummary(monochrome_logs, status_summary)

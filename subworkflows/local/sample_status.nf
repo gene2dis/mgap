@@ -101,18 +101,14 @@ workflow SAMPLE_STATUS {
         .map { row -> columns.collect { column -> row[column] == null ? '' : row[column] }.join('\t') + '\n' }
         .collectFile(name: 'sample_status.tsv', seed: columns.join('\t') + '\n', sort: true, storeDir: "${params.outdir}/pipeline_info")
 
-    // Runs once the table is written, so a failed run still has it
-    ch_status_tsv
+    // The rows come out once the table is written, so a run that fails on them
+    // (assemblyFailure, checked by PIPELINE_COMPLETION) still has it
+    ch_status_rows = ch_status_tsv
         .combine(ch_rows.toList().map { rows -> [ rows ] })
-        .subscribe { _tsv, rows ->
-            def attempted = rows.findAll { row -> row.seq_type != 'contig' && row.status != 'skipped' }
-            if (attempted && !attempted.any { row -> hasAssembly(row) }) {
-                error("Every sample that went into assembly failed there (${attempted.size()}) - see ${params.outdir}/pipeline_info/sample_status.tsv.")
-            }
-        }
+        .map { _tsv, rows -> rows }
 
     emit:
-    ch_rows.toList()  // channel: [ [ map ] ] every sample's row
+    ch_status_rows  // channel: [ [ map ] ] every sample's row, once sample_status.tsv is written
 }
 
 //
@@ -168,6 +164,19 @@ def sampleStatusSummary(rows) {
     }
     def details = listed + warned
     return "Samples: ${rows.size()} (${counts})${details ? ' - ' + details.join('; ') : ''}. Details: ${params.outdir}/pipeline_info/sample_status.tsv"
+}
+
+//
+// D-7: the run fails when every sample that went into assembly failed there
+// (skipped samples aside; a run whose samples were all skipped succeeds). Returns
+// the error message, or null
+//
+def assemblyFailure(rows) {
+    def attempted = rows.findAll { row -> row.seq_type != 'contig' && row.status != 'skipped' }
+    if (attempted && !attempted.any { row -> hasAssembly(row) }) {
+        return "Every sample that went into assembly failed there (${attempted.size()}) - see ${params.outdir}/pipeline_info/sample_status.tsv."
+    }
+    return null
 }
 
 //

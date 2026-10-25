@@ -21,7 +21,7 @@ nextflow_pipeline {
                 def r1 = "${projectDir}/tests/data/stub_inputs/reads_1.fastq.gz"
                 def r2 = "${projectDir}/tests/data/stub_inputs/reads_2.fastq.gz"
                 input    = SampleStatus.samplesheet(outputDir, 'samplesheet.csv', 'sample,fastq_1,fastq_2',
-                    [ 'TEST_PASS', 'TEST_LOW', 'TEST_SPADES_FAIL', 'TEST_SPADES_OOM' ].collect { sample -> "${sample},${r1},${r2}" })
+                    [ 'TEST_PASS', 'TEST_LOW', 'TEST_SPADES_FAIL', 'TEST_SPADES_OOM', 'TEST_SPADES_MEMORY_LIMIT' ].collect { sample -> "${sample},${r1},${r2}" })
                 seq_type = "illumina"
                 outdir   = "$outputDir"
             }
@@ -33,7 +33,7 @@ nextflow_pipeline {
             def nextflow_log = path("$metaDir/nextflow.log").text
             assertAll(
                 { assert workflow.success },
-                { assert status.keySet() == [ 'TEST_PASS', 'TEST_LOW', 'TEST_SPADES_FAIL', 'TEST_SPADES_OOM' ] as Set },
+                { assert status.keySet() == [ 'TEST_PASS', 'TEST_LOW', 'TEST_SPADES_FAIL', 'TEST_SPADES_OOM', 'TEST_SPADES_MEMORY_LIMIT' ] as Set },
                 { assert status.TEST_PASS.subMap('seq_type', 'status', 'stage', 'reason', 'filtered_bases', 'assembly_contigs') == [ seq_type: 'illumina', status: 'pass', stage: 'annotation', reason: '', filtered_bases: '100000000', assembly_contigs: '1' ] },
                 // below --min_bases: no Kraken2, Mash or SPAdes
                 { assert status.TEST_LOW.subMap('status', 'stage', 'reason', 'assembly_contigs') == [ status: 'skipped', stage: 'read_qc', reason: '1000000 bases after fastp, below --min_bases 50000000', assembly_contigs: '' ] },
@@ -46,7 +46,10 @@ nextflow_pipeline {
                 { assert workflow.trace.tasks().count { it.name.contains('SPADES (TEST_SPADES_OOM)') } == 2 },
                 { assert status.TEST_SPADES_OOM.status == 'pass' },
                 { assert succeeded.any { it.contains('MLST (TEST_SPADES_OOM)') } },
-                { assert nextflow_log.contains("Samples: 4 (2 pass, 1 skipped, 1 failed) - skipped: TEST_LOW (read_qc); failed: TEST_SPADES_FAIL (assembly).") }
+                // exit 12 (SPAdes at its own --memory limit): retried once, then passes
+                { assert workflow.trace.tasks().count { it.name.contains('SPADES (TEST_SPADES_MEMORY_LIMIT)') } == 2 },
+                { assert status.TEST_SPADES_MEMORY_LIMIT.status == 'pass' },
+                { assert nextflow_log.contains("Samples: 5 (3 pass, 1 skipped, 1 failed) - skipped: TEST_LOW (read_qc); failed: TEST_SPADES_FAIL (assembly).") }
             )
         }
     }
@@ -143,6 +146,7 @@ nextflow_pipeline {
             assertAll(
                 { assert workflow.failed },
                 { assert path("$metaDir/nextflow.log").text.contains("Every sample that went into assembly failed there (1)") },
+                { assert path("$metaDir/nextflow.log").text.contains("Samples: 2 (0 pass, 1 skipped, 1 failed) - skipped: TEST_LOW (read_qc); failed: TEST_SPADES_FAIL (assembly).") },
                 { assert status.TEST_LOW.status == 'skipped' },
                 { assert status.TEST_SPADES_FAIL.status == 'failed' }
             )

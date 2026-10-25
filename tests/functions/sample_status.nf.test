@@ -160,4 +160,59 @@ nextflow_function {
             )
         }
     }
+
+    test("assemblyFailure - every attempted sample failed at assembly or polishing") {
+
+        function "assemblyFailure"
+
+        when {
+            params {
+                outdir = "results"
+            }
+            function {
+                """
+                input[0] = [
+                    [ sample: 'S1', seq_type: 'ont', status: 'failed', stage: 'assembly' ],
+                    [ sample: 'S2', seq_type: 'ont', status: 'failed', stage: 'polishing' ],
+                    [ sample: 'S3', seq_type: 'ont', status: 'skipped', stage: 'read_qc' ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == 'Every sample that went into assembly failed there (2) - see results/pipeline_info/sample_status.tsv.' }
+            )
+        }
+    }
+
+    test("assemblyFailure - no failure when one attempted sample has an assembly") {
+
+        function "assemblyFailure"
+
+        when {
+            params {
+                outdir = "results"
+            }
+            function {
+                """
+                // S2 failed after assembly (no contig >= --min_contig_length), so it has one
+                input[0] = [
+                    [ sample: 'S1', seq_type: 'illumina', status: 'skipped', stage: 'read_qc' ],
+                    [ sample: 'S2', seq_type: 'illumina', status: 'failed', stage: 'annotation_input' ],
+                    [ sample: 'S3', seq_type: 'illumina', status: 'failed', stage: 'assembly' ]
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert function.success },
+                { assert function.result == null }
+            )
+        }
+    }
 }
