@@ -180,21 +180,22 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 #### Databases
 
-| Parameter                  | Default | Description                                                                                   |
-| -------------------------- | ------- | --------------------------------------------------------------------------------------------- |
-| `--bakta_db`               | `null`  | Path to Bakta database (Bakta and AMRFinderPlus are skipped if unset)                         |
-| `--checkm2_db`             | `null`  | Path to CheckM2 database file (CheckM2 is skipped if unset)                                   |
-| `--amrfinder_db`           | `null`  | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset; also needs `--bakta_db`)   |
-| `--genomad_db`             | `null`  | Path to geNomad database (geNomad is skipped if unset)                                        |
-| `--kraken2db`              | `null`  | Path to Kraken2 database (required to run contamination detection)                            |
-| `--brackendb`              | `null`  | Path to Bracken database (Illumina only; falls back to `--kraken2db`)                         |
-| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled)                              |
-| `--gtdbtk_pplacer_scratch` | `true`  | Use a scratch directory for pplacer to reduce GTDB-Tk memory use                              |
-| `--rgi_db`                 | `null`  | Path to RGI/CARD database (required if `--run_rgi` is enabled)                                |
-| `--mobsuite_db`            | `null`  | Path to pre-built MOB-suite database (optional; uses bundled DB if unset)                     |
-| `--mlst_blastdb`           | `null`  | Alternative MLST BLAST database directory containing `mlst.fa` and its index files (optional) |
-| `--mlst_datadir`           | `null`  | Alternative MLST PubMLST data directory (optional; uses the one bundled with mlst if unset)   |
-| `--plassembler_db`         | `null`  | Path to Plassembler database (only needed when `plassembler` is in `--autocycler_assemblers`) |
+| Parameter                  | Default | Description                                                                                                    |
+| -------------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `--bakta_db`               | `null`  | Path to Bakta database (Bakta and AMRFinderPlus are skipped if unset)                                          |
+| `--checkm2_db`             | `null`  | Path to CheckM2 database file (CheckM2 is skipped if unset)                                                    |
+| `--amrfinder_db`           | `null`  | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset; also needs `--bakta_db`)                    |
+| `--genomad_db`             | `null`  | Path to geNomad database (geNomad is skipped if unset)                                                         |
+| `--kraken2db`              | `null`  | Path to Kraken2 database (required to run contamination detection)                                             |
+| `--brackendb`              | `null`  | Path to Bracken database (Illumina only; falls back to `--kraken2db`)                                          |
+| `--bracken_read_length`    | `null`  | Bracken `-r` for every sample; if unset, per sample from the read length and the database's kmer distributions |
+| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk database (required if `--run_gtdbtk` is enabled)                                               |
+| `--gtdbtk_pplacer_scratch` | `true`  | Use a scratch directory for pplacer to reduce GTDB-Tk memory use                                               |
+| `--rgi_db`                 | `null`  | Path to RGI/CARD database (required if `--run_rgi` is enabled)                                                 |
+| `--mobsuite_db`            | `null`  | Path to pre-built MOB-suite database (optional; uses bundled DB if unset)                                      |
+| `--mlst_blastdb`           | `null`  | Alternative MLST BLAST database directory containing `mlst.fa` and its index files (optional)                  |
+| `--mlst_datadir`           | `null`  | Alternative MLST PubMLST data directory (optional; uses the one bundled with mlst if unset)                    |
+| `--plassembler_db`         | `null`  | Path to Plassembler database (only needed when `plassembler` is in `--autocycler_assemblers`)                  |
 
 #### Illumina read processing (fastp)
 

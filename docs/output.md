@@ -173,7 +173,7 @@ This step runs for `--seq_type ont` only.
 
 </details>
 
-[Kraken2](https://ccb.jhu.edu/software/kraken2/) classifies reads against a reference database for contamination detection. [Bracken](https://ccb.jhu.edu/software/bracken/) refines Kraken2 abundance estimates at a specified taxonomic level.
+[Kraken2](https://ccb.jhu.edu/software/kraken2/) classifies reads against a reference database for contamination detection. [Bracken](https://ccb.jhu.edu/software/bracken/) refines Kraken2 abundance estimates at a specified taxonomic level, with the database read length (`-r`) matched to each sample's reads (or `--bracken_read_length`).
 
 This step is optional and runs when `--run_kraken2` is enabled and `--kraken2db` is provided.
 

@@ -307,6 +307,13 @@
                     "exists": true,
                     "fa_icon": "fas fa-database"
                 },
+                "bracken_read_length": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Bracken read length (-r) for every sample (Illumina only). If unset, each sample gets the longest read length in the Bracken database at or below its sequenced read length.",
+                    "help_text": "The Bracken database must contain database<N>mers.kmer_distrib for this N. Unset, the pipeline reads each sample's sequenced read length from fastp (read1_before_filtering.total_cycles, e.g. 151) and lists the database's kmer_distrib files (e.g. 100, 150, 300 -> 150); when none is that short it uses the shortest, with a warning.",
+                    "fa_icon": "fas fa-ruler"
+                },
                 "genomad_db": {
                     "type": "string",
                     "description": "Path to geNomad database directory.",

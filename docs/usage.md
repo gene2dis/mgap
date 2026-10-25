@@ -527,11 +527,12 @@ This step is **enabled by default** but requires a database (`--kraken2db`). If 
 
 **Kraken2/Bracken parameters:**
 
-| Parameter       | Default | Description                                                                                                                                       |
-| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--run_kraken2` | `true`  | Enable Kraken2 contamination detection                                                                                                            |
-| `--kraken2db`   | `null`  | Path to Kraken2 database directory (required to run)                                                                                              |
-| `--brackendb`   | `null`  | Path to Bracken database directory (Illumina only). Falls back to `--kraken2db` if unset, which then must contain Bracken kmer distribution files |
+| Parameter               | Default | Description                                                                                                                                       |
+| ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--run_kraken2`         | `true`  | Enable Kraken2 contamination detection                                                                                                            |
+| `--kraken2db`           | `null`  | Path to Kraken2 database directory (required to run)                                                                                              |
+| `--brackendb`           | `null`  | Path to Bracken database directory (Illumina only). Falls back to `--kraken2db` if unset, which then must contain Bracken kmer distribution files |
+| `--bracken_read_length` | `null`  | Bracken read length (`-r`) for every sample. If unset, chosen per sample (see below)                                                              |
 
 **Basic usage with contamination detection:**
 
@@ -557,6 +558,14 @@ nextflow run gene2dis/mgap \
 ```
 
 > **Note:** Bracken runs only for `--seq_type illumina`. ONT mode runs Kraken2 only (no Bracken re-estimation).
+
+Bracken re-estimates abundances with k-mer distributions built for one read length (`database<N>mers.kmer_distrib`
+in the Bracken database, e.g. N = 50, 75, 100, 150, 200, 250, 300). For each sample the pipeline takes the sequenced
+read length from fastp (`read1_before_filtering.total_cycles`, e.g. 151 or 301) and passes the longest N at or below
+it as `-r` (150 or 300). If every N is longer than the reads, the shortest is used, with a warning.
+`--bracken_read_length` sets one N for all samples instead; the database must have it. In the
+[benchmark](benchmarks/coverage_2026-10-24.md#b10--bracken-read-length) the matched length changed species fractions by
+at most 0.49 points compared with Bracken's default of 100, and never the top species.
 
 Kraken2 runs with `--memory-mapping`: the database is read through the operating system's page cache instead of being
 loaded into each task's memory, so tasks on the same machine share one copy and later tasks start without reloading it.

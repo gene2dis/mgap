@@ -42,6 +42,7 @@ bakta_db: null # Bakta database directory
 checkm2_db: null # CheckM2 database file
 kraken2db: null # Kraken2 database directory
 brackendb: null # Bracken database directory (Illumina only; falls back to kraken2db if unset)
+bracken_read_length: null # Bracken -r for all samples; null = per sample from the read length and the database
 amrfinder_db: null # AMRFinderPlus database directory (also needs bakta_db — AMRFinderPlus runs on Bakta outputs)
 genomad_db: null # geNomad database directory
 mobsuite_db: null # MOB-suite database directory (optional)

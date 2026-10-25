@@ -61,9 +61,30 @@ workflow ILLUMINA {
 
         // Bracken uses its own database if provided; otherwise falls back to
         // the Kraken2 DB directory (which must then contain Bracken kmer files)
+        def bracken_db = file(params.brackendb ?: params.kraken2db, checkIfExists: true)
+
+        // Bracken -r per sample (BRACKEN ext.args, from meta.bracken_read_length):
+        // the longest database<N>mers.kmer_distrib at or below the sequenced read
+        // length (fastp read1_before_filtering.total_cycles), unless
+        // --bracken_read_length is set
+        def bracken_lengths = brackenReadLengths(bracken_db)
+        def bracken_override = params.bracken_read_length ? params.bracken_read_length.toString().toInteger() : null
+        if (!bracken_lengths) {
+            log.warn("No database<N>mers.kmer_distrib file in the Bracken database ${bracken_db}: Bracken runs without -r (its default, 100).")
+        }
+        else if (bracken_override && !(bracken_override in bracken_lengths)) {
+            error("--bracken_read_length ${bracken_override}: the Bracken database ${bracken_db} has no database${bracken_override}mers.kmer_distrib (it has read lengths ${bracken_lengths.join(', ')}).")
+        }
+        ch_bracken_input = KRAKEN2.out.report
+            .join(FASTP.out.json)
+            .map { meta, report, fastp_json ->
+                def read_length = bracken_override ?: brackenReadLength(meta.id, fastpReadCycles(fastp_json), bracken_lengths)
+                [ meta + [ bracken_read_length: read_length ], report ]
+            }
+
         BRACKEN (
-            KRAKEN2.out.report,
-            file(params.brackendb ?: params.kraken2db, checkIfExists: true)
+            ch_bracken_input,
+            bracken_db
         )
         ch_versions = ch_versions.mix(BRACKEN.out.versions.first())
     }
@@ -97,4 +118,47 @@ workflow ILLUMINA {
     assembly = SPADES.out.scaffolds  // channel: [ val(meta), path(fasta.gz) ]
     reports  = ch_reports             // channel: [ path(report) ] for MultiQC
     versions = ch_versions            // channel: [ path(versions.yml) ]
+}
+
+//
+// Read lengths N with a database<N>mers.kmer_distrib file in the Bracken database, ascending
+//
+def brackenReadLengths(bracken_db) {
+    return bracken_db.listFiles()
+        .collect { kmer_file -> (kmer_file.name =~ /^database(\d+)mers\.kmer_distrib$/) }
+        .findAll { match -> match.matches() }
+        .collect { match -> match.group(1).toInteger() }
+        .sort()
+}
+
+//
+// Sequenced read length: read1_before_filtering.total_cycles of the fastp JSON (0 if unreadable)
+//
+def fastpReadCycles(fastp_json) {
+    try {
+        return new groovy.json.JsonSlurper().parseText(fastp_json.text)?.read1_before_filtering?.total_cycles ?: 0
+    } catch (Exception _error) {
+        return 0
+    }
+}
+
+//
+// Bracken -r for one sample: the longest database read length at or below the
+// sequenced read length, or the shortest one (with a warning) when none fits or
+// the read length is unknown. null when the database has none (no -r).
+//
+def brackenReadLength(sample, read_cycles, bracken_lengths) {
+    if (!bracken_lengths) {
+        return null
+    }
+    if (!read_cycles) {
+        log.warn("Sample '${sample}': no read length in the fastp report - Bracken uses -r ${bracken_lengths.min()}.")
+        return bracken_lengths.min()
+    }
+    def fitting = bracken_lengths.findAll { length -> length <= read_cycles }
+    if (!fitting) {
+        log.warn("Sample '${sample}': reads are ${read_cycles} bp, shorter than every Bracken database read length (${bracken_lengths.join(', ')}) - Bracken uses -r ${bracken_lengths.min()}.")
+        return bracken_lengths.min()
+    }
+    return fitting.max()
 }

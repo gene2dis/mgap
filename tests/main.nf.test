@@ -70,7 +70,8 @@ nextflow_pipeline {
         tag "stub"
 
         options "-stub"
-        config "./config/ext_args.config"
+        // fastp stub: 151 cycles; stub database: 100, 150 and 300 bp kmer distributions
+        config "./config/bracken_read_length.config"
 
         when {
             params {
@@ -92,7 +93,93 @@ nextflow_pipeline {
                 { assert succeeded.any { it.contains('BRACKEN') } },
                 { assert succeeded.any { it.contains('SPADES') } },
                 { assert kraken2.size() == 1 },
-                { assert kraken2.values().every { it == '--memory-mapping' } }
+                { assert kraken2.values().every { it == '--memory-mapping' } },
+                // the longest database read length at or below the 151 sequenced cycles
+                { assert TaskArgs.of(metaDir, 'BRACKEN') == [ TEST_BFRAGILIS: '-r 150' ] }
+            )
+        }
+
+    }
+
+    test("Bracken read length set with --bracken_read_length - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+        config "./config/bracken_read_length.config"
+
+        when {
+            params {
+                input               = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type            = "illumina"
+                kraken2db           = "${projectDir}/tests/data/stub_db/kraken2"
+                bracken_read_length = 300
+                adjust_coverage     = false
+                outdir              = "$outputDir"
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert TaskArgs.of(metaDir, 'BRACKEN') == [ TEST_BFRAGILIS: '-r 300' ] }
+            )
+        }
+
+    }
+
+    test("Bracken read length when no database read length fits the reads - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+        config "./config/bracken_read_length.config"
+
+        when {
+            params {
+                input            = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type         = "illumina"
+                kraken2db        = "${projectDir}/tests/data/stub_db/kraken2"
+                // 75 bp reads, shorter than the database's 100, 150 and 300
+                stub_read_cycles = 75
+                adjust_coverage  = false
+                outdir           = "$outputDir"
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert TaskArgs.of(metaDir, 'BRACKEN') == [ TEST_BFRAGILIS: '-r 100' ] },
+                { assert path("$metaDir/nextflow.log").text.contains("Sample 'TEST_BFRAGILIS': reads are 75 bp, shorter than every Bracken database read length (100, 150, 300) - Bracken uses -r 100.") }
+            )
+        }
+
+    }
+
+    test("Bracken read length not in the database fails at launch - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input               = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type            = "illumina"
+                kraken2db           = "${projectDir}/tests/data/stub_db/kraken2"
+                bracken_read_length = 250
+                outdir              = "$outputDir"
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.failed },
+                { assert path("$metaDir/nextflow.log").text.contains("--bracken_read_length 250: the Bracken database") }
             )
         }
 
