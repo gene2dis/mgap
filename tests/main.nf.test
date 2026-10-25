@@ -876,6 +876,8 @@ nextflow_pipeline {
                 seq_type        = "illumina"
                 run_kraken2     = false
                 adjust_coverage = false
+                // ~11 Mb after fastp, below the 50 Mb default (as in conf/test.config)
+                min_bases       = 5000000
                 outdir          = "$outputDir"
             }
         }

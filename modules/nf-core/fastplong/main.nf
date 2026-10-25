@@ -51,12 +51,16 @@ process FASTPLONG {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def touch_reads = discard_trimmed_pass ? "" : "echo '' | gzip > ${prefix}.fastplong.fastq.gz"
     def touch_fail  = save_trimmed_fail ? "echo '' | gzip > ${prefix}.fail.fastq.gz" : ""
+    // mgap: ext.stub_total_bases writes the fastplong JSON field the pipeline reads
+    // (bases after filtering, for --min_bases), so stub tests reach that branch
+    def stub_bases  = task.ext.stub_total_bases
+    def write_json  = stub_bases == null ? "touch ${prefix}.fastplong.json" : "echo '{\"summary\": {\"after_filtering\": {\"total_bases\": ${stub_bases}}}}' > ${prefix}.fastplong.json"
     """
     echo $args
 
     $touch_reads
     $touch_fail
-    touch ${prefix}.fastplong.json
+    $write_json
     touch ${prefix}.fastplong.html
     touch ${prefix}.fastplong.log
     """
