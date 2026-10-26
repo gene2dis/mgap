@@ -34,6 +34,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Launch-time warnings for annotation steps skipped because their database was not provided
 - Stub blocks in every local module (fast `-stub` runs cover all three input modes)
 - Sample QC gate (issues #14, #3, #2; D-7): samples with fewer than `--min_bases` (default 50,000,000) bases after fastp/fastplong skip Kraken2/Bracken, assembly and annotation; SPAdes, Flye and Medaka retry an out-of-memory failure once and then ignore it, so one failed sample no longer stops the run; QUAST failures are a warning. `pipeline_info/sample_status.tsv` lists every sample as pass, skipped or failed with the stage, reason and read and assembly numbers (reads, bases, mean and, for ONT, approximate N50 read length from the fastp/fastplong reports; contigs, length and N50 from `seqkit stats`), and the completion log prints a summary line (with how many samples with an assembly QUAST failed for). The run exits 0 unless every sample that went into assembly failed
+- Run report prototype (not yet run by the pipeline): `bin/mgap_report.py` writes one offline HTML page (read QC, species in the reads, assembly, CheckM2, typing, AMR heatmaps, mobile elements, per-sample cards, versions and citations) and a per-sample TSV from a manifest of tool outputs; `accessory_scripts/build_report_manifest.py` builds that manifest from a finished results folder
 
 ### `Changed`
 
