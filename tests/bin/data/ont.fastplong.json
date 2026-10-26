@@ -1,0 +1,25 @@
+{
+  "summary": {
+    "fastplong_version": "0.7.1",
+    "before_filtering": {
+      "total_reads": 1000,
+      "total_bases": 33343943,
+      "q20_bases": 33343943,
+      "q30_bases": 33343943,
+      "q20_rate": 1,
+      "q30_rate": 1,
+      "read_mean_length": 33343,
+      "gc_content": 0.477815
+    },
+    "after_filtering": {
+      "total_reads": 938,
+      "total_bases": 33311690,
+      "q20_bases": 33311690,
+      "q30_bases": 33311690,
+      "q20_rate": 1,
+      "q30_rate": 1,
+      "read_mean_length": 35513,
+      "gc_content": 0.477802
+    }
+  }
+}

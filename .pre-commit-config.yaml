@@ -10,7 +10,8 @@ repos:
       - id: end-of-file-fixer
         exclude: ^modules/nf-core/
       - id: trailing-whitespace
-        exclude: ^modules/nf-core/
+        # tab-separated fixtures end in a tab when their last column is empty
+        exclude: ^(modules/nf-core/|tests/bin/data/.*\.(tsv|txt|tab)$)
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ["--maxkb=1000"]

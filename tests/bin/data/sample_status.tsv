@@ -1,0 +1,4 @@
+sample	seq_type	status	stage	reason	input_reads	input_bases	input_mean_length	input_n50	filtered_reads	filtered_bases	assembly_contigs	assembly_length	assembly_n50	annotation_contigs	annotation_length
+511.1	illumina	pass	annotation		3202076	480311400	150		3004034	444812524	397	4907697	295713	38	4823885
+SCL2535	illumina	pass	annotation		2270906	551085099	243		2150760	472142971	157	5505072	375956	40	5471959
+SCL2535_low	illumina	skipped	read_qc	16648045 bases after fastp, below --min_bases 50000000	80000	19404851	243		75770	16648045					

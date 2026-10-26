@@ -1,0 +1,2 @@
+antigenic_formula	cgmlst_ST	cgmlst_distance	cgmlst_found_loci	cgmlst_genome_match	cgmlst_matching_alleles	cgmlst_subspecies	fasta_filepath	genome	h1	h2	o_antigen	qc_messages	qc_status	serogroup	serovar	serovar_antigen	serovar_cgmlst
+1,4,[5],12:f,g,s:-	4008255310	0.033333333333333326	330	ERR178863	319	enterica	511.1.fasta	511.1	f,g,s	-	1,4,[5],12	INFO: Number of cgMLST330 loci found (n=330)	PASS	B	Agona	Derby|Agona|Essen|Budapest	Agona

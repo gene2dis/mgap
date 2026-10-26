@@ -1,0 +1,6 @@
+  0.24	2860	2860	U	0	unclassified
+ 99.76	1180570	6916	R	1	root
+ 27.88	329949	325588	S	573	                  Klebsiella pneumoniae
+  0.49	5791	5791	S	54291	                  Raoultella ornithinolytica
+  0.33	3942	3760	S	1463165	                  Klebsiella quasipneumoniae
+ 88.43	1046519	705168	G	570	                Klebsiella
