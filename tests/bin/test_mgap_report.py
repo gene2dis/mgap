@@ -5,6 +5,8 @@ The files in data/ are excerpts of real MGAP outputs (Phase 8a run of the Illumi
 """
 
 import json
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -169,6 +171,15 @@ def test_parse_sccmec(data):
     assert (result["type"], result["subtype"], result["mecA"]) == ("I", "Ia", "+")
 
 
+def test_sccmec_problem(data):
+    # SCL1559: the target genes gave no type, so sccmec fell back to cassette coverage
+    assert "cassette coverage only" in report.sccmec_problem(report.parse_sccmec(data / "SCL1559.sccmec.tsv"))
+    assert report.sccmec_problem({"type": "II", "mecA": "+", "target_comment": ""}) is None
+    assert report.sccmec_problem({"type": "-", "mecA": "-", "targets": "-"}) is None  # no SCCmec (MSSA)
+    assert "no SCCmec type" in report.sccmec_problem({"type": "-", "mecA": "+", "targets": "mecA"})
+    assert "several" in report.sccmec_problem({"type": "IV,V", "mecA": "+", "target_comment": ""})
+
+
 # --------------------------------------------------------------------------------------------------
 # Genome quality, AMR and mobile elements
 # --------------------------------------------------------------------------------------------------
@@ -329,3 +340,81 @@ def test_report_sections_need_their_inputs(tmp_path, data):
     assert '<section id="assembly"' in page
     for section in ("read-qc", "quality", "typing", "amr", "mobile"):
         assert f'<section id="{section}"' not in page
+
+
+def write_manifest(path, rows):
+    path.write_text("sample\ttool\tfile\n" + "".join(f"{s}\t{tool}\t{file}\n" for s, tool, file in rows))
+    return path
+
+
+def test_checkm2_groups_and_table_order(tmp_path, data):
+    rows = [("511.1", "checkm2", data / "511.1.checkm2.tsv")]
+    for sample, completeness, contamination in (("A", 85.0, 1.0), ("B", 99.0, 7.0), ("C", 80.0, 9.0)):
+        path = tmp_path / f"{sample}.tsv"
+        path.write_text(
+            (data / "511.1.checkm2.tsv")
+            .read_text()
+            .replace("\t100.0\t0.32\t", f"\t{completeness}\t{contamination}\t")
+            .replace("511.1", sample)
+        )
+        rows.append((sample, "checkm2", path))
+    run = report.RunData(report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows)), {})
+    groups = {s: run.checkm2_group(s) for s in ("511.1", "A", "B", "C")}
+    assert groups == {"511.1": None, "A": "low_completeness", "B": "high_contamination", "C": "both"}
+    page = report.section_quality(run).html()
+    # genomes outside the limits come first in the table
+    assert page.index('#sample-A"') < page.index("#sample-511_1")
+
+
+def test_typing_disagreement_first_and_no_second_call(tmp_path, data):
+    mlst = tmp_path / "SCL2461.mlst.tsv"
+    mlst.write_text("SCL2461.fasta\tecoli_achtman_4\t14464\tadk(1)\n")
+    rows = [
+        ("100.1", "mlst", data / "100.1.mlst.tsv"),
+        ("SCL2461", "mlst", mlst),
+        ("-", "gtdbtk", data / "gtdbtk.bac120.summary.tsv"),
+    ]
+    run_info = {"mlst_organisms": {"senterica_achtman_2": "Salmonella", "ecoli_achtman_4": "Escherichia"}}
+    manifest = report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows))
+    page = report.section_typing(report.RunData(manifest, run_info)).html()
+    # GTDB-Tk calls SCL2461 Klebsiella: flagged and listed before 100.1
+    assert page.index("#sample-SCL2461") < page.index("#sample-100_1")
+    assert "differs" in page
+    # without GTDB-Tk or reads there is nothing to compare MLST with
+    del manifest["gtdbtk"]
+    page = report.section_typing(report.RunData(manifest, run_info)).html()
+    assert "Neither GTDB-Tk nor a read classification ran" in page
+    assert "Genus check" not in page
+
+
+def test_database_versions_in_overview(tmp_path, data):
+    rows = [("-", "software_versions", data / "software_versions.yml")]
+    run_info = {
+        "databases": {"amrfinder_db": "/dbs/amrfinder", "bakta_db": "/dbs/bakta", "kraken2db": "/dbs/k2"},
+        "database_versions": {"bakta_db": "6.0 full (2025-02-24)"},
+    }
+    run = report.RunData(report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows)), run_info)
+    page = report.section_overview(run).html()
+    assert "2025-12-03.1" in page  # from software_versions.yml
+    assert "6.0 full (2025-02-24)" in page  # from run-info
+    assert "not recorded" in page  # Kraken2 databases carry no version
+
+
+def test_build_manifest_database_versions(tmp_path):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "accessory_scripts"))
+    import build_report_manifest
+
+    (tmp_path / "bakta").mkdir()
+    (tmp_path / "bakta" / "version.json").write_text('{"date": "2025-02-24", "major": 6, "minor": 0, "type": "full"}')
+    (tmp_path / "gtdb" / "metadata").mkdir(parents=True)
+    (tmp_path / "gtdb" / "metadata" / "metadata.txt").write_text("VERSION_DATA=r232\n")
+    (tmp_path / "rgi").mkdir()
+    (tmp_path / "rgi" / "card_database_v4.0.1_all.fasta").write_text("")
+    (tmp_path / "k2").mkdir()
+    databases = {name: str(tmp_path / name) for name in ("bakta", "gtdb", "rgi", "k2")}
+    databases = dict(zip(("bakta_db", "gtdbtk_db", "rgi_db", "kraken2db"), databases.values()))
+    assert build_report_manifest.database_versions(databases) == {
+        "bakta_db": "6.0 full (2025-02-24)",
+        "gtdbtk_db": "r232",
+        "rgi_db": "CARD 4.0.1",
+    }
