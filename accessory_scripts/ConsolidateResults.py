@@ -220,24 +220,30 @@ def parse_annotation(input_folder, sample):
 
     annotation_dir = input_folder + "/" + sample + "/annotation/"
 
-    checkm2_out = parse_if_present(parse_checkm2, annotation_dir + "checkm2/" + sample + ".quality_report.tsv")
+    checkm2_out = parse_if_present(parse_checkm2, annotation_dir + "checkm2/" + sample + "_checkm2_report.tsv")
     mlst_out = parse_if_present(parse_mlst, annotation_dir + "mlst/" + sample + ".tsv")
     bakta_out = parse_if_present(parse_bakta, annotation_dir + "bakta/" + sample + ".tsv")
     amrfinder_out = parse_if_present(parse_amrfinder, annotation_dir + "amrfinder/" + sample + ".tsv")
-    genomad_virus_out = parse_if_present(parse_genomad, annotation_dir + "genomad/" + sample + "_virus_summary.tsv")
-    genomad_plasmid_out = parse_if_present(parse_genomad, annotation_dir + "genomad/" + sample + "_plasmid_summary.tsv")
+    # geNomad publishes its whole output folder; the summaries are in <sample>_summary/
+    genomad_summary = annotation_dir + "genomad/" + sample + "_summary/" + sample
+    genomad_virus_out = parse_if_present(parse_genomad, genomad_summary + "_virus_summary.tsv")
+    genomad_plasmid_out = parse_if_present(parse_genomad, genomad_summary + "_plasmid_summary.tsv")
 
     return checkm2_out, mlst_out, bakta_out, amrfinder_out, genomad_virus_out, genomad_plasmid_out
 
 
 def parse_kleborate(input_folder, sample):
     """
-    Function to parse the kleborate results
+    Function to parse the kleborate results. Kleborate 3 (-p kpsc) names its
+    output after the preset, klebsiella_pneumo_complex_output.txt, one row
+    per assembly; its "strain" column is the assembly file name, so the
+    sample ID is set from the folder instead.
     """
     kleborate_out = pd.read_csv(
-        input_folder + "/" + sample + "/annotation/kleborate/" + sample + ".results.txt", sep="\t"
+        input_folder + "/" + sample + "/annotation/kleborate/klebsiella_pneumo_complex_output.txt", sep="\t"
     )
-    kleborate_out.rename(columns={"strain": "sample"}, inplace=True)
+    kleborate_out = kleborate_out.drop(columns=["strain"], errors="ignore")
+    kleborate_out["sample"] = sample
     kleborate_out = kleborate_out.set_index("sample")
 
     return kleborate_out
@@ -326,7 +332,9 @@ if __name__ == "__main__":
             genomad_plasmid_results.append(genomad_plasmid)
 
         # Specific annotations
-        if os.path.exists(args.input_folder + "/" + sample + "/annotation/kleborate"):
+        if os.path.exists(
+            args.input_folder + "/" + sample + "/annotation/kleborate/klebsiella_pneumo_complex_output.txt"
+        ):
             kleborate_results.append(parse_kleborate(args.input_folder, sample))
 
         if os.path.exists(args.input_folder + "/" + sample + "/annotation/sccmec"):

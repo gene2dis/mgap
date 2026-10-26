@@ -104,6 +104,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - Samples no longer vanish silently when dnaapler produces no reoriented assembly (falls back to the unoriented assembly with a warning)
 - SISTR's conditionally-produced outputs are optional, so runs no longer fail over missing novel-allele files
 - `ConsolidateResults.py`: fixed silently-dropped kleborate/sccmec tables, added ONT support and defensive parsing
+- `ConsolidateResults.py` reads Kleborate 3's `klebsiella_pneumo_complex_output.txt` (Kleborate 3 names its output after the `-p kpsc` preset); it looked for `<sample>.results.txt`, which Kleborate 3 does not write, and stopped with `FileNotFoundError` on any run with a Kleborate sample. It also reads CheckM2's `<sample>_checkm2_report.tsv` and geNomad's summaries from `<sample>_summary/`; the old paths matched nothing, so the CheckM2 and geNomad tables were silently left out
 - Duplicate sample names in the samplesheet are rejected at launch (`uniqueEntries`); before, joins keyed on the sample could mis-join or drop samples
 - Database paths are checked at launch (`exists` in the schema, `checkIfExists` for Kraken2, Bracken, RGI and MOB-suite)
 - Cloud profiles: resources come from `conf/base.config` with retry scaling (Google Batch machine types no longer smaller than the requested memory), `google.location` replaces the ignored `google.region`, and the dead `google.lifeSciences` block and the AMI-specific AWS CLI default are gone
