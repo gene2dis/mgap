@@ -183,6 +183,7 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 | `--run_gtdbtk`      | `false`    | Enable GTDB-Tk taxonomic classification                                                |
 | `--run_rgi`         | `false`    | Enable RGI antimicrobial resistance gene prediction                                    |
 | `--run_mobsuite`    | `false`    | Enable MOB-suite plasmid detection and reconstruction                                  |
+| `--skip_report`     | `false`    | Skip the run report (`report/`: offline HTML, summary TSV and XLSX)                    |
 | `--run_dnaapler`    | `true`     | Enable contig reorientation with Dnaapler (ONT only)                                   |
 
 #### Databases

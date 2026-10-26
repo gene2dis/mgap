@@ -108,7 +108,8 @@ workflow SAMPLE_STATUS {
         .map { _tsv, rows -> rows }
 
     emit:
-    ch_status_rows  // channel: [ [ map ] ] every sample's row, once sample_status.tsv is written
+    rows = ch_status_rows  // channel: [ [ map ] ] every sample's row, once sample_status.tsv is written
+    tsv  = ch_status_tsv   // channel: path(sample_status.tsv) for the run report
 }
 
 //

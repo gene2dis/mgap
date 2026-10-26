@@ -1,0 +1,60 @@
+name: mgap_report
+description: |
+  MGAP run report: one offline HTML page (Plotly inlined), a per-sample summary TSV and an XLSX workbook
+  (the summary, then one sheet per tool) from the run's tool outputs, through bin/mgap_report.py.
+keywords:
+  - report
+  - summary
+  - qc
+  - typing
+  - amr
+tools:
+  - mgap_report:
+      description: Run report script of the MGAP pipeline (bin/mgap_report.py), built on pandas, Plotly, PyYAML and openpyxl.
+      homepage: https://github.com/gene2dis/mgap
+      documentation: https://github.com/gene2dis/mgap/blob/main/docs/output.md
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - entries:
+        type: list
+        description: |
+          One [ sample, tool ] pair per file, in the order of files. Run-level files use '-' as the sample;
+          the tool names are listed in the docstring of bin/mgap_report.py.
+    - files:
+        type: file
+        description: |
+          The tool outputs, each staged in its own numbered folder (inputs/<n>/<name>) so files with the
+          same name do not collide.
+        pattern: "*"
+  - run_info:
+      type: file
+      description: |
+        JSON with what no output file holds: pipeline and Nextflow versions, run name and date, sequencing
+        type, key parameters, database paths and versions, and the MLST scheme to organism map.
+      pattern: "*.json"
+output:
+  html:
+    - mgap_report.html:
+        type: file
+        description: Self-contained HTML report that opens offline.
+        pattern: "mgap_report.html"
+  tsv:
+    - mgap_summary.tsv:
+        type: file
+        description: One row per sample with its key numbers and warnings.
+        pattern: "mgap_summary.tsv"
+  xlsx:
+    - mgap_summary.xlsx:
+        type: file
+        description: Workbook with the summary sheet and one sheet per tool.
+        pattern: "mgap_summary.xlsx"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

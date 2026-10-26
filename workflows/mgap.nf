@@ -88,6 +88,7 @@ include { RGI_LOAD } from '../modules/local/rgi/load/main'
 include { RGI_MAIN } from '../modules/local/rgi/main/main'
 include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoend/main'
 include { MOBSUITE_RECON } from '../modules/nf-core/mobsuite/recon/main'
+include { MGAP_REPORT } from '../modules/local/mgap_report/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -126,6 +127,8 @@ workflow MGAP {
     // per-sample numbers and skipped/failed samples for sample_status.tsv
     ch_read_stats = channel.empty()
     ch_sample_outcomes = channel.empty()
+    // [ meta, tool, file ] for the run report; tool names as in bin/mgap_report.py
+    ch_report_files = channel.empty()
 
     if (params.seq_type == "illumina") {
         //
@@ -146,6 +149,7 @@ workflow MGAP {
         ch_sample_outcomes = ILLUMINA.out.status
         ch_versions = ch_versions.mix(ILLUMINA.out.versions)
         ch_multiqc_files = ch_multiqc_files.mix(ILLUMINA.out.reports)
+        ch_report_files = ch_report_files.mix(ILLUMINA.out.report_files)
 
     } else if (params.seq_type == "ont") {
         //
@@ -165,6 +169,7 @@ workflow MGAP {
         ch_sample_outcomes = ONT.out.status
         ch_versions = ch_versions.mix(ONT.out.versions)
         ch_multiqc_files = ch_multiqc_files.mix(ONT.out.reports)
+        ch_report_files = ch_report_files.mix(ONT.out.report_files)
 
     } else if (params.seq_type == "contig") {
         //
@@ -197,6 +202,7 @@ workflow MGAP {
     // MultiQC's QUAST module only reads files named report.tsv, not the <sample>.tsv
     // link; MULTIQC stages each input in its own folder, so the names do not clash
     ch_multiqc_files = ch_multiqc_files.mix(QUAST.out.results.map { _meta, dir -> dir.resolve('report.tsv') })
+    ch_report_files = ch_report_files.mix(QUAST.out.tsv.map { meta, tsv -> [ meta, 'quast', tsv ] })
     // QUAST failures are ignored (conf/modules.config, issue #2: exit 4 when no
     // contig is >= 500 bp); the sample is still annotated
     ch_quast_failed = missingOutputs(genome_assembly, QUAST.out.tsv, channel.empty())
@@ -213,6 +219,7 @@ workflow MGAP {
     //
     SEQKIT_FILTER( genome_assembly )
     ch_versions = ch_versions.mix(SEQKIT_FILTER.out.versions.first())
+    ch_report_files = ch_report_files.mix(SEQKIT_FILTER.out.stats.map { meta, stats -> [ meta, 'filter_stats', stats ] })
     // A sample with no contig >= --min_contig_length gets an empty file: leave it
     // out of annotation (GTDB-Tk's batch would fail for every sample) and say so
     SEQKIT_FILTER.out.fasta
@@ -228,6 +235,9 @@ workflow MGAP {
             [ meta, [ stage: 'annotation_input', status: 'failed', reason: "no contig >= --min_contig_length ${params.min_contig_length} bp" ] ]
         }
 
+    // run-level files for the report (GTDB-Tk adds its summaries below)
+    ch_report_run_files = channel.empty()
+
     // RUN Checkm2 (only when --checkm2_db is provided)
     if (params.checkm2_db) {
         // nf-core checkm2/predict expects tuple val(dbmeta), path(db) for database
@@ -237,6 +247,7 @@ workflow MGAP {
             ch_checkm2_db
         )
         ch_versions = ch_versions.mix(CHECKM2.out.versions.first())
+        ch_report_files = ch_report_files.mix(CHECKM2.out.checkm2_tsv.map { meta, tsv -> [ meta, 'checkm2', tsv ] })
     }
 
     // RUN MLST
@@ -248,6 +259,7 @@ workflow MGAP {
         ch_mlst_datadir
     )
     ch_versions = ch_versions.mix(MLST.out.versions.first())
+    ch_report_files = ch_report_files.mix(MLST.out.tsv.map { meta, tsv -> [ meta, 'mlst', tsv ] })
 
     //
     // Process MLST to get species name for AMRFinderPlus and species-specific tools
@@ -303,6 +315,9 @@ workflow MGAP {
                 file(params.amrfinder_db, checkIfExists: true)
             )
             ch_versions = ch_versions.mix(AMRFINDERPLUS_RUN.out.versions.first())
+            // <sample>.tsv holds the genes and the point mutations found; -mutations.tsv lists every
+            // position checked, wild type included, so the report does not read it
+            ch_report_files = ch_report_files.mix(AMRFINDERPLUS_RUN.out.report.map { meta, tsv -> [ meta, 'amrfinderplus', tsv ] })
         }
     }
 
@@ -327,6 +342,9 @@ workflow MGAP {
         )
         // one batch task for the whole run, so no .first() needed
         ch_versions = ch_versions.mix(GTDBTK.out.versions)
+        // bac120 and ar53 summaries; genome names are the sample IDs
+        ch_report_run_files = ch_report_run_files.mix(GTDBTK.out.summary
+            .flatMap { _meta, summaries -> [ summaries ].flatten().collect { summary -> [ '-', 'gtdbtk', summary ] } })
     }
 
 
@@ -337,6 +355,10 @@ workflow MGAP {
             file(params.genomad_db, checkIfExists: true)
         )
         ch_versions = ch_versions.mix(GENOMAD.out.versions.first())
+        ch_report_files = ch_report_files.mix(
+            GENOMAD.out.plasmid_summary.map { meta, tsv -> [ meta, 'genomad_plasmid', tsv ] },
+            GENOMAD.out.virus_summary.map { meta, tsv -> [ meta, 'genomad_virus', tsv ] }
+        )
     }
 
     // RUN MOB-suite for plasmid detection and reconstruction
@@ -346,6 +368,11 @@ workflow MGAP {
             params.mobsuite_db ? file(params.mobsuite_db, checkIfExists: true) : []
         )
         ch_versions = ch_versions.mix(MOBSUITE_RECON.out.versions.first())
+        // the same file names for every sample: MGAP_REPORT stages each file in its own folder
+        ch_report_files = ch_report_files.mix(
+            MOBSUITE_RECON.out.contig_report.map { meta, txt -> [ meta, 'mobsuite_contigs', txt ] },
+            MOBSUITE_RECON.out.mobtyper_results.map { meta, txt -> [ meta, 'mobsuite_mobtyper', txt ] }
+        )
     }
 
     // RUN RGI for antimicrobial resistance gene prediction
@@ -361,6 +388,7 @@ workflow MGAP {
             RGI_LOAD.out.db
         )
         ch_versions = ch_versions.mix(RGI_MAIN.out.versions.first())
+        ch_report_files = ch_report_files.mix(RGI_MAIN.out.tsv.map { meta, txt -> [ meta, 'rgi', txt ] })
     }
 
     //
@@ -372,6 +400,20 @@ workflow MGAP {
         ch_annotation_fasta
     )
     ch_versions = ch_versions.mix(SPECIES_TYPING.out.versions)
+    // Kleborate also writes a hAMRonization file, and sccmec its BLAST and detail tables
+    ch_report_files = ch_report_files.mix(
+        SPECIES_TYPING.out.kleborate.flatMap { meta, outputs ->
+            [ outputs ].flatten()
+                .findAll { output -> output.name.endsWith('_output.txt') && !output.name.contains('hAMRonization') }
+                .collect { output -> [ meta, 'kleborate', output ] }
+        },
+        SPECIES_TYPING.out.sccmec.flatMap { meta, outputs ->
+            [ outputs ].flatten()
+                .findAll { output -> !(output.name ==~ /.*\.(targets|regions)\.(blastn|details)\.tsv/) }
+                .collect { output -> [ meta, 'sccmec', output ] }
+        },
+        SPECIES_TYPING.out.sistr.map { meta, tab -> [ meta, 'sistr', tab ] }
+    )
 
     //
     // SUBWORKFLOW: pipeline_info/sample_status.tsv - pass, skipped or failed per sample
@@ -440,14 +482,133 @@ workflow MGAP {
         []   // sample names
     )
 
-    // Publish software_versions.yml: every tool, MultiQC included
-    MULTIQC.out.versions
+    // Every tool, MultiQC included
+    ch_versions_all = MULTIQC.out.versions
         .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
         .mix(ch_versions_text)
+
+    //
+    // MODULE: run report (HTML, summary TSV and XLSX in {outdir}/report). It reads
+    // software_versions.yml, so it gets a copy in the work directory; the published file
+    // adds the report's own versions afterwards.
+    //
+    if (!params.skip_report.toString().toBoolean()) {
+        ch_report_versions = ch_versions_all.collectFile(name: 'software_versions.yml', sort: true)
+        ch_report_input = ch_report_files
+            .map { meta, tool, output -> [ meta.id, tool, output ] }
+            .mix(
+                ch_report_run_files,
+                SAMPLE_STATUS.out.tsv.map { tsv -> [ '-', 'sample_status', tsv ] },
+                ch_report_versions.map { yml -> [ '-', 'software_versions', yml ] },
+                channel.of([ '-', 'citations', file("${projectDir}/CITATIONS.md", checkIfExists: true) ])
+            )
+            // a fixed order, so -resume reuses the report when nothing changed
+            .toSortedList { a, b -> a[0] <=> b[0] ?: a[1] <=> b[1] ?: a[2].name <=> b[2].name }
+            .map { items -> [ items.collect { item -> [ item[0], item[1] ] }, items.collect { item -> item[2] } ] }
+        ch_run_info = channel.of(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(reportRunInfo(getTaxaNames()))))
+            .collectFile(name: 'run_info.json')
+
+        MGAP_REPORT ( ch_report_input, ch_run_info )
+        ch_versions_all = ch_versions_all.mix(MGAP_REPORT.out.versions.map { versions_file -> versions_file.text })
+    }
+
+    // Publish software_versions.yml: every tool, MultiQC and the report included
+    ch_versions_all
         .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info", sort: true)
 
     emit:
-    SAMPLE_STATUS.out  // channel: [ [ map ] ] sample_status.tsv rows, for the completion log
+    SAMPLE_STATUS.out.rows  // channel: [ [ map ] ] sample_status.tsv rows, for the completion log
+}
+
+//
+// Run-info JSON for the report: what no tool output holds. Parameters are the
+// thresholds that shape the results; databases are the ones the run used, with the
+// version from each database's own version file where it has one (Kraken2, CheckM2
+// and MOB-suite databases have none, and the report shows "not recorded").
+//
+def reportRunInfo(mlst_organisms) {
+    def seq_type = params.seq_type
+    def parameters = [ min_contig_length: params.min_contig_length ]
+    if (seq_type in [ 'illumina', 'ont' ]) {
+        parameters.min_bases = params.min_bases
+    }
+    if (seq_type == 'illumina') {
+        parameters.adjust_coverage = params.adjust_coverage
+        if (params.adjust_coverage.toString().toBoolean()) {
+            parameters.max_coverage = params.max_coverage
+        }
+    }
+    if (seq_type == 'ont') {
+        parameters.ont_assembler = params.ont_assembler
+        if (params.ont_assembler == 'flye') {
+            parameters.flye_mode = params.flye_mode
+            parameters.flye_asm_coverage = params.flye_asm_coverage
+        }
+        parameters.medaka_model = params.medaka_model
+    }
+    def used = [
+        kraken2db     : params.run_kraken2.toString().toBoolean() && seq_type != 'contig',
+        brackendb     : params.run_kraken2.toString().toBoolean() && seq_type == 'illumina',
+        checkm2_db    : true,
+        bakta_db      : true,
+        amrfinder_db  : params.bakta_db as boolean,
+        genomad_db    : true,
+        gtdbtk_db     : params.run_gtdbtk.toString().toBoolean(),
+        rgi_db        : params.run_rgi.toString().toBoolean(),
+        mobsuite_db   : params.run_mobsuite.toString().toBoolean(),
+        plassembler_db: seq_type == 'ont' && params.ont_assembler == 'autocycler',
+        mlst_datadir  : true
+    ]
+    def databases = used.findAll { name, is_used -> is_used && params[name] }.collectEntries { name, _is_used -> [ name, params[name].toString() ] }
+    return [
+        pipeline_version : workflow.manifest.version,
+        nextflow_version : nextflow.version.toString(),
+        run_name         : workflow.runName,
+        date             : java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.format(workflow.start),
+        seq_type         : seq_type,
+        command          : workflow.commandLine,
+        parameters       : parameters.findAll { _name, value -> value != null }.collectEntries { name, value -> [ name, value.toString() ] },
+        databases        : databases,
+        database_versions: databases.collectEntries { name, path -> [ name, databaseVersion(name, path) ] }.findAll { _name, version -> version },
+        mlst_organisms   : mlst_organisms
+    ]
+}
+
+//
+// A database's version from its own version file (as accessory_scripts/build_report_manifest.py
+// reads them), or null. Bakta version.json, AMRFinderPlus and geNomad version.txt, GTDB-Tk
+// metadata/metadata.txt (VERSION_DATA) and the CARD version in rgi_db's card_database_v*.fasta name.
+//
+def databaseVersion(name, path) {
+    try {
+        def base = file(path)
+        if (!base.isDirectory()) {
+            base = base.parent
+        }
+        if (name == 'bakta_db') {
+            def data = new groovy.json.JsonSlurper().parseText(base.resolve('version.json').text)
+            return "${data.major}.${data.minor} ${data.type ?: ''} (${data.date})".replace('  ', ' ')
+        }
+        if (name in [ 'amrfinder_db', 'genomad_db' ]) {
+            return base.resolve('version.txt').text.trim() ?: null
+        }
+        if (name == 'gtdbtk_db') {
+            def match = base.resolve('metadata/metadata.txt').text =~ /VERSION_DATA=(\S+)/
+            return match.find() ? match.group(1) : null
+        }
+        if (name == 'rgi_db') {
+            def versions = base.listFiles()
+                .collect { entry -> (entry.name =~ /^card_database_v([\d.]+?)(?:_all)?\.fasta$/) }
+                .findAll { match -> match.matches() }
+                .collect { match -> match.group(1) }
+                .unique()
+                .sort { version -> version.tokenize('.').collect { part -> part.padLeft(6, '0') }.join('.') }
+            return versions ? "CARD ${versions[-1]}" : null
+        }
+    } catch (Exception _error) {
+        return null
+    }
+    return null
 }
 
 /*
