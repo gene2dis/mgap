@@ -27,7 +27,43 @@ nextflow_pipeline {
                 { assert succeeded.any { it.contains('FASTP') } },
                 { assert succeeded.any { it.contains('SPADES') } },
                 { assert succeeded.any { it.contains('QUAST') } },
-                { assert succeeded.any { it.contains('MLST') } }
+                { assert succeeded.any { it.contains('MLST') } },
+                { assert succeeded.any { it.contains('MGAP_REPORT') } },
+                { assert path("$outputDir/report/mgap_report.html").exists() },
+                { assert path("$outputDir/report/mgap_summary.tsv").exists() },
+                { assert path("$outputDir/report/mgap_summary.xlsx").exists() },
+                // the published versions include the report's own
+                { assert path("$outputDir/pipeline_info/software_versions.yml").yaml.keySet().any { it.endsWith('MGAP_REPORT') } }
+            )
+        }
+
+    }
+
+    test("Run report skipped with --skip_report - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type        = "illumina"
+                run_kraken2     = false
+                adjust_coverage = false
+                skip_report     = true
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert !succeeded.any { it.contains('MGAP_REPORT') } },
+                { assert !path("$outputDir/report").exists() },
+                { assert path("$outputDir/pipeline_info/software_versions.yml").exists() }
             )
         }
 
@@ -885,6 +921,7 @@ nextflow_pipeline {
         then {
             def succeeded = workflow.trace.succeeded().collect { it.name }
             def versions = path("$outputDir/pipeline_info/software_versions.yml").yaml
+            def report = path("$outputDir/report/mgap_report.html").text
             def sample = "TEST_BFRAGILIS"
             assertAll(
                 { assert workflow.success },
@@ -903,7 +940,13 @@ nextflow_pipeline {
                 { assert path("$outputDir/${sample}/annotation/mlst/${sample}.tsv").exists() },
                 { assert path("$outputDir/multiqc/multiqc_report.html").exists() },
                 // MultiQC parsed the QUAST report, under the sample ID
-                { assert path("$outputDir/multiqc/multiqc_data/multiqc_quast.txt").readLines()*.split('\t')*.getAt(0) == [ 'Sample', sample ] }
+                { assert path("$outputDir/multiqc/multiqc_data/multiqc_quast.txt").readLines()*.split('\t')*.getAt(0) == [ 'Sample', sample ] },
+                // run report without databases: read QC, assembly and MLST sections, none of the database ones
+                { assert succeeded.any { it.contains('MGAP_REPORT') } },
+                { assert [ 'overview', 'read-qc', 'assembly', 'typing', 'samples', 'methods' ].every { report.contains("<section id=\"${it}\"") } },
+                { assert [ 'quality', 'amr', 'mobile' ].every { !report.contains("<section id=\"${it}\"") } },
+                { assert path("$outputDir/report/mgap_summary.tsv").readLines()*.split('\t')*.getAt(0) == [ 'sample', sample ] },
+                { assert path("$outputDir/report/mgap_summary.xlsx").exists() }
             )
         }
 
