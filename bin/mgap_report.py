@@ -39,8 +39,10 @@ report goes on without it; a section appears only when at least one of its input
 
 ``--run-info`` takes an optional JSON object with what no output file holds: ``pipeline_version``,
 ``nextflow_version``, ``run_name``, ``date``, ``seq_type``, ``command``, ``parameters`` (name to value),
-``databases`` (parameter name to path or version) and ``mlst_organisms`` (MLST scheme to the
-AMRFinderPlus organism, the pipeline's ``getTaxaNames()``).
+``databases`` (parameter name to path), ``database_versions`` (parameter name to version, read from
+the database's own version file) and ``mlst_organisms`` (MLST scheme to the AMRFinderPlus organism,
+the pipeline's ``getTaxaNames()``). Database versions that software_versions.yml records
+(``amrfinderplus-database``, ``gtdb_db``) are used when run-info has none.
 """
 
 import argparse
@@ -97,6 +99,14 @@ SECOND_SPECIES_WARN = 5.0
 TOP_TAXA = 7
 HEATMAP_COLUMN = 34  # px per sample in the resistance heatmaps
 HEATMAP_LABEL = 50  # characters of a heatmap row label; the hover text has the full name
+# software_versions.yml entries that are database versions -> the database parameter they belong to
+DATABASE_VERSION_ENTRIES = {"amrfinderplus-database": "amrfinder_db", "gtdb_db": "gtdbtk_db"}
+# CheckM2 scatter: genomes outside the limits get their own colour and marker shape
+CHECKM2_GROUPS = (
+    ("low_completeness", "Low completeness", "#eda100", "triangle-down"),
+    ("high_contamination", "High contamination", "#e34948", "diamond"),
+    ("both", "Low completeness and high contamination", "#8f1d1b", "x"),
+)
 
 # Approximate total length (Mb) of complete genomes of each AMRFinderPlus organism, as a range;
 # used only to flag assemblies far outside it. Keyed like the pipeline's getTaxaNames() values.
@@ -372,6 +382,21 @@ def parse_sccmec(path):
     return table.iloc[0].to_dict()
 
 
+def sccmec_problem(row):
+    """Why an sccmec call is not clear-cut, or None (one type from the target genes, or no SCCmec at all)."""
+    sccmec_type = (row.get("type") or "").strip()
+    if sccmec_type in ("", "-"):
+        if row.get("mecA") == "+" or (row.get("targets") or "").strip() not in ("", "-"):
+            return "mecA or cassette genes found, but no SCCmec type"
+        return None  # no mecA and no cassette genes: no SCCmec (MSSA)
+    if re.search(r"[,;]", sccmec_type):
+        return f"several SCCmec types ({sccmec_type})"
+    if row.get("target_comment"):
+        # sccmec falls back to the closest cassette when the target genes do not match one type
+        return "SCCmec type from cassette coverage only; the target genes gave no type"
+    return None
+
+
 AMRFINDER_COLUMNS = {
     # AMRFinderPlus 4.x name: (3.x name, short name)
     "Element symbol": ("Gene symbol", "gene"),
@@ -621,6 +646,15 @@ class RunData:
         organism = self.organism(sample)
         return EXPECTED_GENOME_MB.get(organism) if organism else None
 
+    def checkm2_group(self, sample):
+        """CHECKM2_GROUPS key for a genome outside the CheckM2 limits, or None."""
+        checkm2 = self.checkm2.get(sample)
+        if not checkm2:
+            return None
+        low = checkm2["completeness"] < CHECKM2_MIN_COMPLETENESS
+        high = checkm2["contamination"] > CHECKM2_MAX_CONTAMINATION
+        return "both" if low and high else "low_completeness" if low else "high_contamination" if high else None
+
     def amr_genes(self, sample):
         table = self.amrfinder.get(sample)
         if table is None or table.empty or "type" not in table:
@@ -661,7 +695,14 @@ class RunData:
         disagreement = self.species_disagreement(sample)
         if disagreement:
             notes.append(disagreement)
+        if sample in self.sccmec and sccmec_problem(self.sccmec[sample]):
+            notes.append(sccmec_problem(self.sccmec[sample]))
         return notes
+
+    def species_checked(self, sample):
+        """True when a second species call (GTDB-Tk or reads) exists to compare with MLST."""
+        taxa = self.taxa.get(sample)
+        return bool(self.gtdbtk.get(sample, {}).get("genus")) or (taxa is not None and len(taxa) > 0)
 
     def mlst_genus(self, sample):
         organism = self.organism(sample)
@@ -833,8 +874,19 @@ def section_overview(run):
         body += "<h3>Key thresholds</h3>" + render_table([("name", "Parameter"), ("value", "Value")], rows)
     databases = info.get("databases") or {}
     if databases:
-        rows = [{"name": name, "value": value} for name, value in databases.items()]
-        body += "<h3>Databases</h3>" + render_table([("name", "Parameter"), ("value", "Path or version")], rows)
+        versions = {
+            DATABASE_VERSION_ENTRIES[row["tool"]]: row["version"]
+            for row in run.versions
+            if row["tool"] in DATABASE_VERSION_ENTRIES
+        }
+        versions.update(info.get("database_versions") or {})
+        rows = [
+            {"name": name, "version": versions.get(name) or "not recorded", "path": path}
+            for name, path in databases.items()
+        ]
+        body += "<h3>Databases</h3>" + render_table(
+            [("name", "Parameter"), ("version", "Version"), ("path", "Path")], rows
+        )
 
     body += (
         '<p class="note">Reading the charts: bar charts have one row per sample in samplesheet order, so they '
@@ -1211,22 +1263,21 @@ def section_quality(run):
     samples = [s for s in run.samples if s in run.checkm2]
     if not samples:
         return None
-    passing = [
-        s
-        for s in samples
-        if run.checkm2[s]["completeness"] >= CHECKM2_MIN_COMPLETENESS
-        and run.checkm2[s]["contamination"] <= CHECKM2_MAX_CONTAMINATION
-    ]
-    fig = go.Figure()
-    for slot, (name, group) in enumerate(
+    groups = [
         (
-            (
-                f">= {CHECKM2_MIN_COMPLETENESS:g} % complete and <= {CHECKM2_MAX_CONTAMINATION:g} % contaminated",
-                passing,
-            ),
-            ("Outside these limits", [s for s in samples if s not in passing]),
+            f">= {CHECKM2_MIN_COMPLETENESS:g} % complete and <= {CHECKM2_MAX_CONTAMINATION:g} % contaminated",
+            PALETTE[0],
+            "circle",
+            [s for s in samples if run.checkm2_group(s) is None],
         )
-    ):
+    ]
+    groups += [
+        (name, colour, symbol, [s for s in samples if run.checkm2_group(s) == key])
+        for key, name, colour, symbol in CHECKM2_GROUPS
+    ]
+    outside = sum(len(group) for _, _, _, group in groups[1:])
+    fig = go.Figure()
+    for slot, (name, colour, symbol, group) in enumerate(groups):
         if not group:
             continue
         fig.add_trace(
@@ -1235,10 +1286,15 @@ def section_quality(run):
                 y=[run.checkm2[s]["contamination"] for s in group],
                 text=group,
                 # passing genomes sit together near 100 / 0, so only the ones to look at are labelled
-                mode="markers+text" if slot == 1 and len(group) <= 25 else "markers",
+                mode="markers+text" if slot and outside <= 25 else "markers",
                 textposition="top center",
                 textfont=dict(size=10, color=INK_SECONDARY),
-                marker=dict(size=10, color=PALETTE[slot], line=dict(color=SURFACE, width=2)),
+                marker=dict(
+                    size=12 if slot else 10,
+                    color=colour,
+                    symbol=symbol,
+                    line=dict(color=colour if symbol == "x" else SURFACE, width=1 if symbol == "x" else 2),
+                ),
                 name=name,
                 hovertemplate="%{text}<br>Completeness %{x:.2f} %<br>Contamination %{y:.2f} %<extra></extra>",
             )
@@ -1257,8 +1313,14 @@ def section_quality(run):
             "completeness": fmt_float(run.checkm2[s]["completeness"], 2),
             "contamination": fmt_float(run.checkm2[s]["contamination"], 2),
             "model": run.checkm2[s].get("model") or "",
+            "check": (
+                f'<span class="flag">{esc(dict((k, n) for k, n, _, _ in CHECKM2_GROUPS)[run.checkm2_group(s)].lower())}</span>'
+                if run.checkm2_group(s)
+                else "within limits"
+            ),
         }
-        for s in samples
+        # genomes outside the limits first, then samplesheet order
+        for s in sorted(samples, key=lambda s: run.checkm2_group(s) is None)
     ]
     body += render_table(
         [
@@ -1266,18 +1328,20 @@ def section_quality(run):
             ("completeness", "Completeness (%)"),
             ("contamination", "Contamination (%)"),
             ("model", "CheckM2 model"),
+            ("check", "Check"),
         ],
         rows,
         numeric=("completeness", "contamination"),
-        raw=("sample",),
+        raw=("sample", "check"),
     )
     intro = [
         "CheckM2 estimates how complete the genome is and how much of it looks like it comes from another "
         "organism, from the genes found in the assembly. Points in the lower right corner, at least "
         f"{CHECKM2_MIN_COMPLETENESS:g} % complete and at most {CHECKM2_MAX_CONTAMINATION:g} % contaminated "
         "(the dashed lines; the usual high-quality draft limits), are good genomes. Low completeness points to "
-        "a poor assembly; high contamination to a mixed culture. Genomes outside the limits are labelled; hover "
-        "a point for its sample, and the table lists every value.",
+        "a poor assembly; high contamination to a mixed culture. Genomes outside the limits have their own colour "
+        "and marker shape (low completeness, high contamination, or both) and are labelled; hover a point for "
+        "its sample. The table lists every value, genomes outside the limits first.",
     ]
     return Section("quality", "Genome quality (CheckM2)", intro, body)
 
@@ -1293,8 +1357,15 @@ def section_typing(run):
         g = run.gtdbtk.get(s, {})
         taxa = run.taxa.get(s)
         disagreement = run.species_disagreement(s)
+        if disagreement:
+            check = '<span class="flag">differs</span>'
+        elif not run.organism(s):
+            check = ""
+        else:
+            check = "agrees" if run.species_checked(s) else "no second call"
         rows.append(
             {
+                "_flagged": bool(disagreement),
                 "sample": sample_link(s),
                 "scheme": m.get("scheme") or "none",
                 "st": m.get("st") or "",
@@ -1302,9 +1373,11 @@ def section_typing(run):
                 "gtdb": gtdb_name(g),
                 "ani": fmt_float(g.get("ani"), 2),
                 "reads": f"<i>{esc(taxa.iloc[0]['name'])}</i>" if taxa is not None and len(taxa) else "",
-                "check": '<span class="flag">differs</span>' if disagreement else ("agrees" if run.organism(s) else ""),
+                "check": check,
             }
         )
+    # disagreements first, then samplesheet order (sorted() keeps the order within each group)
+    rows = sorted(rows, key=lambda row: not row.pop("_flagged"))
     if rows:
         columns = [
             ("sample", "Sample"),
@@ -1320,6 +1393,12 @@ def section_typing(run):
             columns = [c for c in columns if c[0] not in ("gtdb", "ani")]
         if not run.taxa:
             columns = [c for c in columns if c[0] != "reads"]
+        if not run.gtdbtk and not run.taxa:
+            columns = [c for c in columns if c[0] != "check"]
+            body += (
+                '<p class="note">Neither GTDB-Tk nor a read classification ran, so the MLST species could not be '
+                "checked against a second call.</p>"
+            )
         body += render_table(columns, rows, numeric=("ani",), raw=("sample", "mlst_species", "gtdb", "reads", "check"))
 
     if run.kleborate:
@@ -1389,14 +1468,17 @@ def section_typing(run):
         )
     if run.sccmec:
         rows = []
-        for s in [s for s in run.samples if s in run.sccmec]:
+        # calls that are not clear-cut first, then samplesheet order
+        for s in sorted([s for s in run.samples if s in run.sccmec], key=lambda s: not sccmec_problem(run.sccmec[s])):
             r = run.sccmec[s]
+            problem = sccmec_problem(r)
             rows.append(
                 {
                     "sample": sample_link(s),
                     "type": r.get("type", ""),
                     "subtype": r.get("subtype", ""),
                     "mecA": r.get("mecA", ""),
+                    "call": f'<span class="flag">{esc(problem)}</span>' if problem else "clear",
                     "comment": r.get("comment", ""),
                 }
             )
@@ -1406,19 +1488,27 @@ def section_typing(run):
                 ("type", "SCCmec type"),
                 ("subtype", "Subtype"),
                 ("mecA", "mecA"),
+                ("call", "Call"),
                 ("comment", "Comment"),
             ],
             rows,
-            raw=("sample",),
+            raw=("sample", "call"),
         )
     intro = [
         "MLST compares seven housekeeping genes with a scheme for the species and gives a sequence type (ST); "
         "the scheme it picks also names the species and decides which species tools run (Kleborate for "
         "<i>Klebsiella pneumoniae</i>, SISTR for <i>Salmonella</i>, sccmec for <i>Staphylococcus aureus</i>). "
         "An empty ST means a new or incomplete allele combination.",
-        "GTDB-Tk and the read classification are independent species calls: when their genus differs from "
-        "the MLST species the row is flagged, and the species tools may have been chosen wrongly.",
+        "GTDB-Tk (when it ran) and the read classification (Bracken, or Kraken2 without it) are independent "
+        "species calls: when either genus differs from the MLST species the row is flagged and listed first, "
+        "and the species tools may have been chosen wrongly.",
     ]
+    if run.sccmec:
+        intro.append(
+            "sccmec types the cassette from its target genes (mec and ccr complexes); when they do not give one "
+            "type it falls back to the closest whole cassette. Calls without a clear type from the target genes "
+            "are flagged and listed first."
+        )
     return Section("typing", "Species and typing", intro, body)
 
 
@@ -1777,7 +1867,7 @@ def section_cards(run):
             facts.append(("SISTR serovar", esc(r.get("serovar", ""))))
         r = run.sccmec.get(s)
         if r:
-            facts.append(("SCCmec", esc(r.get("type", ""))))
+            facts.append(("SCCmec", esc(r.get("type") or "none") + (" (not clear-cut)" if sccmec_problem(r) else "")))
         if s in run.amrfinder:
             genes = run.amr_genes(s)
             facts.append(("AMR genes", f"{len(genes)}: " + esc(", ".join(genes)) if genes else "none"))

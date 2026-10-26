@@ -7,8 +7,10 @@ layout ({outdir}/<sample>/..., gtdbtk/, pipeline_info/) and writes:
 
 - a manifest TSV (sample, tool, file) with absolute paths
 - a run-info JSON: pipeline and Nextflow versions (software_versions.yml), run date (execution trace
-    timestamp), seq_type (sample_status.tsv), the parameters and databases given with --param, and the
-    MLST scheme to AMRFinderPlus organism map read from the pipeline's workflows/mgap.nf
+    timestamp), seq_type (sample_status.tsv), the parameters and databases given with --param, the
+    database versions read from each database folder's own version file (Bakta, AMRFinderPlus, geNomad,
+    GTDB-Tk, CARD for RGI; Kraken2, CheckM2 and MOB-suite databases record none), and the MLST scheme to
+    AMRFinderPlus organism map read from the pipeline's workflows/mgap.nf
 
 Example:
     build_report_manifest.py --results results --pipeline . --param min_bases=50000000 \\
@@ -55,6 +57,50 @@ RUN_PATTERNS = {
 EXCLUDE = re.compile(r"hAMRonization")
 NON_SAMPLE_DIRS = {"pipeline_info", "gtdbtk", "multiqc", "report"}
 DATABASE_PARAMS = re.compile(r"(_db|db)$")
+
+
+def bakta_version(base):
+    data = json.loads((base / "version.json").read_text())
+    return f"{data['major']}.{data['minor']} {data.get('type', '')} ({data['date']})".replace("  ", " ")
+
+
+def gtdbtk_version(base):
+    match = re.search(r"VERSION_DATA=(\S+)", (base / "metadata" / "metadata.txt").read_text())
+    return match.group(1) if match else None
+
+
+def card_version(base):
+    names = [
+        re.search(r"card_database_v([\d.]+?)(?:_all)?\.fasta$", path.name)
+        for path in base.glob("card_database_v*.fasta")
+    ]
+    versions = sorted({match.group(1) for match in names if match})
+    return f"CARD {versions[-1]}" if versions else None
+
+
+# database parameter -> reader of the version file in its folder
+DATABASE_VERSIONS = {
+    "bakta_db": bakta_version,
+    "amrfinder_db": lambda base: (base / "version.txt").read_text().strip(),
+    "genomad_db": lambda base: (base / "version.txt").read_text().strip(),
+    "gtdbtk_db": gtdbtk_version,
+    "rgi_db": card_version,
+}
+
+
+def database_versions(databases):
+    versions = {}
+    for param, path in databases.items():
+        base = Path(path)
+        if param not in DATABASE_VERSIONS or not base.exists():
+            continue
+        try:
+            version = DATABASE_VERSIONS[param](base if base.is_dir() else base.parent)
+        except (OSError, ValueError, KeyError):
+            version = None
+        if version:
+            versions[param] = version
+    return versions
 
 
 def find(base, patterns, sample=""):
@@ -113,6 +159,7 @@ def run_info(results, pipeline, params):
         info["seq_type"] = ", ".join(seq_types)
     info["parameters"] = {k: v for k, v in params.items() if not DATABASE_PARAMS.search(k)}
     info["databases"] = {k: v for k, v in params.items() if DATABASE_PARAMS.search(k)}
+    info["database_versions"] = database_versions(info["databases"])
     workflow_file = pipeline / "workflows" / "mgap.nf"
     if workflow_file.exists():
         info["mlst_organisms"] = mlst_organisms(workflow_file)
