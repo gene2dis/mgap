@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""MGAP run report: one self-contained HTML page and one per-sample TSV from a run's tool outputs.
+"""MGAP run report: one self-contained HTML page, one per-sample TSV and an optional XLSX workbook (the
+summary, then one sheet per tool) from a run's tool outputs.
 
 The report never looks for files on its own. Every input is listed in a manifest, a TSV with the
 columns ``sample``, ``tool`` and ``file`` (or a JSON list of objects with the same keys); in the
@@ -36,6 +37,9 @@ run level (sample ``-``)
 
 An unknown tool, a missing file or a file that cannot be parsed gives a warning on stderr and the
 report goes on without it; a section appears only when at least one of its inputs was read.
+
+With more than LARGE_RUN (100) samples, the one-bar-per-sample charts become distributions (a box with
+one point per sample) on which only the outliers are named; sample cards start collapsed in every run.
 
 ``--run-info`` takes an optional JSON object with what no output file holds: ``pipeline_version``,
 ``nextflow_version``, ``run_name``, ``date``, ``seq_type``, ``command``, ``parameters`` (name to value),
@@ -99,6 +103,11 @@ SECOND_SPECIES_WARN = 5.0
 TOP_TAXA = 7
 HEATMAP_COLUMN = 34  # px per sample in the resistance heatmaps
 HEATMAP_LABEL = 50  # characters of a heatmap row label; the hover text has the full name
+# Above this many samples, one-bar-per-sample charts become distributions with only the outliers named
+LARGE_RUN = 100
+OUTLIER_LABELS = 12  # outliers named on a distribution panel; hover shows every point
+TABLE_SCROLL_ROWS = 40  # longer tables scroll inside a box of TABLE_SCROLL_HEIGHT px
+TABLE_SCROLL_HEIGHT = 560
 # software_versions.yml entries that are database versions -> the database parameter they belong to
 DATABASE_VERSION_ENTRIES = {"amrfinderplus-database": "amrfinder_db", "gtdb_db": "gtdbtk_db"}
 # CheckM2 scatter: genomes outside the limits get their own colour and marker shape
@@ -768,6 +777,8 @@ def render_table(columns, rows, table_id=None, numeric=(), raw=(), max_height=No
     if not rows:
         return ""
     attributes = f' id="{esc(table_id)}"' if table_id else ""
+    if max_height is None and len(rows) > TABLE_SCROLL_ROWS:
+        max_height = TABLE_SCROLL_HEIGHT
     style = f' style="max-height:{max_height}px"' if max_height else ""
     parts = [f'<div class="table-wrap"{style}><table class="data sortable"{attributes}>']
     if caption:
@@ -810,6 +821,106 @@ def figure_html(fig, height, legend_y=1.0):
 def bar_height(n_rows, per_row=22, minimum=260, extra=120):
     """Height of a horizontal bar chart: one row per sample, so 200 samples stay readable (scroll)."""
     return max(minimum, n_rows * per_row + extra)
+
+
+def outliers(values, low=None, high=None):
+    """Samples outside Tukey's fences (1.5 x IQR beyond the quartiles) or outside the given limits."""
+    series = pd.Series(values, dtype=float).dropna()
+    if series.empty:
+        return set()
+    q1, q3 = series.quantile(0.25), series.quantile(0.75)
+    spread = 1.5 * (q3 - q1)
+    outside = (series < q1 - spread) | (series > q3 + spread) if spread > 0 else pd.Series(False, index=series.index)
+    if low is not None:
+        outside |= series < low
+    if high is not None:
+        outside |= series > high
+    return set(series[outside].index)
+
+
+class Panel:
+    """One metric of a distribution figure: {sample: value} with optional limits and extra flagged samples."""
+
+    def __init__(self, title, unit, values, low=None, high=None, flagged=(), digits=1):
+        self.title, self.unit, self.digits = title, unit, digits
+        self.values = {s: v for s, v in values.items() if v is not None and not pd.isna(v)}
+        self.low, self.high = low, high
+        self.outliers = outliers(self.values, low, high) | {s for s in flagged if s in self.values}
+
+
+def outlier_labels(values, flagged):
+    """Labels for the most extreme outliers: points closer than 2 % of the axis share one label, 'name +N'."""
+    spread = (max(values.values()) - min(values.values())) or 1
+    groups = []  # [first sample, value, count]
+    for s in flagged:
+        group = next((g for g in groups if abs(values[s] - g[1]) <= 0.02 * spread), None)
+        if group:
+            group[2] += 1
+        elif len(groups) < OUTLIER_LABELS:
+            groups.append([s, values[s], 1])
+    return {s: f"{s} +{count - 1}" if count > 1 else s for s, _, count in groups}
+
+
+def distribution_html(panels):
+    """Large runs: one box with every sample as a point per metric; outliers in red, the most extreme named."""
+    panels = [panel for panel in panels if panel.values]
+    if not panels:
+        return ""
+    fig = make_subplots(
+        rows=len(panels), cols=1, subplot_titles=[p.title for p in panels], vertical_spacing=0.6 / len(panels)
+    )
+    for row, panel in enumerate(panels, 1):
+        samples = list(panel.values)
+        values = [panel.values[s] for s in samples]
+        hover = f"%{{text}}<br>%{{x:,.{panel.digits}f}} {panel.unit}<extra></extra>"
+        fig.add_trace(
+            go.Box(
+                x=values,
+                y=[panel.title] * len(values),
+                text=samples,
+                orientation="h",
+                boxpoints="all",
+                jitter=0.6,
+                pointpos=0,
+                marker=dict(size=5, color=PALETTE[0], opacity=0.55),
+                line=dict(color=INK_SECONDARY, width=1),
+                fillcolor="rgba(0,0,0,0)",
+                name="Samples",
+                showlegend=False,
+                hovertemplate=hover,
+            ),
+            row=row,
+            col=1,
+        )
+        flagged = sorted(panel.outliers, key=lambda s: abs(panel.values[s] - pd.Series(values).median()), reverse=True)
+        labels = outlier_labels(panel.values, flagged)
+        if flagged:
+            fig.add_trace(
+                go.Scatter(
+                    x=[panel.values[s] for s in flagged],
+                    y=[panel.title] * len(flagged),
+                    text=[labels.get(s, "") for s in flagged],
+                    customdata=flagged,
+                    mode="markers+text",
+                    textposition="top center",
+                    textfont=dict(size=10, color=INK_SECONDARY),
+                    marker=dict(size=9, color=PALETTE[7], symbol="diamond", line=dict(color=SURFACE, width=1)),
+                    name="Outliers (most extreme named)",
+                    showlegend=not any(t.legendgroup == "outliers" for t in fig.data),
+                    legendgroup="outliers",
+                    hovertemplate=f"%{{customdata}}<br>%{{x:,.{panel.digits}f}} {panel.unit}<extra></extra>",
+                ),
+                row=row,
+                col=1,
+            )
+        for limit in (panel.low, panel.high):
+            if limit is not None:
+                fig.add_vline(x=limit, line_dash="dash", line_color=INK_SECONDARY, row=row, col=1)
+        fig.update_xaxes(title_text=panel.unit, row=row, col=1)
+        fig.update_yaxes(showticklabels=False, row=row, col=1)
+    fig.update_layout(margin=dict(l=10, r=20, t=70, b=40))
+    fig.update_annotations(font=dict(size=13, color=INK))
+    return figure_html(fig, 150 * len(panels) + 90, legend_y=1.0 + 40 / (150 * len(panels) + 90))
 
 
 # --------------------------------------------------------------------------------------------------
@@ -889,11 +1000,13 @@ def section_overview(run):
         )
 
     body += (
-        '<p class="note">Reading the charts: bar charts have one row per sample in samplesheet order, so they '
-        "grow by about 25 px per sample and stay readable up to a few hundred samples; heatmaps have one column "
-        "per sample and scroll sideways when they are wider than the page. Hover a bar, point or cell for its "
-        "value; click a table header to sort; sample names link to the sample cards. Colours follow one "
-        "colour-blind-safe palette, and every colour is also named in a legend or label.</p>"
+        '<p class="note">Reading the charts: with up to '
+        f"{LARGE_RUN} samples, bar charts have one row per sample in samplesheet order; with more, each metric "
+        "is a box with one point per sample, and only the outliers (outside 1.5 times the interquartile range "
+        "or a QC limit) are marked, the most extreme by name. Heatmaps have one column per sample and scroll "
+        "sideways when they are wider than the page. Hover a bar, point or cell for its value; click a table "
+        "header to sort; long tables scroll inside their box; sample names open the sample cards. Colours "
+        "follow one colour-blind-safe palette, and every colour is also named in a legend or label.</p>"
     )
     intro = [
         "This page summarises one run of MGAP (Microbial Genome Analysis Pipeline): read quality, assembly, "
@@ -912,7 +1025,44 @@ def section_read_qc(run):
     if not samples and not taxa_samples:
         return None
     body = ""
-    if samples:
+    min_bases = to_number((run.run_info.get("parameters") or {}).get("min_bases"))
+    if len(samples) > LARGE_RUN:
+        reads = run.reads
+        body += distribution_html(
+            [
+                Panel(
+                    "Reads kept",
+                    "million reads",
+                    {s: (reads[s].get("reads_after") or 0) / 1e6 for s in samples},
+                    digits=2,
+                ),
+                Panel(
+                    "Bases kept",
+                    "Mb",
+                    {s: (reads[s].get("bases_after") or 0) / 1e6 for s in samples},
+                    low=min_bases / 1e6 if min_bases else None,
+                ),
+                Panel(
+                    "Bases kept by read filtering",
+                    "%",
+                    {
+                        s: 100 * reads[s]["bases_after"] / reads[s]["bases_before"]
+                        for s in samples
+                        if reads[s].get("bases_before") and reads[s].get("bases_after") is not None
+                    },
+                ),
+                Panel(
+                    "Q30 after filtering",
+                    "%",
+                    {
+                        s: 100 * reads[s]["q30_rate_after"]
+                        for s in samples
+                        if reads[s].get("q30_rate_after") is not None
+                    },
+                ),
+            ]
+        )
+    elif samples:
         fig = make_subplots(rows=1, cols=2, shared_yaxes=True, horizontal_spacing=0.04)
         ordered = list(reversed(samples))  # first sample at the top
         for col, (key, scale, unit) in enumerate((("reads", 1e6, "Reads (millions)"), ("bases", 1e6, "Bases (Mb)")), 1):
@@ -933,7 +1083,6 @@ def section_read_qc(run):
                     col=col,
                 )
             fig.update_xaxes(title_text=unit, row=1, col=col)
-        min_bases = to_number((run.run_info.get("parameters") or {}).get("min_bases"))
         if min_bases:
             fig.add_vline(x=min_bases / 1e6, line_dash="dash", line_color=INK_SECONDARY, row=1, col=2)
             fig.add_annotation(
@@ -957,6 +1106,7 @@ def section_read_qc(run):
         )
         body += figure_html(fig, bar_height(len(samples), per_row=26))
 
+    if samples:
         rows = []
         for s in samples:
             r = run.reads[s]
@@ -1046,8 +1196,14 @@ def section_read_qc(run):
         intro.append(
             "Kraken2 assigns each read to a taxon and Bracken re-estimates the species shares; an isolate should "
             "show one species with most of the reads. A second species above "
-            f"{SECOND_SPECIES_WARN:g} % may mean a mixed or contaminated culture. The chart shows the "
-            f"{TOP_TAXA} most abundant species of the run by name and sums the rest as Other."
+            f"{SECOND_SPECIES_WARN:g} % may mean a mixed or contaminated culture. "
+            + (
+                f"The first chart counts the samples by their top species ({TOP_TAXA} species by name, the rest as "
+                "Other); the boxes below give each sample's share of its top and second species."
+                if len(taxa_samples) > LARGE_RUN
+                else f"The chart shows the {TOP_TAXA} most abundant species of the run by name and sums the rest "
+                "as Other."
+            )
         )
     return Section("read-qc", "Read quality and species in the reads", intro, body)
 
@@ -1068,6 +1224,8 @@ def top_taxa(run, samples, count=TOP_TAXA):
 
 
 def taxa_chart(run, samples):
+    if len(samples) > LARGE_RUN:
+        return taxa_distribution(run, samples)
     top = top_taxa(run, samples)
     ordered = list(reversed(samples))
     fig = go.Figure()
@@ -1129,13 +1287,67 @@ def taxa_chart(run, samples):
     return figure_html(fig, bar_height(len(samples), extra=150))
 
 
+def taxa_distribution(run, samples):
+    """Large runs: samples per top species (one bar per species), then the top and second species shares."""
+    leaders = pd.Series([run.taxa[s].iloc[0]["name"] for s in samples if len(run.taxa[s])], dtype=str)
+    counts = leaders.value_counts()
+    named = counts.iloc[:TOP_TAXA]
+    if len(counts) > TOP_TAXA:
+        named = pd.concat([named, pd.Series({"Other species": int(counts.iloc[TOP_TAXA:].sum())})])
+    ordered = list(reversed(named.index))
+    fig = go.Figure(
+        go.Bar(
+            y=ordered,
+            x=[int(named[name]) for name in ordered],
+            orientation="h",
+            marker_color=[OTHER_COLOUR if name == "Other species" else PALETTE[0] for name in ordered],
+            hovertemplate="%{y}: %{x} samples<extra></extra>",
+            showlegend=False,
+        )
+    )
+    fig.update_layout(bargap=0.3, margin=dict(l=10, r=20, t=30, b=50))
+    fig.update_xaxes(title_text="Samples whose top species in the reads is this one")
+    second = {s: float(run.taxa[s].iloc[1]["percent"]) for s in samples if len(run.taxa[s]) > 1}
+    return figure_html(fig, bar_height(len(ordered), per_row=28)) + distribution_html(
+        [
+            Panel(
+                "Share of the top species",
+                "%",
+                {s: float(run.taxa[s].iloc[0]["percent"]) for s in samples if len(run.taxa[s])},
+            ),
+            Panel("Share of the second species", "%", second, high=SECOND_SPECIES_WARN),
+        ]
+    )
+
+
 def section_assembly(run):
     samples = [s for s in run.samples if s in run.quast or s in run.filter_stats]
     if not samples:
         return None
     body = ""
     quast_samples = [s for s in samples if s in run.quast]
-    if quast_samples:
+    if len(quast_samples) > LARGE_RUN:
+        unusual = set()
+        for s in quast_samples:
+            expected, length = run.expected_length(s), run.quast[s].get("total_length")
+            if expected and length and not expected[0] * 0.9 <= length / 1e6 <= expected[1] * 1.1:
+                unusual.add(s)
+        body += distribution_html(
+            [
+                Panel(
+                    "Total length (outliers include lengths outside the usual range for the MLST species)",
+                    "Mb",
+                    {s: (run.quast[s].get("total_length") or 0) / 1e6 for s in quast_samples},
+                    flagged=unusual,
+                    digits=2,
+                ),
+                Panel(
+                    "Contigs (>= 500 bp)", "contigs", {s: run.quast[s].get("contigs") for s in quast_samples}, digits=0
+                ),
+                Panel("N50", "kb", {s: (run.quast[s].get("n50") or 0) / 1e3 for s in quast_samples}),
+            ]
+        )
+    elif quast_samples:
         ordered = list(reversed(quast_samples))
         fig = make_subplots(
             rows=1,
@@ -1549,8 +1761,9 @@ def amr_heatmap(tables, samples, group_column):
         for s in samples:
             hit = lookup.get((s, gene))
             if hit is None:
+                # no hover text on empty cells (hoverongaps=False): it doubles the page size on large runs
                 z_row.append(None)
-                hover_row.append(f"{s}<br>{gene}: not found")
+                hover_row.append("")
             else:
                 z_row.append(hit.identity)
                 hover_row.append(
@@ -1568,6 +1781,7 @@ def amr_heatmap(tables, samples, group_column):
             y=labels,
             text=hover,
             hovertemplate="%{text}<extra></extra>",
+            hoverongaps=False,
             colorscale=scale,
             zmin=min(80.0, best["identity"].min()) if best["identity"].notna().any() else 80.0,
             zmax=100,
@@ -1697,7 +1911,24 @@ def section_mobile(run):
     if not genomad_samples and not mob_samples:
         return None
     body = ""
-    if genomad_samples:
+    if len(genomad_samples) > LARGE_RUN:
+        body += "<h3>geNomad</h3>" + distribution_html(
+            [
+                Panel(
+                    "Plasmid contigs",
+                    "contigs",
+                    {s: len(run.genomad_plasmid.get(s, [])) for s in genomad_samples},
+                    digits=0,
+                ),
+                Panel(
+                    "Virus sequences",
+                    "sequences",
+                    {s: len(run.genomad_virus.get(s, [])) for s in genomad_samples},
+                    digits=0,
+                ),
+            ]
+        )
+    if genomad_samples and len(genomad_samples) <= LARGE_RUN:
         ordered = list(reversed(genomad_samples))
         fig = go.Figure()
         for slot, (label, source) in enumerate(
@@ -1716,6 +1947,7 @@ def section_mobile(run):
         fig.update_layout(barmode="group", bargap=0.25, margin=dict(l=10, r=20, t=40, b=50))
         fig.update_xaxes(title_text="Sequences called by geNomad", dtick=1 if len(genomad_samples) else None)
         body += "<h3>geNomad</h3>" + figure_html(fig, bar_height(len(genomad_samples), per_row=26))
+    if genomad_samples:
         rows = []
         for s in genomad_samples:
             plasmids = run.genomad_plasmid.get(s, pd.DataFrame())
@@ -1819,7 +2051,7 @@ def section_mobile(run):
 def section_cards(run):
     if not run.samples:
         return None
-    cards = []
+    cards, chips = [], []
     for s in run.samples:
         status = run.status_row(s).get("status") or ("pass" if s in run.quast or s in run.mlst else "")
         facts = []
@@ -1884,18 +2116,43 @@ def section_cards(run):
         fact_html = "".join(f"<dt>{esc(label)}</dt><dd>{value}</dd>" for label, value in facts)
         warning_html = "".join(f"<li>{esc(w)}</li>" for w in warnings)
         badge = f'<span class="chip status-{esc(status)}">{esc(status)}</span>' if status else ""
+        count = (
+            f'<span class="flag">{len(warnings)} warning{"s" if len(warnings) > 1 else ""}</span>' if warnings else ""
+        )
+        name = esc(s.lower())
         cards.append(
-            f'<article class="card" id="sample-{slug(s)}"><h3>{esc(s)} {badge}</h3>'
+            f'<details class="card" id="sample-{slug(s)}" data-name="{name}"><summary>'
+            f'<span class="card-name">{esc(s)}</span> {badge} {count}</summary>'
             f'<dl class="facts">{fact_html}</dl>'
             + (f'<ul class="warnings">{warning_html}</ul>' if warnings else "")
-            + "</article>"
+            + "</details>"
         )
+        title = esc("; ".join(warnings)) if warnings else "no warnings"
+        chips.append(
+            (
+                not warnings,
+                f'<li data-name="{name}"><a class="sample-chip{" flagged" if warnings else ""}" '
+                f'href="#sample-{slug(s)}" title="{title}">{esc(s)}</a></li>',
+            )
+        )
+    flagged = sum(1 for clean, _ in chips if not clean)
+    # samples with warnings first (sorted() keeps samplesheet order within each group)
+    listing = "".join(chip for _, chip in sorted(chips, key=lambda item: item[0]))
+    body = (
+        '<div class="sample-finder"><label for="sample-search">Find a sample</label> '
+        '<input type="search" id="sample-search" placeholder="Sample name" autocomplete="off"> '
+        f'<span class="note">{len(run.samples)} samples, {flagged} with warnings (marked and listed first)</span></div>'
+        f'<ul class="sample-list">{listing}</ul>'
+        f'<div class="cards">{"".join(cards)}</div>'
+    )
     intro = [
-        "One card per sample with its key numbers. Warnings list what deserves a second look: a skipped or "
-        "failed step, low completeness or high contamination, an assembly length far from the usual genome "
-        "size, a second species in the reads, or species calls that disagree.",
+        "One card per sample with its key numbers; click a sample in the list, or a sample name anywhere in the "
+        "report, to open its card. Samples with warnings are marked with a warning sign and a red outline and "
+        "come first in the list. Warnings list what deserves a second look: a skipped or failed step, low "
+        "completeness or high contamination, an assembly length far from the usual genome size, a second "
+        "species in the reads, species calls that disagree, or an SCCmec call that is not clear-cut.",
     ]
-    return Section("samples", "Samples", intro, '<div class="cards">' + "".join(cards) + "</div>")
+    return Section("samples", "Samples", intro, body)
 
 
 def section_methods(run):
@@ -2056,6 +2313,97 @@ def tidy_summary(frame):
 
 
 # --------------------------------------------------------------------------------------------------
+# Workbook
+# --------------------------------------------------------------------------------------------------
+
+# Excel's cell limit is 32,767 characters, and openpyxl refuses control characters
+XLSX_CELL = 32000
+XLSX_ILLEGAL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+# RGI sequence columns: long and of little use in a spreadsheet
+RGI_SEQUENCE_COLUMNS = ("Predicted_DNA", "Predicted_Protein", "CARD_Protein_Sequence")
+
+
+def per_sample(tables):
+    """{sample: DataFrame} -> one DataFrame with a leading sample column."""
+    frames = [frame.assign(sample=s)[["sample"] + list(frame.columns)] for s, frame in tables.items() if len(frame)]
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
+def per_sample_dicts(tables):
+    """{sample: dict} -> one row per sample."""
+    return pd.DataFrame([{"sample": s, **values} for s, values in tables.items()])
+
+
+def tool_tables(run):
+    """The workbook sheets after the summary: one per tool that ran, in samplesheet order."""
+    order = {s: index for index, s in enumerate(run.samples)}
+    reads = per_sample_dicts(run.reads)
+    if len(reads):
+        reads.insert(1, "tool", reads["sample"].map(run.read_tool))
+        if run.genome_size:
+            reads["mash_genome_size"] = reads["sample"].map(run.genome_size)
+    taxa = per_sample({s: frame.assign(source=run.taxa_source[s]) for s, frame in run.taxa.items()})
+    gtdbtk = per_sample_dicts({s: {k: v for k, v in g.items()} for s, g in run.gtdbtk.items()})
+    rgi = per_sample(run.rgi)
+    rgi = rgi.drop(columns=[c for c in RGI_SEQUENCE_COLUMNS if c in rgi], errors="ignore")
+    versions = pd.DataFrame(
+        [{"tool": r["tool"], "version": r["version"], "processes": ", ".join(r["processes"])} for r in run.versions]
+    )
+    sheets = OrderedDict(
+        [
+            ("Sample status", run.status if run.status is not None else pd.DataFrame()),
+            ("Reads", reads),
+            ("Species in reads", taxa),
+            ("QUAST", per_sample_dicts(run.quast)),
+            ("Length filter", per_sample_dicts(run.filter_stats)),
+            ("CheckM2", per_sample_dicts(run.checkm2)),
+            ("MLST", per_sample_dicts(run.mlst)),
+            ("GTDB-Tk", gtdbtk),
+            ("Kleborate", per_sample_dicts(run.kleborate)),
+            ("SISTR", per_sample_dicts(run.sistr)),
+            ("SCCmec", per_sample_dicts(run.sccmec)),
+            ("AMRFinderPlus", per_sample(run.amrfinder)),
+            ("RGI", rgi),
+            ("geNomad plasmids", per_sample(run.genomad_plasmid)),
+            ("geNomad viruses", per_sample(run.genomad_virus)),
+            ("MOB-suite contigs", per_sample(run.mobsuite_contigs)),
+            ("MOB-suite plasmids", per_sample(run.mobsuite_mobtyper)),
+            ("Software versions", versions),
+        ]
+    )
+    for name, frame in sheets.items():
+        if len(frame) and "sample" in frame and name != "Sample status":
+            # a stable sort keeps each sample's rows in the tool's order
+            sheets[name] = frame.sort_values("sample", key=lambda c: c.map(order).fillna(len(order)), kind="stable")
+    return OrderedDict((name, frame) for name, frame in sheets.items() if len(frame))
+
+
+def xlsx_value(value):
+    if isinstance(value, str):
+        return XLSX_ILLEGAL.sub("", value)[:XLSX_CELL]
+    if isinstance(value, (list, tuple, dict)):
+        return xlsx_value(json.dumps(value) if isinstance(value, dict) else ", ".join(map(str, value)))
+    return value
+
+
+def write_xlsx(path, summary, sheets):
+    """Summary sheet first, then one sheet per tool; header row frozen and filterable."""
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        for name, frame in [("Summary", summary)] + list(sheets.items()):
+            frame = frame.copy()
+            for column in frame.columns:
+                if frame[column].dtype == object:
+                    frame[column] = frame[column].map(xlsx_value)
+            frame.to_excel(writer, sheet_name=name[:31], index=False)
+            sheet = writer.sheets[name[:31]]
+            sheet.freeze_panes = "B2" if "sample" in frame else "A2"
+            sheet.auto_filter.ref = sheet.dimensions
+            for cells in sheet.iter_cols(min_row=1, max_row=min(sheet.max_row, 200)):
+                width = max(len(str(cell.value)) if cell.value is not None else 0 for cell in cells)
+                sheet.column_dimensions[cells[0].column_letter].width = min(60, max(8, width + 2))
+
+
+# --------------------------------------------------------------------------------------------------
 # Page
 # --------------------------------------------------------------------------------------------------
 
@@ -2098,11 +2446,25 @@ dl.facts dt { color: var(--ink2); } dl.facts dd { margin: 0; }
 .chip.status-skipped::before { content: "\\2013  "; color: #8a6100; }
 .chip.status-failed::before { content: "\\2715  "; color: var(--bad); }
 .flag { color: var(--bad); font-weight: 600; } .flag::before { content: "\\26A0  "; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; }
-.card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; background: #fff;
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px;
+    align-items: start; }
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; background: #fff;
     scroll-margin-top: 80px; }
 .card:target { outline: 2px solid var(--accent); }
-.card h3 { margin: 0 0 4px; }
+.card summary { cursor: pointer; font-weight: 600; }
+.card summary .chip, .card summary .flag { font-weight: 600; font-size: 13px; margin-left: 6px; }
+.card[open] summary { margin-bottom: 4px; }
+.sample-finder { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.sample-finder input { font: inherit; padding: 4px 8px; border: 1px solid #c3c2b7; border-radius: 6px;
+    min-width: 220px; }
+ul.sample-list { list-style: none; padding: 0; margin: 8px 0 16px; display: flex; flex-wrap: wrap; gap: 6px;
+    max-height: 240px; overflow: auto; }
+.sample-chip { display: inline-block; padding: 1px 10px; border: 1px solid var(--line); border-radius: 999px;
+    font-size: 13px; text-decoration: none; color: var(--ink); background: #f0efec; }
+.sample-chip.flagged { border: 2px solid var(--bad); background: #fbeaea; color: #8a2b2b; font-weight: 600; }
+.sample-chip.flagged::before { content: "\\26A0  "; }
+.sample-chip:hover { border-color: var(--accent); }
+[hidden] { display: none !important; }
 .card dl.facts { font-size: 13px; }
 ul.warnings { margin: 6px 0 0; padding-left: 20px; font-size: 13px; color: #8a2b2b; }
 ul.citations { font-size: 13px; padding-left: 20px; } .note { font-size: 13px; color: var(--ink2); } ul.citations li { margin-bottom: 6px; }
@@ -2110,7 +2472,28 @@ footer { color: var(--muted); font-size: 12px; text-align: center; padding: 16px
 @media (max-width: 600px) { main, header, nav { padding-left: 12px; padding-right: 12px; }
     nav { position: static; } section, .card { scroll-margin-top: 8px; }
     .cards { grid-template-columns: 1fr; } }
-@media print { nav { display: none; } section { break-inside: avoid-page; } }
+@media print { nav, .sample-finder, ul.sample-list { display: none; } section { break-inside: avoid-page; } }
+"""
+
+CARDS_JS = """
+function openCard(id) {
+    var card = document.getElementById(id);
+    if (card && card.tagName === "DETAILS") { card.open = true; }
+}
+document.querySelectorAll('a[href^="#sample-"]').forEach(function (link) {
+    link.addEventListener("click", function () { openCard(link.getAttribute("href").slice(1)); });
+});
+window.addEventListener("hashchange", function () { openCard(location.hash.slice(1)); });
+if (location.hash) { openCard(location.hash.slice(1)); }
+var search = document.getElementById("sample-search");
+if (search) {
+    search.addEventListener("input", function () {
+        var query = search.value.trim().toLowerCase();
+        document.querySelectorAll(".sample-list li, .cards .card").forEach(function (item) {
+            item.hidden = query !== "" && item.getAttribute("data-name").indexOf(query) === -1;
+        });
+    });
+}
 """
 
 SORT_JS = """
@@ -2170,7 +2553,7 @@ def build_html(run, sections):
         f"<header><h1>MGAP run report</h1><p>{esc(subtitle)}</p></header>"
         f"<nav>{nav}</nav><main>{content}</main>"
         f"<footer>Generated {date.today().isoformat()} by mgap_report.py. The page works offline.</footer>"
-        f"<script>{SORT_JS}</script></body></html>"
+        f"<script>{SORT_JS}{CARDS_JS}</script></body></html>"
     )
 
 
@@ -2180,6 +2563,7 @@ def main(argv=None):
     parser.add_argument("--run-info", help="JSON with run metadata (version, date, seq_type, parameters ...)")
     parser.add_argument("--html", default="mgap_report.html", help="output HTML (default: %(default)s)")
     parser.add_argument("--tsv", default="mgap_summary.tsv", help="output per-sample TSV (default: %(default)s)")
+    parser.add_argument("--xlsx", help="output XLSX workbook: the summary, then one sheet per tool (needs openpyxl)")
     args = parser.parse_args(argv)
 
     run_info = {}
@@ -2200,8 +2584,14 @@ def main(argv=None):
     )
     sections = [section for section in (builder(run) for builder in builders) if section is not None]
     Path(args.html).write_text(build_html(run, sections), encoding="utf-8")
-    tidy_summary(summary_rows(run)).to_csv(args.tsv, sep="\t", index=False)
-    print(f"{args.html}: {len(sections)} sections, {len(run.samples)} samples; {args.tsv}", file=sys.stderr)
+    summary = tidy_summary(summary_rows(run))
+    summary.to_csv(args.tsv, sep="\t", index=False)
+    outputs = [args.tsv]
+    if args.xlsx:
+        sheets = tool_tables(run)
+        write_xlsx(args.xlsx, summary, sheets)
+        outputs.append(f"{args.xlsx} ({len(sheets) + 1} sheets)")
+    print(f"{args.html}: {len(sections)} sections, {len(run.samples)} samples; {'; '.join(outputs)}", file=sys.stderr)
 
 
 if __name__ == "__main__":

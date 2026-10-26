@@ -418,3 +418,86 @@ def test_build_manifest_database_versions(tmp_path):
         "gtdbtk_db": "r232",
         "rgi_db": "CARD 4.0.1",
     }
+
+
+# --------------------------------------------------------------------------------------------------
+# Large runs, sample cards and the workbook
+# --------------------------------------------------------------------------------------------------
+
+
+def test_outliers_tukey_fences_and_limits():
+    values = {f"S{i}": 10.0 + i % 3 for i in range(20)} | {"high": 40.0, "low_limit": 9.0}
+    assert report.outliers(values) == {"high"}
+    assert report.outliers(values, low=9.5) == {"high", "low_limit"}
+    # no spread: only the limits flag anything
+    assert report.outliers({"A": 1.0, "B": 1.0}) == set()
+
+
+def test_outlier_labels_group_close_points():
+    values = {"a": 0.0, "b": 0.1, "c": 50.0, "d": 100.0}
+    labels = report.outlier_labels(values, ["a", "b", "d"])
+    assert labels == {"a": "a +1", "d": "d"}
+
+
+def test_large_run_assembly_is_a_distribution(tmp_path, data):
+    rows = [(f"S{i:03d}", "quast", data / "511.1.quast.tsv") for i in range(report.LARGE_RUN + 1)]
+    run = report.RunData(report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows)), {})
+    page = report.section_assembly(run).html()
+    assert '"type":"box"' in page
+    # no chart with one row per sample (bar charts put the sample names on the y axis)
+    assert '"y":["S' not in page
+    # the per-sample table is still there, in a scrolling box
+    assert "S100" in page and f"max-height:{report.TABLE_SCROLL_HEIGHT}px" in page
+    small = report.RunData(report.read_manifest(write_manifest(tmp_path / "small.tsv", rows[:3])), {})
+    assert '"y":["S' in report.section_assembly(small).html()
+
+
+def test_heatmap_empty_cells_have_no_hover_text(tmp_path, data):
+    other = tmp_path / "other.amrfinder.tsv"
+    lines = (data / "511.1.amrfinder.tsv").read_text().splitlines()
+    other.write_text("\n".join(lines[:2]) + "\n")  # header and one hit
+    rows = [("511.1", "amrfinderplus", data / "511.1.amrfinder.tsv"), ("other", "amrfinderplus", other)]
+    run = report.RunData(report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows)), {})
+    page = report.section_amr(run).html()
+    assert '"hoverongaps":false' in page
+    assert "not found" not in page
+
+
+def test_cards_collapsed_with_flagged_samples_first(tmp_path, data):
+    manifest = write_manifest(tmp_path / "manifest.tsv", [(s, tool, data / name) for s, tool, name in FIXTURE_MANIFEST])
+    html = tmp_path / "report.html"
+    report.main(["--manifest", str(manifest), "--html", str(html), "--tsv", str(tmp_path / "summary.tsv")])
+    page = html.read_text()
+    assert '<details class="card" id="sample-SCL2535_low"' in page
+    assert 'id="sample-search"' in page
+    listing = page[page.index('<ul class="sample-list">') :]
+    chips = listing[: listing.index("</ul>")].split("<li ")[1:]
+    flagged = ["flagged" in chip for chip in chips]
+    # every flagged sample comes before every other one, and the skipped sample is flagged
+    assert flagged == sorted(flagged, reverse=True) and any(flagged) and not all(flagged)
+    assert 'class="sample-chip flagged" href="#sample-SCL2535_low"' in listing
+
+
+def test_xlsx_summary_and_one_sheet_per_tool(tmp_path, data):
+    pytest.importorskip("openpyxl", minversion="3.1.0")  # the oldest pandas 2.2 accepts
+    manifest = write_manifest(tmp_path / "manifest.tsv", [(s, tool, data / name) for s, tool, name in FIXTURE_MANIFEST])
+    xlsx = tmp_path / "summary.xlsx"
+    report.main(
+        [
+            "--manifest",
+            str(manifest),
+            "--html",
+            str(tmp_path / "r.html"),
+            "--tsv",
+            str(tmp_path / "s.tsv"),
+            "--xlsx",
+            str(xlsx),
+        ]
+    )
+    sheets = report.pd.read_excel(xlsx, sheet_name=None)
+    assert list(sheets)[0] == "Summary"
+    for name in ("Sample status", "Reads", "QUAST", "CheckM2", "MLST", "GTDB-Tk", "Kleborate", "SCCmec", "RGI"):
+        assert name in sheets
+    assert "Predicted_DNA" not in sheets["RGI"]
+    assert set(sheets["SCCmec"]["sample"]) == {"SCL1559"}
+    assert len(sheets["Summary"]) == len((tmp_path / "s.tsv").read_text().splitlines()) - 1
