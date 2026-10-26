@@ -69,6 +69,32 @@ nextflow_pipeline {
 
     }
 
+    test("Run report with a numeric sample name - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input    = "${projectDir}/tests/data/samplesheet_numeric_name.csv"
+                seq_type = "contig"
+                outdir   = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                { assert succeeded.any { it.contains('MGAP_REPORT') } },
+                { assert path("$outputDir/report/mgap_report.html").exists() }
+            )
+        }
+
+    }
+
     test("Run pipeline with coverage adjustment - stub") {
 
         tag "pipeline"

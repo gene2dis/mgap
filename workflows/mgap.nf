@@ -495,7 +495,8 @@ workflow MGAP {
     if (!params.skip_report.toString().toBoolean()) {
         ch_report_versions = ch_versions_all.collectFile(name: 'software_versions.yml', sort: true)
         ch_report_input = ch_report_files
-            .map { meta, tool, output -> [ meta.id, tool, output ] }
+            // nf-schema reads a name such as 100.1 as a number; the sort below needs strings
+            .map { meta, tool, output -> [ meta.id.toString(), tool, output ] }
             .mix(
                 ch_report_run_files,
                 SAMPLE_STATUS.out.tsv.map { tsv -> [ '-', 'sample_status', tsv ] },
