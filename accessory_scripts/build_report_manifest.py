@@ -56,7 +56,8 @@ RUN_PATTERNS = {
 }
 EXCLUDE = re.compile(r"hAMRonization")
 NON_SAMPLE_DIRS = {"pipeline_info", "gtdbtk", "multiqc", "report"}
-DATABASE_PARAMS = re.compile(r"(_db|db)$")
+# database paths, as the pipeline lists them in run_info.json (mlst_datadir included)
+DATABASE_PARAMS = re.compile(r"(db|_datadir)$")
 
 
 def bakta_version(base):
