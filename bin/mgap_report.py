@@ -1775,13 +1775,15 @@ def amr_heatmap(tables, samples, group_column):
                 )
         z.append(z_row)
         hover.append(hover_row)
-    labels = [shorten(f"{groups[gene].lower()} · {gene}") for gene in genes]
+    # rows are keyed by the full name, so two genes whose shortened labels match stay two rows
+    keys = [f"{groups[gene].lower()} · {gene}" for gene in genes]
+    labels = [shorten(key) for key in keys]
     scale = [[index / (len(SEQUENTIAL) - 1), colour] for index, colour in enumerate(SEQUENTIAL)]
     fig = go.Figure(
         go.Heatmap(
             z=z,
             x=samples,
-            y=labels,
+            y=keys,
             text=hover,
             hovertemplate="%{text}<extra></extra>",
             hoverongaps=False,
@@ -1800,7 +1802,9 @@ def amr_heatmap(tables, samples, group_column):
     left = int(6.5 * max(len(label) for label in labels)) + 20
     turned = 7 * max(len(s) for s in samples) > HEATMAP_COLUMN
     top = 60 + (int(5 * max(len(s) for s in samples)) if turned else 20)
-    fig.update_yaxes(autorange="reversed", tickfont=dict(size=11), showgrid=False)
+    fig.update_yaxes(
+        autorange="reversed", tickfont=dict(size=11), showgrid=False, tickmode="array", tickvals=keys, ticktext=labels
+    )
     fig.update_xaxes(side="top", tickangle=-60 if turned else 0, showgrid=False, title_text="")
     width = left + HEATMAP_COLUMN * len(samples) + 110
     fig.update_layout(width=width, margin=dict(l=left, r=10, t=top, b=10))
@@ -1888,7 +1892,8 @@ def section_amr(run):
             table["drug_group"] = table["drug_class"].str.split(";").str[0].str.strip()
             strict[s] = table
         body += "<h3>RGI (CARD): Perfect and Strict hits</h3>"
-        body += amr_heatmap(strict, rgi_samples, "drug_group")
+        heat = amr_heatmap(strict, rgi_samples, "drug_group")
+        body += heat or "<p>No Perfect or Strict RGI hits were found.</p>"
     intro = [
         "AMRFinderPlus (NCBI) finds acquired resistance genes and, for supported species, resistance point "
         "mutations; the species comes from the MLST scheme. In the heatmap each row is a gene, grouped by drug "
@@ -1948,7 +1953,9 @@ def section_mobile(run):
                 )
             )
         fig.update_layout(barmode="group", bargap=0.25, margin=dict(l=10, r=20, t=40, b=50))
-        fig.update_xaxes(title_text="Sequences called by geNomad", dtick=1 if len(genomad_samples) else None)
+        most = max(len(source.get(s, [])) for source in (run.genomad_plasmid, run.genomad_virus) for s in ordered)
+        # whole-number ticks for small counts; Plotly picks the step for larger ones
+        fig.update_xaxes(title_text="Sequences called by geNomad", dtick=1 if most <= 10 else None)
         body += "<h3>geNomad</h3>" + figure_html(fig, bar_height(len(genomad_samples), per_row=26))
     if genomad_samples:
         rows = []

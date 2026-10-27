@@ -389,6 +389,36 @@ def test_point_mutations_are_not_acquired_genes(tmp_path, data):
     assert row["amrfinder_point_mutations"] == "gyrA_D87Y"
 
 
+def test_heatmap_keeps_genes_with_the_same_short_label():
+    # both labels shorten to "fluoroquinolone antibiotic · Escherichia coli sox…" (as in the Illumina run)
+    genes = [f"Escherichia coli {name} with mutation conferring antibiotic resistance" for name in ("soxR", "soxS")]
+    table = report.pd.DataFrame(
+        {"gene": genes, "drug_group": "fluoroquinolone antibiotic", "identity": [99.0, 98.0], "coverage": 100.0}
+    )
+    page = report.amr_heatmap({"S1": table}, ["S1"], "drug_group")
+    # Plotly writes the figure as JSON, with non-ASCII characters escaped
+    rows = json.dumps([f"fluoroquinolone antibiotic · {gene}" for gene in genes], separators=(",", ":"))
+    ticks = json.dumps(["fluoroquinolone antibiotic · Escherichia coli sox…"] * 2, separators=(",", ":"))
+    assert f'"y":{rows}' in page
+    assert f'"ticktext":{ticks}' in page
+
+
+def test_rgi_without_strict_hits_says_so(tmp_path, data):
+    lines = (data / "SCL1559.rgi.txt").read_text().splitlines()
+    path = tmp_path / "SCL1559.rgi.txt"
+    path.write_text(
+        "\n".join(
+            [lines[0]]
+            + [line.replace("\tStrict\t", "\tLoose\t").replace("\tPerfect\t", "\tLoose\t") for line in lines[1:]]
+        )
+        + "\n"
+    )
+    run = report.RunData(
+        report.read_manifest(write_manifest(tmp_path / "manifest.tsv", [("SCL1559", "rgi", path)])), {}
+    )
+    assert "No Perfect or Strict RGI hits were found." in report.section_amr(run).html()
+
+
 def test_checkm2_groups_and_table_order(tmp_path, data):
     rows = [("511.1", "checkm2", data / "511.1.checkm2.tsv")]
     for sample, completeness, contamination in (("A", 85.0, 1.0), ("B", 99.0, 7.0), ("C", 80.0, 9.0)):
