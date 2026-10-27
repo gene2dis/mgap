@@ -120,9 +120,12 @@ workflow MGAP {
 
     //
     // Parse the samplesheet once, then keep the columns each sequencing type needs.
-    // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order
+    // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order.
+    // With lenientMode it reads a name such as 100.1 or 2023 as a number; meta.id is kept as text,
+    // as written in the samplesheet, so every step compares and sorts sample names the same way.
     //
     ch_samplesheet = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
+        .map { meta, fastq_1, fastq_2, fasta -> [ meta + [ id: meta.id.toString() ], fastq_1, fastq_2, fasta ] }
     genome_assembly = channel.empty()
     // per-sample numbers and skipped/failed samples for sample_status.tsv
     ch_read_stats = channel.empty()
@@ -495,15 +498,15 @@ workflow MGAP {
     if (!params.skip_report.toString().toBoolean()) {
         ch_report_versions = ch_versions_all.collectFile(name: 'software_versions.yml', sort: true)
         ch_report_input = ch_report_files
-            // nf-schema reads a name such as 100.1 as a number; the sort below needs strings
-            .map { meta, tool, output -> [ meta.id.toString(), tool, output ] }
+            .map { meta, tool, output -> [ meta.id, tool, output ] }
             .mix(
                 ch_report_run_files,
                 SAMPLE_STATUS.out.tsv.map { tsv -> [ '-', 'sample_status', tsv ] },
                 ch_report_versions.map { yml -> [ '-', 'software_versions', yml ] },
                 channel.of([ '-', 'citations', file("${projectDir}/CITATIONS.md", checkIfExists: true) ])
             )
-            // a fixed order, so -resume reuses the report when nothing changed
+            // a fixed file order, so the report reads its inputs the same way on every run. run_info.json
+            // holds the run name and command line, so the report is made again on every launch (-resume too)
             .toSortedList { a, b -> a[0] <=> b[0] ?: a[1] <=> b[1] ?: a[2].name <=> b[2].name }
             .map { items -> [ items.collect { item -> [ item[0], item[1] ] }, items.collect { item -> item[2] } ] }
         ch_run_info = channel.of(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(reportRunInfo(getTaxaNames()))))
