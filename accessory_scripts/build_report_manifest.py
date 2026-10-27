@@ -75,7 +75,8 @@ def card_version(base):
         re.search(r"card_database_v([\d.]+?)(?:_all)?\.fasta$", path.name)
         for path in base.glob("card_database_v*.fasta")
     ]
-    versions = sorted({match.group(1) for match in names if match})
+    # numeric order (4.0.10 after 4.0.9), as the pipeline's databaseVersion() sorts them
+    versions = sorted({match.group(1) for match in names if match}, key=lambda v: [int(p) for p in v.split(".") if p])
     return f"CARD {versions[-1]}" if versions else None
 
 
