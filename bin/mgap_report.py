@@ -665,10 +665,12 @@ class RunData:
         return "both" if low and high else "low_completeness" if low else "high_contamination" if high else None
 
     def amr_genes(self, sample):
+        """Acquired AMR genes, as in the heatmap; point mutations (subtype POINT) are listed separately."""
         table = self.amrfinder.get(sample)
         if table is None or table.empty or "type" not in table:
             return []
-        return sorted(set(table.loc[table["type"] == "AMR", "gene"]), key=str.lower)
+        acquired = (table["type"] == "AMR") & (column(table, "subtype") != "POINT")
+        return sorted(set(table.loc[acquired, "gene"]), key=str.lower)
 
     def warnings(self, sample):
         """Plain-language warnings for the sample card and the TSV."""

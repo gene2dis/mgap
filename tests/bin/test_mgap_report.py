@@ -373,6 +373,22 @@ def test_sample_anchors_are_unique():
     assert all(report.re.fullmatch(r"[A-Za-z0-9_-]+", slug) for slug in slugs)
 
 
+def test_point_mutations_are_not_acquired_genes(tmp_path, data):
+    lines = (data / "511.1.amrfinder.tsv").read_text().splitlines()
+    fields = lines[-1].split("\t")
+    # a gyrA point mutation: Element symbol, Type AMR, Subtype POINT
+    fields[5], fields[8], fields[9] = "gyrA_D87Y", "AMR", "POINT"
+    path = tmp_path / "511.1.amrfinder.tsv"
+    path.write_text("\n".join(lines + ["\t".join(fields)]) + "\n")
+    run = report.RunData(
+        report.read_manifest(write_manifest(tmp_path / "manifest.tsv", [("511.1", "amrfinderplus", path)])), {}
+    )
+    assert run.amr_genes("511.1") == ["fosA7.2", "mdsA", "mdsB"]
+    row = report.summary_rows(run).iloc[0]
+    assert row["amrfinder_amr_gene_count"] == 3
+    assert row["amrfinder_point_mutations"] == "gyrA_D87Y"
+
+
 def test_checkm2_groups_and_table_order(tmp_path, data):
     rows = [("511.1", "checkm2", data / "511.1.checkm2.tsv")]
     for sample, completeness, contamination in (("A", 85.0, 1.0), ("B", 99.0, 7.0), ("C", 80.0, 9.0)):
