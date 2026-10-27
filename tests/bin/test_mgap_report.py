@@ -609,3 +609,17 @@ def test_plasmid_consensus_section_and_summary(tmp_path, data):
     sheet = openpyxl.load_workbook(xlsx)["Plasmid consensus"]
     assert sheet.max_row == 41  # header + 40 contigs
     assert [cell.value for cell in sheet[1]][:3] == ["sample", "contig", "description"]
+
+
+def test_plasmid_contig_table_names_each_replicon_once(tmp_path, data):
+    # PlasmidFinder can hit one replicon several times on a contig (ONT SCL10571: Col440I twice)
+    text = (data / "plasmid" / "SCL2535.plasmid_consensus.tsv").read_text()
+    edited = tmp_path / "consensus.tsv"
+    edited.write_text(text.replace("\tIncFIB(pKPHS1)\t97.32", "\tIncFIB(pKPHS1),IncFIB(pKPHS1)\t97.32,96.10"))
+    assert edited.read_text() != text
+    manifest = write_manifest(tmp_path / "manifest.tsv", [("SCL2535", "plasmid_consensus", edited)])
+    html = tmp_path / "report.html"
+    report.main(["--manifest", str(manifest), "--html", str(html), "--tsv", str(tmp_path / "summary.tsv")])
+    page = html.read_text()
+    assert "IncFIB(pKPHS1)" in page
+    assert "IncFIB(pKPHS1), IncFIB(pKPHS1)" not in page

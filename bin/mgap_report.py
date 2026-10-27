@@ -2127,7 +2127,10 @@ def section_plasmids(run):
                     hovertemplate=f"%{{y}}<br>{label}: %{{x}} contigs<extra></extra>",
                 )
             )
-        fig.update_layout(barmode="stack", bargap=0.25, margin=dict(l=10, r=20, t=40, b=50))
+        # legend in call order (Plotly lists stacked horizontal traces last-first)
+        fig.update_layout(
+            barmode="stack", bargap=0.25, margin=dict(l=10, r=20, t=40, b=50), legend=dict(traceorder="normal")
+        )
         most = max((sum(c.values()) for c in counts.values()), default=0)
         fig.update_xaxes(title_text="Contigs by consensus call", dtick=1 if most <= 10 else None)
         body += figure_html(fig, bar_height(len(samples), per_row=26))
@@ -2162,9 +2165,10 @@ def section_plasmids(run):
                     "circular": row.get("circular", ""),
                     "call": PLASMID_CALL_LABELS.get(row.get("consensus", ""), row.get("consensus", "")),
                     "evidence": row.get("evidence", ""),
-                    "plasmidfinder": row.get("plasmidfinder_replicons", "").replace(",", ", "),
-                    "mobsuite": row.get("mobsuite_replicons", "").replace(",", ", "),
-                    "relaxase": row.get("mobsuite_relaxases", "").replace(",", ", "),
+                    # one name per replicon or relaxase type; the consensus TSV keeps every hit
+                    "plasmidfinder": ", ".join(unique_items([row.get("plasmidfinder_replicons", "")])) or "-",
+                    "mobsuite": ", ".join(unique_items([row.get("mobsuite_replicons", "")])) or "-",
+                    "relaxase": ", ".join(unique_items([row.get("mobsuite_relaxases", "")])) or "-",
                     "mobility": row.get("predicted_mobility", ""),
                     "cluster": row.get("mobsuite_cluster", ""),
                 }
