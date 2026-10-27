@@ -63,6 +63,10 @@ All results are written to the directory specified with `--outdir`. The layout b
 ├── gtdbtk/                              # GTDB-Tk taxonomic classification (batch, all samples)
 │   ├── gtdbtk.batch.*.summary.tsv       #   (requires --run_gtdbtk true and --gtdbtk_db)
 │   └── gtdbtk.batch.log
+├── report/                              # Run report (skipped with --skip_report)
+│   ├── mgap_report.html                 #   Offline HTML report of every sample and tool
+│   ├── mgap_summary.tsv                 #   One row per sample: key numbers and warnings
+│   └── mgap_summary.xlsx                #   The summary, then one sheet per tool
 └── pipeline_info/                       # Nextflow execution reports and software versions
     ├── execution_report_*.html
     ├── execution_timeline_*.html
@@ -122,6 +126,8 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 
 ### Reporting
 
+- [Run report](#run-report) - One offline HTML page, a per-sample TSV and an XLSX workbook for the whole run
+- [MultiQC](#multiqc) - QC reports of fastp/fastplong, Kraken2, QUAST and Bakta in one page
 - [Pipeline information](#pipeline-information) - Report metrics generated during workflow execution
 
 ---
@@ -539,6 +545,36 @@ This step is optional and only runs when `--run_mobsuite` is enabled. A pre-buil
 ---
 
 ## Reporting
+
+### Run report
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `report/`
+  - `mgap_report.html`: one self-contained page (Plotly is inlined, about 5 MB): it opens offline, from a shared drive or as an e-mail attachment.
+  - `mgap_summary.tsv`: one row per sample with its status, read, assembly, quality and typing numbers, AMR genes and warnings; columns no sample has a value for are left out.
+  - `mgap_summary.xlsx`: the same summary as the first sheet, then one sheet per tool that ran (sample status, reads, species in the reads, QUAST, length filter, CheckM2, MLST, GTDB-Tk, Kleborate, SISTR, SCCmec, AMRFinderPlus, RGI without its sequence columns, geNomad plasmids and viruses, MOB-suite contigs and plasmids, software versions), each with a `sample` column.
+
+</details>
+
+`MGAP_REPORT` (`bin/mgap_report.py`) reads every tool's output for the run and writes a report for lab staff: each section says what the tool does and how to read its result. Sections appear only for the tools that ran; skipped and failed samples are listed from `pipeline_info/sample_status.tsv`.
+
+| Section                            | What it shows                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Run overview                       | Pipeline and Nextflow versions, run date and sequencing type; pass, skipped and failed counts with the samples that did not pass and why; key thresholds; the databases used, with their version where the database records one (Bakta, AMRFinderPlus, geNomad, GTDB-Tk, CARD; Kraken2, CheckM2 and MOB-suite databases show "not recorded"). |
+| Read quality and species           | Reads and bases before and after fastp/fastplong with the `--min_bases` limit, Q30, GC, duplication and (Illumina) coverage from Mash's genome size; the species in the reads from Bracken (or Kraken2), with a warning when a second species has more than 5 % of the reads.                                                                 |
+| Assembly                           | QUAST total length (with the usual genome length for the MLST species), contigs and N50, and the contigs kept for annotation by `--min_contig_length`.                                                                                                                                                                                        |
+| Genome quality (CheckM2)           | Completeness against contamination, with the 90 % / 5 % high-quality limits; genomes with low completeness, high contamination or both have their own colour and marker and are listed first.                                                                                                                                                 |
+| Species and typing                 | MLST scheme and ST, the GTDB-Tk species and ANI and the top species in the reads; rows where the genus from MLST differs from GTDB-Tk or the reads are flagged and listed first. Kleborate, SISTR and SCCmec tables for the samples routed to them; SCCmec calls not made from the cassette's target genes are flagged and listed first.      |
+| Antimicrobial resistance           | Heatmaps of the AMRFinderPlus acquired genes and the RGI Perfect and Strict hits (gene by sample, colour = identity), the point mutations and every AMRFinderPlus hit.                                                                                                                                                                        |
+| Plasmids and other mobile elements | geNomad plasmid and virus sequences per sample and the MOB-suite reconstructed plasmids with replicon, relaxase, mobility and host range.                                                                                                                                                                                                     |
+| Samples                            | One card per sample with its key numbers and warnings. Cards start collapsed; a search box and a sample list open them, and samples with warnings are marked (warning sign and red outline) and listed first.                                                                                                                                 |
+| Methods, versions and citations    | Every tool version from `pipeline_info/software_versions.yml` and the citations from `CITATIONS.md`, with any tool that has no citation entry.                                                                                                                                                                                                |
+
+With more than 100 samples the one-bar-per-sample charts (read QC, species, assembly, geNomad) become distributions: one box per metric with a point per sample, the outliers (outside 1.5 times the interquartile range or a QC limit) marked, and the most extreme named; long tables scroll inside their box. On copies of the 10 test genomes, a 300-sample report is about 9 MB and opens in about 13 s; real runs with more varied resistance genes have larger heatmaps.
+
+`--skip_report` turns the report off. `accessory_scripts/build_report_manifest.py` builds the report's inputs from an existing results folder, so the report can be rebuilt for a run made before it existed.
 
 ### MultiQC
 

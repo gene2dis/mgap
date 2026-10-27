@@ -1,0 +1,4 @@
+name	taxonomy_id	taxonomy_lvl	kraken_assigned_reads	added_reads	new_est_reads	fraction_total_reads
+Klebsiella pneumoniae	573	S	329949	804304	1134253	0.96143
+Klebsiella quasipneumoniae	1463165	S	3942	2396	6338	0.00537
+Klebsiella variicola	244366	S	2640	2283	4923	0.00417

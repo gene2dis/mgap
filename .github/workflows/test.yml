@@ -40,6 +40,25 @@ jobs:
       - name: Run nextflow lint
         run: nextflow lint . -o concise
 
+  pytest:
+    name: Run pytest (bin/ scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pipeline code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # the versions in modules/local/mgap_report/environment.yml (the report's container)
+      - name: Install the report's Python packages
+        run: pip install pandas==3.0.6 plotly==7.1.0 pyyaml==6.0.3 openpyxl==3.1.5 pytest==9.1.1
+
+      - name: Run pytest
+        run: pytest tests/bin
+
   stub:
     name: Run pipeline stub (Nextflow ${{ matrix.NXF_VER }})
     runs-on: ubuntu-latest

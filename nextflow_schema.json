@@ -212,6 +212,13 @@
                     "description": "Run MOB-suite for plasmid detection and reconstruction.",
                     "fa_icon": "fas fa-circle-nodes"
                 },
+                "skip_report": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip the run report (report/mgap_report.html, mgap_summary.tsv and mgap_summary.xlsx).",
+                    "fa_icon": "fas fa-file-medical",
+                    "help_text": "The report collects every tool's results into one offline HTML page, a per-sample TSV and an XLSX workbook. See docs/output.md."
+                },
                 "run_dnaapler": {
                     "type": "boolean",
                     "default": true,

@@ -47,6 +47,8 @@ workflow ILLUMINA {
     )
     ch_versions = ch_versions.mix(FASTP.out.versions.first())
     ch_reports = FASTP.out.json.map { _meta, json -> json }
+    // [ meta, tool, file ] for the run report (MGAP_REPORT); every sample keeps its fastp report
+    ch_report_files = FASTP.out.json.map { meta, json -> [ meta, 'fastp', json ] }
 
     //
     // SUBWORKFLOW: samples with fewer than --min_bases bases after fastp stop here
@@ -67,6 +69,7 @@ workflow ILLUMINA {
         )
         ch_versions = ch_versions.mix(KRAKEN2.out.versions.first())
         ch_reports = ch_reports.mix(KRAKEN2.out.report.map { _meta, report -> report })
+        ch_report_files = ch_report_files.mix(KRAKEN2.out.report.map { meta, report -> [ meta, 'kraken2', report ] })
 
         // Bracken uses its own database if provided; otherwise falls back to
         // the Kraken2 DB directory (which must then contain Bracken kmer files)
@@ -97,6 +100,7 @@ workflow ILLUMINA {
             bracken_db
         )
         ch_versions = ch_versions.mix(BRACKEN.out.versions.first())
+        ch_report_files = ch_report_files.mix(BRACKEN.out.reports.map { meta, report -> [ meta, 'bracken', report ] })
     }
 
     //
@@ -106,6 +110,7 @@ workflow ILLUMINA {
         COVERAGE_ADJUST ( ch_qc_reads, ch_qc_json )
         ch_versions = ch_versions.mix(COVERAGE_ADJUST.out.versions)
         ch_reads_for_assembly = COVERAGE_ADJUST.out.reads
+        ch_report_files = ch_report_files.mix(COVERAGE_ADJUST.out.genome_size.map { meta, size -> [ meta, 'mash', size ] })
     } else {
         ch_reads_for_assembly = ch_qc_reads
     }
@@ -137,11 +142,12 @@ workflow ILLUMINA {
     emit:
     // nf-core spades outputs gzipped scaffolds (.fa.gz). QUAST reads them as
     // they are; annotation tools get the uncompressed SEQKIT_FILTER output (mgap.nf)
-    assembly   = SPADES.out.scaffolds     // channel: [ val(meta), path(fasta.gz) ]
-    reports    = ch_reports               // channel: [ path(report) ] for MultiQC
-    read_stats = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
-    status     = READ_QC_GATE.out.status.mix(ch_spades_failed)  // channel: [ val(meta), map ] skipped and failed samples
-    versions   = ch_versions              // channel: [ path(versions.yml) ]
+    assembly     = SPADES.out.scaffolds     // channel: [ val(meta), path(fasta.gz) ]
+    reports      = ch_reports               // channel: [ path(report) ] for MultiQC
+    report_files = ch_report_files          // channel: [ val(meta), val(tool), path(file) ] for the run report
+    read_stats   = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
+    status       = READ_QC_GATE.out.status.mix(ch_spades_failed)  // channel: [ val(meta), map ] skipped and failed samples
+    versions     = ch_versions              // channel: [ path(versions.yml) ]
 }
 
 //

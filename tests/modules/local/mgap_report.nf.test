@@ -1,0 +1,94 @@
+nextflow_process {
+
+    name "Test MGAP_REPORT module"
+    script "../../../modules/local/mgap_report/main.nf"
+    process "MGAP_REPORT"
+
+    tag "modules"
+    tag "modules_local"
+    tag "mgap_report"
+
+    // tests/bin/data: excerpts of real MGAP outputs (the pytest fixtures). Two MOB-suite contig reports
+    // with the same file name check that the numbered staging folders keep them apart.
+
+    test("MGAP_REPORT - fixtures") {
+
+        when {
+            process {
+                """
+                def data = "${projectDir}/tests/bin/data"
+                def rows = [
+                    [ 'SCL2535', 'fastp', 'SCL2535.fastp.json' ],
+                    [ 'SCL2333', 'bracken', 'SCL2333.bracken.tsv' ],
+                    [ 'SCL2333', 'kleborate', 'SCL2333.kleborate.txt' ],
+                    [ '511.1', 'quast', '511.1.quast.tsv' ],
+                    [ '511.1', 'checkm2', '511.1.checkm2.tsv' ],
+                    [ '511.1', 'amrfinderplus', '511.1.amrfinder.tsv' ],
+                    [ '100.1', 'mlst', '100.1.mlst.tsv' ],
+                    [ 'SCL1559', 'sccmec', 'SCL1559.sccmec.tsv' ],
+                    [ '-', 'gtdbtk', 'gtdbtk.bac120.summary.tsv' ],
+                    [ '-', 'sample_status', 'sample_status.tsv' ],
+                    [ '-', 'software_versions', 'software_versions.yml' ]
+                ]
+                def files = rows.collect { row -> file("\${data}/\${row[2]}", checkIfExists: true) }
+                // MOB-suite writes contig_report.txt for every sample: two files with the same name
+                def mob = [ 'SCL1559', 'S2' ].collect { sample ->
+                    def folder = file("\${workDir}/mob_\${sample}")
+                    folder.mkdirs()
+                    file("\${data}/SCL1559.mob_contigs.txt").copyTo(folder.resolve('contig_report.txt'))
+                }
+                input[0] = [
+                    rows.collect { row -> [ row[0], row[1] ] } + [ [ 'SCL1559', 'mobsuite_contigs' ], [ 'S2', 'mobsuite_contigs' ] ],
+                    files + mob
+                ]
+                input[1] = []
+                """
+            }
+        }
+
+        then {
+            def html = path(process.out.html[0]).text
+            def summary = path(process.out.tsv[0]).text.readLines()*.split('\t')
+            assertAll(
+                { assert process.success },
+                { assert html.contains('<section id="typing"') },
+                { assert html.contains('<section id="mobile"') },
+                { assert !html.contains('<script src=') },
+                { assert summary[0][0] == 'sample' },
+                // samples from the status table and from the files, S2 included
+                { assert summary*.getAt(0).containsAll([ 'SCL2535', 'SCL2333', '511.1', 'SCL1559', 'S2', 'SCL2535_low' ]) },
+                { assert path(process.out.xlsx[0]).exists() },
+                { assert path(process.out.versions[0]).text.contains('plotly: 7.1.0') }
+            )
+        }
+
+    }
+
+    test("MGAP_REPORT - stub") {
+
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [ [ [ '-', 'sample_status' ] ], [ file("${projectDir}/tests/bin/data/sample_status.tsv", checkIfExists: true) ] ]
+                input[1] = []
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.html },
+                { assert process.out.tsv },
+                { assert process.out.xlsx },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

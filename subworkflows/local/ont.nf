@@ -63,6 +63,8 @@ workflow ONT {
             .collectFile(name: 'fastplong_versions.yml')
     )
     ch_reports = FASTPLONG.out.json.map { _meta, json -> json }
+    // [ meta, tool, file ] for the run report (MGAP_REPORT); every sample keeps its fastplong report
+    ch_report_files = FASTPLONG.out.json.map { meta, json -> [ meta, 'fastplong', json ] }
 
     //
     // SUBWORKFLOW: samples with fewer than --min_bases bases after fastplong stop here
@@ -82,6 +84,7 @@ workflow ONT {
         )
         ch_versions = ch_versions.mix(KRAKEN2.out.versions.first())
         ch_reports = ch_reports.mix(KRAKEN2.out.report.map { _meta, report -> report })
+        ch_report_files = ch_report_files.mix(KRAKEN2.out.report.map { meta, report -> [ meta, 'kraken2', report ] })
     }
 
     //
@@ -295,9 +298,10 @@ workflow ONT {
     }
 
     emit:
-    assembly   = ch_assembly              // channel: [ val(meta), path(fasta) ]
-    reports    = ch_reports               // channel: [ path(report) ] for MultiQC
-    read_stats = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
-    status     = READ_QC_GATE.out.status.mix(ch_failed)  // channel: [ val(meta), map ] skipped and failed samples
-    versions   = ch_versions              // channel: [ path(versions.yml) ]
+    assembly     = ch_assembly              // channel: [ val(meta), path(fasta) ]
+    reports      = ch_reports               // channel: [ path(report) ] for MultiQC
+    report_files = ch_report_files          // channel: [ val(meta), val(tool), path(file) ] for the run report
+    read_stats   = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
+    status       = READ_QC_GATE.out.status.mix(ch_failed)  // channel: [ val(meta), map ] skipped and failed samples
+    versions     = ch_versions              // channel: [ path(versions.yml) ]
 }

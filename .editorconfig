@@ -31,3 +31,11 @@ indent_size = unset
 
 [/assets/email*]
 indent_size = unset
+
+# Tool outputs used as parser fixtures: kept as the tools write them (Kraken2
+# pads its columns with spaces, a TSV whose last column is empty ends in a
+# tab; the fastp JSON is indented by 2, as prettier writes it)
+[/tests/bin/data/*.{tsv,txt,tab,genome_size,json}]
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset

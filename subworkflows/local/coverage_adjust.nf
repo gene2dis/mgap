@@ -54,8 +54,9 @@ workflow COVERAGE_ADJUST {
         .mix(SEQTK_SAMPLE.out.reads)
 
     emit:
-    reads    = ch_adjusted_reads // channel: [ val(meta), [ reads ] ]
-    versions = ch_versions       // channel: [ versions.yml ]
+    reads       = ch_adjusted_reads             // channel: [ val(meta), [ reads ] ]
+    genome_size = MASH_SKETCH.out.genome_size   // channel: [ val(meta), path(genome_size) ] for the run report
+    versions    = ch_versions                   // channel: [ versions.yml ]
 }
 
 //
