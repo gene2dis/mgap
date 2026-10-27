@@ -356,6 +356,16 @@ def write_manifest(path, rows):
     return path
 
 
+def test_samples_in_name_order(tmp_path, data):
+    # sample_status.tsv is sorted as plain text (S1, S10, S2); the report sorts names naturally
+    status = tmp_path / "sample_status.tsv"
+    lines = (data / "sample_status.tsv").read_text().splitlines()
+    status.write_text(lines[0] + "\n" + "".join(f"{name}\tillumina\tpass\n" for name in ("S1", "S10", "S2")))
+    rows = [("-", "sample_status", status), ("S3", "quast", data / "511.1.quast.tsv")]
+    run = report.RunData(report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows)), {})
+    assert run.samples == ["S1", "S2", "S3", "S10"]
+
+
 def test_checkm2_groups_and_table_order(tmp_path, data):
     rows = [("511.1", "checkm2", data / "511.1.checkm2.tsv")]
     for sample, completeness, contamination in (("A", 85.0, 1.0), ("B", 99.0, 7.0), ("C", 80.0, 9.0)):

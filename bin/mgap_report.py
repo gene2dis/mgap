@@ -634,10 +634,9 @@ class RunData:
             samples.update(sample for sample in manifest.get(tool, {}) if sample != RUN_SAMPLE)
         samples.update(self.gtdbtk)
         if self.status is not None and "sample" in self.status:
-            order = list(self.status["sample"])
-            self.samples = order + sorted(samples - set(order), key=natural_key)
-        else:
-            self.samples = sorted(samples, key=natural_key)
+            samples.update(self.status["sample"])
+        # natural order of the names (S2 before S10); sample_status.tsv is sorted as plain text
+        self.samples = sorted(samples, key=natural_key)
 
     # ---- per-sample derived values
 
@@ -1002,12 +1001,12 @@ def section_overview(run):
 
     body += (
         '<p class="note">Reading the charts: with up to '
-        f"{LARGE_RUN} samples, bar charts have one row per sample in samplesheet order; with more, each metric "
-        "is a box with one point per sample, and only the outliers (outside 1.5 times the interquartile range "
-        "or a QC limit) are marked, the most extreme by name. Heatmaps have one column per sample and scroll "
-        "sideways when they are wider than the page. Hover a bar, point or cell for its value; click a table "
-        "header to sort; long tables scroll inside their box; sample names open the sample cards. Colours "
-        "follow one colour-blind-safe palette, and every colour is also named in a legend or label.</p>"
+        f"{LARGE_RUN} samples, bar charts have one row per sample, in name order (S2 before S10); with more, each "
+        "metric is a box with one point per sample, and only the outliers (outside 1.5 times the interquartile "
+        "range or a QC limit) are marked, the most extreme by name. Heatmaps have one column per sample and scroll "
+        "sideways when they are wider than the page. Hover a bar, point or cell for its value; click a table header"
+        " to sort; long tables scroll inside their box; sample names open the sample cards. Colours follow one "
+        "colour-blind-safe palette, and every colour is also named in a legend or label.</p>"
     )
     intro = [
         "This page summarises one run of MGAP (Microbial Genome Analysis Pipeline): read quality, assembly, "
@@ -1532,7 +1531,7 @@ def section_quality(run):
                 else "within limits"
             ),
         }
-        # genomes outside the limits first, then samplesheet order
+        # genomes outside the limits first, then name order
         for s in sorted(samples, key=lambda s: run.checkm2_group(s) is None)
     ]
     body += render_table(
@@ -1589,7 +1588,7 @@ def section_typing(run):
                 "check": check,
             }
         )
-    # disagreements first, then samplesheet order (sorted() keeps the order within each group)
+    # disagreements first, then name order (sorted() keeps the order within each group)
     rows = sorted(rows, key=lambda row: not row.pop("_flagged"))
     if rows:
         columns = [
@@ -1681,7 +1680,7 @@ def section_typing(run):
         )
     if run.sccmec:
         rows = []
-        # calls that are not clear-cut first, then samplesheet order
+        # calls that are not clear-cut first, then name order
         for s in sorted([s for s in run.samples if s in run.sccmec], key=lambda s: not sccmec_problem(run.sccmec[s])):
             r = run.sccmec[s]
             problem = sccmec_problem(r)
@@ -2137,7 +2136,7 @@ def section_cards(run):
             )
         )
     flagged = sum(1 for clean, _ in chips if not clean)
-    # samples with warnings first (sorted() keeps samplesheet order within each group)
+    # samples with warnings first (sorted() keeps name order within each group)
     listing = "".join(chip for _, chip in sorted(chips, key=lambda item: item[0]))
     body = (
         '<div class="sample-finder"><label for="sample-search">Find a sample</label> '
@@ -2336,7 +2335,7 @@ def per_sample_dicts(tables):
 
 
 def tool_tables(run):
-    """The workbook sheets after the summary: one per tool that ran, in samplesheet order."""
+    """The workbook sheets after the summary: one per tool that ran, in sample name order."""
     order = {s: index for index, s in enumerate(run.samples)}
     reads = per_sample_dicts(run.reads)
     if len(reads):
