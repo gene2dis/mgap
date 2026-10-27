@@ -95,7 +95,8 @@ def test_consensus_evidence_columns(tmp_path, data):
     # mobility is only given for mob_recon plasmids
     assert rows["contig_27"]["predicted_mobility"] == "-"
     assert rows["contig_1"]["genomad_plasmid"] == "no"
-    assert rows["contig_1"]["mob_typer"] == "no"
+    # mob_recon ran, MOB-typer did not (Illumina)
+    assert rows["contig_1"]["mob_typer"] == pc.NOT_RUN
 
 
 def test_large_contig_with_evidence_is_check(tmp_path, data):
@@ -257,3 +258,28 @@ def test_circular_leaves_out_chromosome_sized_contigs(tmp_path):
     untagged = write_fasta(tmp_path / "b.fasta", [("contig_1 chr", 50), ("contig_2 p1", 10)])
     pc.main(["circular", "--fasta", str(untagged), "--all-if-untagged", "--max-length", "50", "--out", str(out)])
     assert [record[0] for record in pc.read_fasta(out)] == ["contig_2"]
+
+
+def test_mob_typer_mobility_on_a_fragment_keeps_the_mob_recon_plasmid(tmp_path, data):
+    # contig mode without topology tags: MOB-typer types contig_22 on its own, but it is a fragment of the
+    # conjugative mob_recon plasmid AA276 (with contig_16), so the cluster's mobility stands
+    typer = tmp_path / "typer.txt"
+    typer.write_text(
+        "sample_id\trep_type(s)\trelaxase_type(s)\tpredicted_mobility\tmash_nearest_neighbor\n"
+        "contig_22 NODE_22_length_7041_cov_26.434336\t-\t-\tnon-mobilizable\tCP000001\n"
+        "contig_27 NODE_27_length_4497_cov_37.351259\t-\t-\tnon-mobilizable\tCP000002\n"
+    )
+    rows = run_consensus(tmp_path, data, "--mob-typer", str(typer))
+    assert rows["contig_22"]["mobsuite_cluster"] == rows["contig_16"]["mobsuite_cluster"]
+    assert (rows["contig_22"]["predicted_mobility"], rows["contig_22"]["mobility_source"]) == (
+        "conjugative",
+        "mob_recon cluster",
+    )
+    assert rows["contig_22"]["mash_nearest_neighbor"] != "CP000001"
+    assert rows["contig_22"]["mob_typer"] == "yes"
+    # in no mob_recon plasmid: MOB-typer's prediction is the only one
+    assert (rows["contig_27"]["predicted_mobility"], rows["contig_27"]["mobility_source"]) == (
+        "non-mobilizable",
+        "MOB-typer",
+    )
+    assert rows["contig_1"]["mob_typer"] == "no"

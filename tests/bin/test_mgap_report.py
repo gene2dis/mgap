@@ -492,6 +492,25 @@ def test_build_manifest_database_versions(tmp_path):
     }
 
 
+def test_build_manifest_covers_every_sample_tool():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "accessory_scripts"))
+    import build_report_manifest
+
+    # rebuilding the report from a results folder finds every per-sample input the report reads
+    assert set(report.SAMPLE_TOOLS) - set(build_report_manifest.SAMPLE_PATTERNS) == set()
+
+
+def test_build_manifest_finds_plasmid_consensus(tmp_path):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "accessory_scripts"))
+    import build_report_manifest
+
+    folder = tmp_path / "SCL2535" / "annotation" / "plasmid_consensus"
+    folder.mkdir(parents=True)
+    (folder / "SCL2535.plasmid_consensus.tsv").write_text("sample\tcontig\n")
+    rows = build_report_manifest.manifest_rows(tmp_path, None)
+    assert [(row["sample"], row["tool"]) for row in rows] == [("SCL2535", "plasmid_consensus")]
+
+
 # --------------------------------------------------------------------------------------------------
 # Large runs, sample cards and the workbook
 # --------------------------------------------------------------------------------------------------

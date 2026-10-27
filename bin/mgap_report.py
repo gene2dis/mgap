@@ -2110,7 +2110,6 @@ def section_plasmids(run):
             [
                 Panel(f"Contigs called {label}", "contigs", {s: counts[s].get(call, 0) for s in samples}, digits=0)
                 for call, label in PLASMID_CALL_LABELS.items()
-                if call != "check"
             ]
         )
     else:

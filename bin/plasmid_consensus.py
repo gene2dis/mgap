@@ -249,8 +249,10 @@ def consensus(args):
             )
             row["mobsuite_mpf"] = join_unique(value(contig_row, "mpf_type"), value(typed or {}, "mpf_type"))
             row["mobsuite_orit"] = join_unique(value(contig_row, "orit_type(s)"), value(typed or {}, "orit_type(s)"))
-            row["mob_typer"] = "yes" if typed else "no"
-            if typed:
+            row["mob_typer"] = ("yes" if typed else "no") if args.mob_typer else NOT_RUN
+            # MOB-typer's prediction is for the whole molecule only on a circular contig; on a fragment of a
+            # mob_recon plasmid, the cluster's prediction stands
+            if typed and (circular == "yes" or molecule != "plasmid"):
                 row["predicted_mobility"], row["mobility_source"] = value(typed, "predicted_mobility"), "MOB-typer"
                 row["mash_nearest_neighbor"] = value(typed, "mash_nearest_neighbor")
                 row["mash_neighbor_identification"] = value(typed, "mash_neighbor_identification")

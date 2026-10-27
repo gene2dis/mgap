@@ -44,6 +44,7 @@ SAMPLE_PATTERNS = {
     "genomad_virus": ["annotation/genomad/**/*_virus_summary.tsv"],
     "mobsuite_contigs": ["annotation/mobsuite/contig_report.txt"],
     "mobsuite_mobtyper": ["annotation/mobsuite/mobtyper_results.txt"],
+    "plasmid_consensus": ["annotation/plasmid_consensus/*.plasmid_consensus.tsv"],
     "kleborate": ["annotation/kleborate/*_output.txt"],
     "sistr": ["annotation/sistr/*.tab"],
     "sccmec": ["annotation/sccmec/{sample}.tsv"],
