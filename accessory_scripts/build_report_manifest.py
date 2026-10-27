@@ -141,7 +141,7 @@ def run_info(results, pipeline, params):
     info = {}
     versions = results / "pipeline_info" / "software_versions.yml"
     if versions.exists():
-        workflow = (yaml.safe_load(versions.read_text()) or {}).get("Workflow", {})
+        workflow = (yaml.load(versions.read_text(), Loader=yaml.BaseLoader) or {}).get("Workflow", {})
         for name, version in workflow.items():
             if name.lower() == "nextflow":
                 info["nextflow_version"] = str(version)

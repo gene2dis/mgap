@@ -489,7 +489,8 @@ def parse_software_versions(path):
     if yaml is None:
         raise RuntimeError("PyYAML is not installed")
     with open(path) as handle:
-        data = yaml.safe_load(handle) or {}
+        # BaseLoader keeps every value as text: safe_load reads a version such as 2.20 as the number 2.2
+        data = yaml.load(handle, Loader=yaml.BaseLoader) or {}
     by_tool = OrderedDict()
     for process, tools in data.items():
         if not isinstance(tools, dict):

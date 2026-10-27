@@ -261,6 +261,13 @@ def test_parse_software_versions_workflow_first(data):
     assert rgi["processes"] == ["GENE2DIS_MGAP:MGAP:RGI_LOAD", "GENE2DIS_MGAP:MGAP:RGI_MAIN"]
 
 
+def test_parse_software_versions_keeps_versions_as_text(tmp_path):
+    versions = tmp_path / "software_versions.yml"
+    versions.write_text('"GENE2DIS_MGAP:MGAP:TOOL":\n    tool: 2.20\n    python: 3.10\n')
+    rows = report.parse_software_versions(versions)
+    # YAML would read 2.20 as the number 2.2
+    assert {(row["tool"], row["version"]) for row in rows} == {("tool", "2.20"), ("python", "3.10")}
+
 
 # --------------------------------------------------------------------------------------------------
 # Run-level tables
