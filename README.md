@@ -174,17 +174,18 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 #### Pipeline steps
 
-| Parameter           | Default    | Description                                                                            |
-| ------------------- | ---------- | -------------------------------------------------------------------------------------- |
-| `--run_kraken2`     | `true`     | Enable Kraken2 contamination detection (needs `--kraken2db`)                           |
-| `--min_bases`       | `50000000` | Minimum bases after fastp/fastplong; samples below it skip assembly (Illumina and ONT) |
-| `--adjust_coverage` | `true`     | Subsample Illumina reads above `--max_coverage` (Illumina only)                        |
-| `--max_coverage`    | `150`      | Maximum Illumina coverage (fastp bases ÷ Mash genome size) before subsampling to it    |
-| `--run_gtdbtk`      | `false`    | Enable GTDB-Tk taxonomic classification                                                |
-| `--run_rgi`         | `false`    | Enable RGI antimicrobial resistance gene prediction                                    |
-| `--run_mobsuite`    | `false`    | Enable MOB-suite plasmid detection and reconstruction                                  |
-| `--skip_report`     | `false`    | Skip the run report (`report/`: offline HTML, summary TSV and XLSX)                    |
-| `--run_dnaapler`    | `true`     | Enable contig reorientation with Dnaapler (ONT only)                                   |
+| Parameter             | Default    | Description                                                                            |
+| --------------------- | ---------- | -------------------------------------------------------------------------------------- |
+| `--run_kraken2`       | `true`     | Enable Kraken2 contamination detection (needs `--kraken2db`)                           |
+| `--min_bases`         | `50000000` | Minimum bases after fastp/fastplong; samples below it skip assembly (Illumina and ONT) |
+| `--adjust_coverage`   | `true`     | Subsample Illumina reads above `--max_coverage` (Illumina only)                        |
+| `--max_coverage`      | `150`      | Maximum Illumina coverage (fastp bases ÷ Mash genome size) before subsampling to it    |
+| `--run_gtdbtk`        | `false`    | Enable GTDB-Tk taxonomic classification                                                |
+| `--run_rgi`           | `false`    | Enable RGI antimicrobial resistance gene prediction                                    |
+| `--run_mobsuite`      | `false`    | Enable MOB-suite plasmid detection and reconstruction (MOB-typer on circular contigs)  |
+| `--run_plasmidfinder` | `true`     | Enable PlasmidFinder plasmid replicon detection                                        |
+| `--skip_report`       | `false`    | Skip the run report (`report/`: offline HTML, summary TSV and XLSX)                    |
+| `--run_dnaapler`      | `true`     | Enable contig reorientation with Dnaapler (ONT only)                                   |
 
 #### Databases
 
@@ -201,6 +202,7 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 | `--gtdbtk_pplacer_scratch` | `true`  | Use a scratch directory for pplacer to reduce GTDB-Tk memory use                                               |
 | `--rgi_db`                 | `null`  | Path to RGI/CARD database (required if `--run_rgi` is enabled)                                                 |
 | `--mobsuite_db`            | `null`  | Path to pre-built MOB-suite database (optional; uses bundled DB if unset)                                      |
+| `--plasmidfinder_db`       | `null`  | Path to a PlasmidFinder database (optional; uses the 2019 database bundled with PlasmidFinder if unset)        |
 | `--mlst_blastdb`           | `null`  | Alternative MLST BLAST database directory containing `mlst.fa` and its index files (optional)                  |
 | `--mlst_datadir`           | `null`  | Alternative MLST PubMLST data directory (optional; uses the one bundled with mlst if unset)                    |
 | `--plassembler_db`         | `null`  | Path to Plassembler database (only needed when `plassembler` is in `--autocycler_assemblers`)                  |
