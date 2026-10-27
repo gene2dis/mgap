@@ -2390,10 +2390,8 @@ def write_xlsx(path, summary, sheets):
     """Summary sheet first, then one sheet per tool; header row frozen and filterable."""
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         for name, frame in [("Summary", summary)] + list(sheets.items()):
-            frame = frame.copy()
-            for column in frame.columns:
-                if frame[column].dtype == object:
-                    frame[column] = frame[column].map(xlsx_value)
+            # every cell: pandas 3 gives text columns the "str" dtype, not object
+            frame = frame.map(xlsx_value)
             frame.to_excel(writer, sheet_name=name[:31], index=False)
             sheet = writer.sheets[name[:31]]
             sheet.freeze_panes = "B2" if "sample" in frame else "A2"

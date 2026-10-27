@@ -4,6 +4,7 @@ The files in data/ are excerpts of real MGAP outputs (Phase 8a run of the Illumi
 2026-10-25), with work-directory paths removed. Run with: pytest tests/bin
 """
 
+import io
 import json
 import sys
 from pathlib import Path
@@ -260,6 +261,7 @@ def test_parse_software_versions_workflow_first(data):
     assert rgi["processes"] == ["GENE2DIS_MGAP:MGAP:RGI_LOAD", "GENE2DIS_MGAP:MGAP:RGI_MAIN"]
 
 
+
 # --------------------------------------------------------------------------------------------------
 # Run-level tables
 # --------------------------------------------------------------------------------------------------
@@ -501,3 +503,15 @@ def test_xlsx_summary_and_one_sheet_per_tool(tmp_path, data):
     assert "Predicted_DNA" not in sheets["RGI"]
     assert set(sheets["SCCmec"]["sample"]) == {"SCL1559"}
     assert len(sheets["Summary"]) == len((tmp_path / "s.tsv").read_text().splitlines()) - 1
+
+
+def test_xlsx_text_columns_cleaned(tmp_path):
+    openpyxl = pytest.importorskip("openpyxl", minversion="3.1.0")
+    summary = report.pd.read_csv(
+        io.StringIO("sample\tnote\nS1\tok\x01bad\nS2\t" + "x" * 40000 + "\n"), sep="\t", dtype=str
+    )
+    xlsx = tmp_path / "summary.xlsx"
+    report.write_xlsx(xlsx, summary, {})
+    sheet = openpyxl.load_workbook(xlsx)["Summary"]
+    assert sheet["B2"].value == "okbad"
+    assert len(sheet["B3"].value) == report.XLSX_CELL
