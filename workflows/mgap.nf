@@ -121,8 +121,9 @@ workflow MGAP {
     //
     // Parse the samplesheet once, then keep the columns each sequencing type needs.
     // samplesheetToList returns [meta, fastq_1, fastq_2, fasta] based on schema property order.
-    // With lenientMode it reads a name such as 100.1 or 2023 as a number; meta.id is kept as text,
-    // as written in the samplesheet, so every step compares and sorts sample names the same way.
+    // With lenientMode it reads a name such as 100.1 or 2023 as a number; meta.id is turned back into
+    // text, so every step compares and sorts sample names the same way. The text matches the samplesheet
+    // (100.10 and 007 stay as written) except for exponent notation: 1e3 becomes 1E+3.
     //
     ch_samplesheet = channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
         .map { meta, fastq_1, fastq_2, fasta -> [ meta + [ id: meta.id.toString() ], fastq_1, fastq_2, fasta ] }
@@ -552,7 +553,8 @@ def reportRunInfo(mlst_organisms) {
     }
     def used = [
         kraken2db     : params.run_kraken2.toString().toBoolean() && seq_type != 'contig',
-        brackendb     : params.run_kraken2.toString().toBoolean() && seq_type == 'illumina',
+        // Bracken runs only after Kraken2, which needs kraken2db
+        brackendb     : params.run_kraken2.toString().toBoolean() && seq_type == 'illumina' && params.kraken2db as boolean,
         checkm2_db    : true,
         bakta_db      : true,
         amrfinder_db  : params.bakta_db as boolean,
