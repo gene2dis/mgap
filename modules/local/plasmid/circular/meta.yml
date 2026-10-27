@@ -1,0 +1,51 @@
+name: plasmid_circular
+description: |
+  Writes the circular contigs of one assembly to a FASTA for MOB-typer (bin/plasmid_consensus.py circular).
+  Circularity comes from Flye's assembly_info.txt when given, else from header tags (circular=true,
+  topology=circular). ext.args '--all-if-untagged' (contig mode) selects every contig when no header
+  carries a topology tag.
+keywords:
+  - plasmid
+  - circular
+  - contigs
+tools:
+  - plasmid_consensus:
+      description: Plasmid script of the MGAP pipeline (bin/plasmid_consensus.py, Python standard library only).
+      homepage: https://github.com/gene2dis/mgap
+      documentation: https://github.com/gene2dis/mgap/blob/main/docs/output.md
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - fasta:
+        type: file
+        description: Annotation FASTA (contigs renamed contig_1..N, the assembler's header kept as the description)
+        pattern: "*.{fasta,fa,fna}"
+    - flye_info:
+        type: file
+        description: Flye assembly_info.txt (circ. column), or [] to read circularity from the headers
+        pattern: "*.txt"
+output:
+  fasta:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - ${prefix}.circular.fasta:
+          type: file
+          description: The selected contigs; not written when no contig is selected
+          pattern: "*.circular.fasta"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

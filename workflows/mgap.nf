@@ -88,7 +88,9 @@ include { RGI_LOAD } from '../modules/local/rgi/load/main'
 include { RGI_MAIN } from '../modules/local/rgi/main/main'
 include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoend/main'
 include { MOBSUITE_RECON } from '../modules/nf-core/mobsuite/recon/main'
+include { MOBSUITE_TYPER } from '../modules/nf-core/mobsuite/typer/main'
 include { PLASMIDFINDER } from '../modules/nf-core/plasmidfinder/main'
+include { PLASMID_CIRCULAR } from '../modules/local/plasmid/circular/main'
 include { PLASMID_CONSENSUS } from '../modules/local/plasmid/consensus/main'
 include { MGAP_REPORT } from '../modules/local/mgap_report/main'
 
@@ -419,6 +421,37 @@ workflow MGAP {
             MOBSUITE_RECON.out.contig_report.map { meta, txt -> [ meta, 'mob_contigs', txt ] },
             MOBSUITE_RECON.out.mobtyper_results.map { meta, txt -> [ meta, 'mob_plasmids', txt ] }
         )
+
+        // F8: mob_recon reconstructs no plasmids from complete ONT assemblies (issue #17), so
+        // MOB-typer types each circular contig of ONT and contig-mode assemblies on its own
+        if (params.seq_type in [ 'ont', 'contig' ]) {
+            PLASMID_CIRCULAR( ch_topology_input )
+            ch_versions = ch_versions.mix(PLASMID_CIRCULAR.out.versions.first())
+
+            // nf-core mobsuite/typer: database directory, then eight optional database files and
+            // the two optional reports (not used)
+            MOBSUITE_TYPER(
+                PLASMID_CIRCULAR.out.fasta,
+                params.mobsuite_db ? file(params.mobsuite_db, checkIfExists: true) : [],
+                [], [], [], [], [], [], [],
+                false,
+                false
+            )
+            ch_versions = ch_versions.mix(
+                MOBSUITE_TYPER.out.versions_mobsuite
+                    .first()
+                    .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
+                    .collectFile(name: 'mobsuite_typer_versions.yml')
+            )
+            // the report glob (*.txt) also matches the biomarker and MGE reports, which are not asked for
+            ch_plasmid_files = ch_plasmid_files.mix(
+                MOBSUITE_TYPER.out.report.flatMap { meta, outputs ->
+                    [ outputs ].flatten()
+                        .findAll { output -> !(output.name ==~ /.*_(biomarker|mge)_report\.txt/) }
+                        .collect { output -> [ meta, 'mob_typer', output ] }
+                }
+            )
+        }
     }
 
     //
