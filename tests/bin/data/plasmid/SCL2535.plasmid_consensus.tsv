@@ -1,0 +1,41 @@
+sample	contig	description	length	circular	circular_source	consensus	support	evidence	genomad_plasmid	genomad_score	genomad_topology	genomad_conjugation_genes	mobsuite_molecule_type	mobsuite_cluster	mobsuite_replicons	mobsuite_relaxases	mobsuite_mpf	mobsuite_orit	mob_typer	predicted_mobility	mobility_source	mash_nearest_neighbor	mash_neighbor_identification	plasmidfinder_replicons	plasmidfinder_identity
+SCL2535	contig_1	NODE_1_length_1682762_cov_30.909424	1682762	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	MPF_T	-	no	-	-	-	-	-	-
+SCL2535	contig_2	NODE_2_length_1019930_cov_35.281554	1019930	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_3	NODE_3_length_375956_cov_43.139351	375956	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_4	NODE_4_length_357642_cov_40.878162	357642	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_5	NODE_5_length_306836_cov_39.636043	306836	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_6	NODE_6_length_269224_cov_45.562251	269224	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_7	NODE_7_length_216458_cov_29.941548	216458	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_8	NODE_8_length_216105_cov_42.646334	216105	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_9	NODE_9_length_203492_cov_43.859179	203492	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_10	NODE_10_length_130953_cov_37.674468	130953	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_11	NODE_11_length_110042_cov_17.045271	110042	-	-	plasmid	2	MOB-suite, PlasmidFinder	no	-	-	-	plasmid	AC125	IncFIB	-	-	-	no	non-mobilizable	mob_recon cluster	CP044046	Klebsiella pneumoniae	IncFIB(pKPHS1)	97.32
+SCL2535	contig_12	NODE_12_length_103492_cov_42.011735	103492	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_13	NODE_13_length_99456_cov_45.186632	99456	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_14	NODE_14_length_86594_cov_44.845918	86594	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_15	NODE_15_length_77311_cov_25.577244	77311	-	-	plasmid	3	geNomad, MOB-suite, PlasmidFinder	yes	1.0000	No terminal repeats	NA	plasmid	AA276	IncFIB	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	IncFIB(K)	98.93
+SCL2535	contig_16	NODE_16_length_43835_cov_25.974192	43835	-	-	plasmid	3	geNomad, MOB-suite, PlasmidFinder	yes	1.0000	No terminal repeats	F_traL;F_traE;F_traK;F_traV;virb4;F_traW;F_traU;F_trbC;F_traN;F_traF;F_traH;F_traG;MOBF	plasmid	AA276	IncFII	MOBF	MPF_F,MPF_T	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	IncFII(K)	95.95
+SCL2535	contig_17	NODE_17_length_35035_cov_44.284376	35035	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_18	NODE_18_length_26305_cov_44.467186	26305	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_19	NODE_19_length_21783_cov_41.057536	21783	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_20	NODE_20_length_14205_cov_27.618128	14205	-	-	plasmid	2	geNomad, MOB-suite	yes	1.0000	No terminal repeats	NA	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_21	NODE_21_length_13610_cov_26.399763	13610	-	-	plasmid	2	geNomad, MOB-suite	yes	1.0000	No terminal repeats	NA	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_22	NODE_22_length_7041_cov_26.434336	7041	-	-	candidate	1	MOB-suite only	no	-	-	-	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_23	NODE_23_length_5896_cov_24.279598	5896	-	-	plasmid	2	geNomad, MOB-suite	yes	1.0000	No terminal repeats	NA	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_24	NODE_24_length_5849_cov_144.248864	5849	yes	geNomad DTR	plasmid	2	geNomad, MOB-suite	yes	1.0000	DTR	NA	plasmid	novel_6df09c1f6ffb46c80d462c329636a320	rep_cluster_2401	-	-	MOB_unknown	no	mobilizable	mob_recon cluster	CP022918	Klebsiella pneumoniae	-	-
+SCL2535	contig_25	NODE_25_length_4580_cov_23.679093	4580	-	-	plasmid	2	geNomad, MOB-suite	yes	1.0000	No terminal repeats	F_traE	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_26	NODE_26_length_4531_cov_46.646685	4531	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_27	NODE_27_length_4497_cov_37.351259	4497	-	-	candidate	1	geNomad only	yes	1.0000	No terminal repeats	NA	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_28	NODE_28_length_4132_cov_29.170787	4132	-	-	plasmid	2	geNomad, MOB-suite	yes	1.0000	No terminal repeats	NA	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_29	NODE_29_length_2973_cov_67.769852	2973	-	-	candidate	1	MOB-suite only	no	-	-	-	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_30	NODE_30_length_2906_cov_32.048938	2906	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_31	NODE_31_length_2853_cov_27.487528	2853	-	-	plasmid	2	geNomad, MOB-suite	yes	0.9999	No terminal repeats	NA	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_32	NODE_32_length_2439_cov_27.809689	2439	-	-	candidate	1	MOB-suite only	no	-	-	-	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_33	NODE_33_length_2377_cov_21.050667	2377	-	-	candidate	1	MOB-suite only	no	-	-	-	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_34	NODE_34_length_2122_cov_28.744361	2122	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_35	NODE_35_length_2061_cov_48.004654	2061	-	-	candidate	1	MOB-suite only	no	-	-	-	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_36	NODE_36_length_1729_cov_24.728464	1729	-	-	candidate	1	MOB-suite only	no	-	-	-	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_37	NODE_37_length_1445_cov_91.094841	1445	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_38	NODE_38_length_1334_cov_72.072080	1334	-	-	candidate	1	MOB-suite only	no	-	-	-	plasmid	AA276	-	-	-	-	no	conjugative	mob_recon cluster	CP010390	Klebsiella pneumoniae	-	-
+SCL2535	contig_39	NODE_39_length_1142_cov_237.533005	1142	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-
+SCL2535	contig_40	NODE_40_length_1026_cov_183.342603	1026	-	-	chromosome	0	MOB-suite: chromosome	no	-	-	-	chromosome	-	-	-	-	-	no	-	-	-	-	-	-

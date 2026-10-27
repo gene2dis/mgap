@@ -29,6 +29,36 @@ class TaskArgs {
         return args
     }
 
+    /**
+     * Returns [ sample (task tag): sorted names of the folders the task's inputs were staged in ]
+     * for every task of the process (inputs declared with stageAs: '<folder>/*')
+     */
+    static Map<String, List<String>> inputFolders(metaDir, String process) {
+        def workDir = Paths.get(metaDir.toString()).resolveSibling('work')
+        def rows = Paths.get(metaDir.toString(), "trace.csv").readLines()
+        def header = rows[0].split('\t') as List
+        def folders = [:]
+        rows.drop(1).each { line ->
+            def cols = line.split('\t')
+            def matcher = cols[header.indexOf('name')] =~ /:([A-Z0-9_]+)(?: \((.+)\))?$/
+            if (matcher && matcher[0][1] == process) {
+                def dir = taskDir(workDir, cols[header.indexOf('hash')])
+                def names = [] as SortedSet
+                Files.list(dir).withCloseable { stream ->
+                    stream.filter { Files.isDirectory(it) }.forEach { sub ->
+                        Files.list(sub).withCloseable { inner ->
+                            if (inner.anyMatch { Files.isSymbolicLink(it) }) {
+                                names << sub.fileName.toString()
+                            }
+                        }
+                    }
+                }
+                folders[matcher[0][2]] = names as List
+            }
+        }
+        return folders
+    }
+
     private static Path taskDir(Path workDir, String hash) {
         def (prefix, rest) = hash.tokenize('/')
         def dir = Files.list(workDir.resolve(prefix)).withCloseable { stream ->

@@ -621,7 +621,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'PLASMIDFINDER', 'PLASMID_CONSENSUS'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -657,7 +657,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'PLASMIDFINDER', 'PLASMID_CONSENSUS'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -695,7 +695,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -731,7 +731,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -769,7 +769,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'KLEBORATE', 'SCCMEC', 'SISTR'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'KLEBORATE', 'SCCMEC', 'SISTR', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -805,8 +805,146 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'KLEBORATE', 'SCCMEC', 'SISTR'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'KLEBORATE', 'SCCMEC', 'SISTR', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS'] as Set },
                 { assert annotation.errors == [] }
+            )
+        }
+
+    }
+
+    test("Plasmid consensus, ONT with Flye - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "plasmids"
+
+        options "-stub"
+        config "./config/plasmids.config"
+
+        when {
+            params {
+                input        = "${projectDir}/assets/samplesheet_test_ont.csv"
+                seq_type     = "ont"
+                run_kraken2  = false
+                genomad_db   = "${projectDir}/tests/data/stub_db/genomad"
+                run_mobsuite = true
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            def sample = 'TEST_BFRAGILIS_ONT'
+            // read as text: the stubs run in the seqkit image (annotation_input.config), so some version lines are not YAML
+            def versions = path("$outputDir/pipeline_info/software_versions.yml").text
+            assertAll(
+                { assert workflow.success },
+                // circular contigs from Flye's assembly_info.txt, each typed on its own
+                { assert TaskArgs.of(metaDir, 'PLASMID_CIRCULAR') == [ (sample): '' ] },
+                { assert TaskArgs.of(metaDir, 'MOBSUITE_TYPER') == [ (sample): '--multi' ] },
+                // the stub mob_recon finds no plasmid, so there is no mobtyper_results.txt
+                { assert TaskArgs.inputFolders(metaDir, 'PLASMID_CONSENSUS') == [ (sample): [ 'fasta', 'flye', 'genomad', 'mob_recon', 'mob_typer', 'plasmidfinder' ] ] },
+                { assert path("$outputDir/${sample}/annotation/plasmid_consensus/${sample}.plasmid_consensus.tsv").exists() },
+                { assert path("$outputDir/${sample}/annotation/mobsuite/${sample}_circular_mobtyper.txt").exists() },
+                { assert path("$outputDir/${sample}/annotation/plasmidfinder/${sample}.tsv").exists() },
+                { assert [ 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'MOBSUITE_TYPER', 'PLASMID_CONSENSUS' ].every { tool -> versions.contains(":${tool}\":") } }
+            )
+        }
+
+    }
+
+    test("Plasmid consensus, ONT with Autocycler - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "plasmids"
+
+        options "-stub"
+        config "./config/plasmids.config"
+
+        when {
+            params {
+                input         = "${projectDir}/assets/samplesheet_test_ont.csv"
+                seq_type      = "ont"
+                ont_assembler = "autocycler"
+                run_kraken2   = false
+                run_mobsuite  = true
+                outdir        = "$outputDir"
+            }
+        }
+
+        then {
+            def sample = 'TEST_BFRAGILIS_ONT'
+            assertAll(
+                { assert workflow.success },
+                // Autocycler marks circular contigs in the headers: no assembly_info.txt
+                { assert TaskArgs.of(metaDir, 'PLASMID_CIRCULAR') == [ (sample): '' ] },
+                { assert TaskArgs.inputFolders(metaDir, 'PLASMID_CONSENSUS') == [ (sample): [ 'fasta', 'mob_recon', 'mob_typer', 'plasmidfinder' ] ] }
+            )
+        }
+
+    }
+
+    test("Plasmid consensus, contig mode - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "plasmids"
+
+        options "-stub"
+        config "./config/plasmids.config"
+
+        when {
+            params {
+                input        = "${projectDir}/assets/samplesheet_test_contig.csv"
+                seq_type     = "contig"
+                run_mobsuite = true
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            def sample = 'TEST_BFRAGILIS_CONTIG'
+            assertAll(
+                { assert workflow.success },
+                // every contig when no header marks circular ones (D-22)
+                { assert TaskArgs.of(metaDir, 'PLASMID_CIRCULAR') == [ (sample): '--all-if-untagged' ] },
+                { assert TaskArgs.of(metaDir, 'MOBSUITE_TYPER') == [ (sample): '--multi' ] },
+                { assert TaskArgs.inputFolders(metaDir, 'PLASMID_CONSENSUS') == [ (sample): [ 'fasta', 'mob_recon', 'mob_typer', 'plasmidfinder' ] ] },
+                { assert path("$outputDir/${sample}/annotation/plasmid_consensus/${sample}.plasmid_consensus.tsv").exists() }
+            )
+        }
+
+    }
+
+    test("Plasmid consensus, Illumina - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "plasmids"
+
+        options "-stub"
+        config "./config/plasmids.config"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type        = "illumina"
+                run_kraken2     = false
+                adjust_coverage = false
+                genomad_db      = "${projectDir}/tests/data/stub_db/genomad"
+                run_mobsuite    = true
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            assertAll(
+                { assert workflow.success },
+                // mob_recon types the draft contigs itself: no MOB-typer
+                { assert !succeeded.any { it.contains('PLASMID_CIRCULAR') } },
+                { assert !succeeded.any { it.contains('MOBSUITE_TYPER') } },
+                { assert TaskArgs.inputFolders(metaDir, 'PLASMID_CONSENSUS') == [ TEST_BFRAGILIS: [ 'fasta', 'genomad', 'mob_recon', 'plasmidfinder' ] ] }
             )
         }
 
@@ -903,7 +1041,7 @@ nextflow_pipeline {
         tag "pipeline"
         tag "stub"
 
-        options "-stub --adjust_coverage false --run_kraken2 false"
+        options "-stub --adjust_coverage false --run_kraken2 false --run_plasmidfinder false"
 
         when {
             params {
@@ -921,7 +1059,10 @@ nextflow_pipeline {
                 { assert succeeded.any { it.contains('SPADES') } },
                 { assert !succeeded.any { it.contains('KRAKEN2') } },
                 { assert !succeeded.any { it.contains('BRACKEN') } },
-                { assert !succeeded.any { it.contains('MASH_SKETCH') } }
+                { assert !succeeded.any { it.contains('MASH_SKETCH') } },
+                // no plasmid tool runs, so there is no consensus either
+                { assert !succeeded.any { it.contains('PLASMIDFINDER') } },
+                { assert !succeeded.any { it.contains('PLASMID_CONSENSUS') } }
             )
         }
 

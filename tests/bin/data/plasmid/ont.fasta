@@ -1,0 +1,6 @@
+>contig_1 contig_1
+ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT
+>contig_2 contig_7 rotated=True
+ACGTACGTACGTACGTACGT
+>contig_3 contig_9
+ACGTACGTACGT

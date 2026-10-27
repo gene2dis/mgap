@@ -585,3 +585,27 @@ def test_xlsx_text_columns_cleaned(tmp_path):
     sheet = openpyxl.load_workbook(xlsx)["Summary"]
     assert sheet["B2"].value == "okbad"
     assert len(sheet["B3"].value) == report.XLSX_CELL
+
+
+def test_plasmid_consensus_section_and_summary(tmp_path, data):
+    manifest = write_manifest(
+        tmp_path / "manifest.tsv",
+        [("SCL2535", "plasmid_consensus", data / "plasmid" / "SCL2535.plasmid_consensus.tsv")],
+    )
+    html, tsv, xlsx = tmp_path / "report.html", tmp_path / "summary.tsv", tmp_path / "summary.xlsx"
+    report.main(["--manifest", str(manifest), "--html", str(html), "--tsv", str(tsv), "--xlsx", str(xlsx)])
+    page = html.read_text()
+    assert '<section id="plasmids"' in page
+    assert "Contigs with plasmid evidence" in page
+    assert "10 plasmid, 8 candidate" in page  # sample card
+    header, row = tsv.read_text().splitlines()
+    summary = dict(zip(header.split("\t"), row.split("\t")))
+    assert summary["plasmid_consensus_plasmid"] == "10"
+    assert summary["plasmid_consensus_candidate"] == "8"
+    assert summary["plasmid_consensus_check"] == "0"
+    assert summary["plasmid_replicons"].split(", ")[:3] == ["IncFIB(pKPHS1)", "IncFIB(K)", "IncFII(K)"]
+    import openpyxl
+
+    sheet = openpyxl.load_workbook(xlsx)["Plasmid consensus"]
+    assert sheet.max_row == 41  # header + 40 contigs
+    assert [cell.value for cell in sheet[1]][:3] == ["sample", "contig", "description"]
