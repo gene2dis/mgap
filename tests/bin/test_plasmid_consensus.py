@@ -230,3 +230,30 @@ def test_circular_contig_mode_fallback(tmp_path):
     tagged = write_fasta(tmp_path / "tagged.fasta", [("contig_1 circular=false", 30), ("contig_2 circular=false", 10)])
     pc.main(["circular", "--fasta", str(tagged), "--all-if-untagged", "--out", str(out)])
     assert not out.exists()
+
+
+def test_mob_typer_markers_vote_only_on_circular_contigs(tmp_path):
+    # contig mode without topology tags types every contig: a relaxase on a chromosome fragment is no vote
+    typer = tmp_path / "typer.txt"
+    typer.write_text(
+        "sample_id\trep_type(s)\trelaxase_type(s)\tpredicted_mobility\n"
+        "contig_1 NODE_1_length_300000_cov_30\t-\tMOBH\tmobilizable\n"
+    )
+    fasta = write_fasta(tmp_path / "draft.fasta", [("contig_1 NODE_1_length_300000_cov_30", 40)])
+    out = tmp_path / "out.tsv"
+    pc.main(["consensus", "--sample", "S", "--fasta", str(fasta), "--mob-typer", str(typer), "--out", str(out)])
+    row = read_rows(out)["contig_1"]
+    assert (row["mob_typer"], row["mobsuite_relaxases"], row["circular"]) == ("yes", "MOBH", "-")
+    assert row["consensus"] == "no call"
+
+
+def test_circular_leaves_out_chromosome_sized_contigs(tmp_path):
+    headers = [("contig_1 circular=true", 50), ("contig_2 circular=true", 30), ("contig_3", 20)]
+    fasta = write_fasta(tmp_path / "a.fasta", headers)
+    out = tmp_path / "circular.fasta"
+    pc.main(["circular", "--fasta", str(fasta), "--max-length", "50", "--out", str(out)])
+    assert [record[0] for record in pc.read_fasta(out)] == ["contig_2"]
+    # the contig-mode fallback leaves them out too
+    untagged = write_fasta(tmp_path / "b.fasta", [("contig_1 chr", 50), ("contig_2 p1", 10)])
+    pc.main(["circular", "--fasta", str(untagged), "--all-if-untagged", "--max-length", "50", "--out", str(out)])
+    assert [record[0] for record in pc.read_fasta(out)] == ["contig_2"]

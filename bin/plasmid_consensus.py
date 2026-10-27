@@ -9,12 +9,15 @@ circular
     assembly_info.txt marks it (circ. = Y; matched on the first word of the description, the
     Flye contig name) or when its header carries circular=true or topology=circular (Autocycler,
     Unicycler, Bakta). With --all-if-untagged (contig mode) a sample whose headers carry no
-    topology tag at all gets every contig. Nothing is written when no contig is selected.
+    topology tag at all gets every contig. Contigs of --max-length bp or more (chromosomes) are
+    left out. Nothing is written when no contig is selected.
 
 consensus
     One row per contig with the evidence from each plasmid tool and a consensus call. Three
     sources vote: geNomad (contig in the plasmid summary), MOB-suite (mob_recon molecule_type
-    plasmid, or a replicon or relaxase from MOB-typer on a circular contig) and PlasmidFinder
+    plasmid, or a replicon or relaxase from MOB-typer on a contig known to be circular; on other
+    contigs, such as every contig of an untagged contig-mode FASTA, MOB-typer adds evidence
+    columns but no vote) and PlasmidFinder
     (a replicon hit). Calls:
         plasmid     2 or 3 sources
         candidate   1 source
@@ -135,11 +138,15 @@ def topology(records, flye_info=None):
 def select_circular(args):
     records = read_fasta(args.fasta)
     shape = topology(records, args.flye_info)
-    selected = [record for record in records if shape[record[0]][0] == "yes"]
-    reason = "circular"
+    candidates = [record for record in records if record[2] < args.max_length]
+    selected = [record for record in candidates if shape[record[0]][0] == "yes"]
+    reason = f"circular, shorter than {args.max_length:,} bp"
     tagged = any(source for _status, source in shape.values())
     if not selected and args.all_if_untagged and not tagged:
-        selected, reason = records, "no topology tag in the headers, every contig"
+        selected, reason = (
+            candidates,
+            f"no topology tag in the headers, every contig shorter than {args.max_length:,} bp",
+        )
     print(f"{len(selected)} of {len(records)} contigs selected ({reason})", file=sys.stderr)
     if not selected:
         return
@@ -253,8 +260,12 @@ def consensus(args):
                 row["mobility_source"] = "mob_recon cluster" if mobility != EMPTY else EMPTY
                 row["mash_nearest_neighbor"] = value(contig_row, "mash_nearest_neighbor")
                 row["mash_neighbor_identification"] = value(contig_row, "mash_neighbor_identification")
-            typed_markers = typed and (
-                value(typed, "rep_type(s)") != EMPTY or value(typed, "relaxase_type(s)") != EMPTY
+            # MOB-typer's markers vote only on a contig known to be circular (a whole molecule); on a
+            # fragment of a draft, mob_recon's molecule_type decides
+            typed_markers = (
+                typed
+                and circular == "yes"
+                and (value(typed, "rep_type(s)") != EMPTY or value(typed, "relaxase_type(s)") != EMPTY)
             )
             mob_vote = molecule == "plasmid" or bool(typed_markers)
             if mob_vote:
@@ -303,6 +314,12 @@ def main(argv=None):
     circular.add_argument("--flye-info", help="Flye assembly_info.txt")
     circular.add_argument(
         "--all-if-untagged", action="store_true", help="every contig when no header carries a topology tag"
+    )
+    circular.add_argument(
+        "--max-length",
+        type=int,
+        default=LARGE_CONTIG,
+        help=f"leave out contigs this long or longer: chromosomes (default {LARGE_CONTIG})",
     )
     circular.add_argument("--out", required=True, help="FASTA to write (not written when nothing is selected)")
     circular.set_defaults(func=select_circular)

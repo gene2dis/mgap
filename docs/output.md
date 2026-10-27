@@ -490,7 +490,7 @@ This step is optional and only runs when `--run_rgi` is enabled. The CARD databa
 
 [MOB-suite](https://github.com/phac-nml/mob-suite) reconstructs and types plasmids in draft bacterial assemblies using the `mob_recon` workflow. It clusters contigs into plasmid groups, assigns replicon and relaxase types, and produces one FASTA per reconstructed plasmid together with a contig-level chromosome/plasmid assignment report.
 
-`mob_recon` is built for draft assemblies and often reconstructs no plasmid from a complete one (issue #17). On ONT and contig-mode assemblies, MOB-typer (`mob_typer --multi`) therefore also types each circular contig as a plasmid of its own. A contig is circular when Flye's `assembly_info.txt` marks it (`circ.` = Y; Flye path), or when its FASTA header says `circular=true` or `topology=circular` (Autocycler, and contig-mode input from Unicycler, Bakta and similar tools). In contig mode, a sample whose headers carry no topology tag at all gets every contig typed. Illumina assemblies are left to `mob_recon`.
+`mob_recon` is built for draft assemblies and often reconstructs no plasmid from a complete one (issue #17). On ONT and contig-mode assemblies, MOB-typer (`mob_typer --multi`) therefore also types each circular contig as a plasmid of its own. A contig is circular when Flye's `assembly_info.txt` marks it (`circ.` = Y; Flye path), or when its FASTA header says `circular=true` or `topology=circular` (Autocycler, and contig-mode input from Unicycler, Bakta and similar tools). In contig mode, a sample whose headers carry no topology tag at all gets every contig typed (about 4 min per 40 contigs with 2 CPUs). Contigs of 1 Mb or more (chromosomes) are not typed. Illumina assemblies are left to `mob_recon`.
 
 This step is optional and only runs when `--run_mobsuite` is enabled. A pre-built database can be supplied via `--mobsuite_db` (used by `mob_recon` and MOB-typer); otherwise MOB-suite uses the database bundled with the container.
 
@@ -520,11 +520,11 @@ This step is optional and only runs when `--run_mobsuite` is enabled. A pre-buil
 
 `PLASMID_CONSENSUS` (`bin/plasmid_consensus.py`) puts the evidence from the plasmid tools side by side for every contig and makes one call. It runs when at least one of PlasmidFinder, geNomad (`--genomad_db`) and MOB-suite (`--run_mobsuite`) ran. Three sources vote:
 
-| Source        | Votes plasmid when                                                                                                                   |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| geNomad       | the contig is in geNomad's plasmid summary                                                                                           |
-| MOB-suite     | `mob_recon` assigns the contig to a plasmid, or MOB-typer finds a replicon or relaxase on it (circular contigs, ONT and contig mode) |
-| PlasmidFinder | a replicon is found on the contig                                                                                                    |
+| Source        | Votes plasmid when                                                                                                                                                                     |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| geNomad       | the contig is in geNomad's plasmid summary                                                                                                                                             |
+| MOB-suite     | `mob_recon` assigns the contig to a plasmid, or MOB-typer finds a replicon or relaxase on a contig known to be circular (on other contigs MOB-typer adds evidence columns, not a vote) |
+| PlasmidFinder | a replicon is found on the contig                                                                                                                                                      |
 
 | Call         | Rule                                                                                                                           |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------ |

@@ -428,7 +428,7 @@ workflow MGAP {
             PLASMID_CIRCULAR( ch_topology_input )
             ch_versions = ch_versions.mix(PLASMID_CIRCULAR.out.versions.first())
 
-            // nf-core mobsuite/typer: database directory, then eight optional database files and
+            // nf-core mobsuite/typer: database directory, then seven optional database files and
             // the two optional reports (not used)
             MOBSUITE_TYPER(
                 PLASMID_CIRCULAR.out.fasta,
