@@ -366,6 +366,13 @@ def test_samples_in_name_order(tmp_path, data):
     assert run.samples == ["S1", "S2", "S3", "S10"]
 
 
+def test_sample_anchors_are_unique():
+    names = ["A.1", "A_1", "A-1", "A_2e_1", "SCL2535_low"]
+    slugs = [report.slug(name) for name in names]
+    assert len(set(slugs)) == len(names)
+    assert all(report.re.fullmatch(r"[A-Za-z0-9_-]+", slug) for slug in slugs)
+
+
 def test_checkm2_groups_and_table_order(tmp_path, data):
     rows = [("511.1", "checkm2", data / "511.1.checkm2.tsv")]
     for sample, completeness, contamination in (("A", 85.0, 1.0), ("B", 99.0, 7.0), ("C", 80.0, 9.0)):
@@ -382,7 +389,7 @@ def test_checkm2_groups_and_table_order(tmp_path, data):
     assert groups == {"511.1": None, "A": "low_completeness", "B": "high_contamination", "C": "both"}
     page = report.section_quality(run).html()
     # genomes outside the limits come first in the table
-    assert page.index('#sample-A"') < page.index("#sample-511_1")
+    assert page.index('#sample-A"') < page.index("#sample-511_2e_1")
 
 
 def test_typing_disagreement_first_and_no_second_call(tmp_path, data):
@@ -397,7 +404,7 @@ def test_typing_disagreement_first_and_no_second_call(tmp_path, data):
     manifest = report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows))
     page = report.section_typing(report.RunData(manifest, run_info)).html()
     # GTDB-Tk calls SCL2461 Klebsiella: flagged and listed before 100.1
-    assert page.index("#sample-SCL2461") < page.index("#sample-100_1")
+    assert page.index("#sample-SCL2461") < page.index("#sample-100_2e_1")
     assert "differs" in page
     # without GTDB-Tk or reads there is nothing to compare MLST with
     del manifest["gtdbtk"]
@@ -487,14 +494,14 @@ def test_cards_collapsed_with_flagged_samples_first(tmp_path, data):
     html = tmp_path / "report.html"
     report.main(["--manifest", str(manifest), "--html", str(html), "--tsv", str(tmp_path / "summary.tsv")])
     page = html.read_text()
-    assert '<details class="card" id="sample-SCL2535_low"' in page
+    assert '<details class="card" id="sample-SCL2535_5f_low"' in page
     assert 'id="sample-search"' in page
     listing = page[page.index('<ul class="sample-list">') :]
     chips = listing[: listing.index("</ul>")].split("<li ")[1:]
     flagged = ["flagged" in chip for chip in chips]
     # every flagged sample comes before every other one, and the skipped sample is flagged
     assert flagged == sorted(flagged, reverse=True) and any(flagged) and not all(flagged)
-    assert 'class="sample-chip flagged" href="#sample-SCL2535_low"' in listing
+    assert 'class="sample-chip flagged" href="#sample-SCL2535_5f_low"' in listing
 
 
 def test_xlsx_summary_and_one_sheet_per_tool(tmp_path, data):

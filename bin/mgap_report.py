@@ -765,7 +765,8 @@ def sample_link(sample):
 
 
 def slug(text):
-    return re.sub(r"[^A-Za-z0-9_-]", "_", str(text))
+    """HTML id part for a sample name: other characters, "_" included, become _<hex>_, so two names never share one."""
+    return re.sub(r"[^A-Za-z0-9-]", lambda match: f"_{ord(match.group()):x}_", str(text))
 
 
 def species_name(organism):
