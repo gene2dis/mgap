@@ -1472,9 +1472,9 @@ def section_assembly(run):
     min_length = (run.run_info.get("parameters") or {}).get("min_contig_length")
     threshold = f"{to_number(min_length):,} bp" if to_number(min_length) else "--min_contig_length"
     intro = [
-        "The cleaned reads are assembled into contigs (SPAdes for Illumina; Flye with Medaka, or Autocycler, "
-        "for Nanopore). QUAST measures the assembly: total length should be close to the usual genome size of "
-        "the species, and fewer contigs with a larger N50 (half of the assembly is in contigs at least this "
+        "The cleaned reads are assembled into contigs (SPAdes for Illumina; Flye with Berokka and Medaka, or "
+        "Autocycler, for Nanopore). QUAST measures the assembly: total length should be close to the usual genome "
+        "size of the species, and fewer contigs with a larger N50 (half of the assembly is in contigs at least this "
         "long) mean a less fragmented assembly. QUAST counts contigs of at least 500 bp.",
         f"Annotation and typing use only contigs of at least {esc(threshold)}; the last two columns give what "
         "was kept. The usual length range is approximate and is shown for the species given by the MLST "

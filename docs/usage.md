@@ -7,7 +7,7 @@
 gene2dis/mgap is a Nextflow pipeline for microbial genome analysis. It supports:
 
 - **Illumina short-read assembly** (FastP → SPAdes)
-- **Oxford Nanopore long-read assembly** (fastplong → Flye → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
+- **Oxford Nanopore long-read assembly** (fastplong → Flye → Berokka → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
 - **Pre-assembled contigs** (direct annotation)
 
 The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), resistome analysis (RGI, optional), mobile element detection (geNomad), plasmid reconstruction (MOB-suite, optional), and species-specific analyses (Kleborate for _Klebsiella_, SCCmec typing for _S. aureus_, SISTR serotyping for _Salmonella_).
@@ -318,6 +318,19 @@ The run exits 0 when samples were skipped or failed. It fails only when every sa
 | Parameter             | Default | Description                                                                                                                                                               |
 | --------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--min_contig_length` | `1000`  | Minimum contig length (bp) for annotation. Shorter contigs are removed from the FASTA that every annotation and typing tool reads; QUAST still reports the whole assembly |
+
+### Berokka End-Overlap Trimming (ONT, Flye)
+
+Flye can assemble a small plasmid as two or three tandem copies on one circular contig (for example a 5,216 bp plasmid
+as a 10,432 bp contig). [Berokka](https://github.com/tseemann/berokka) (v0.2.3) finds a circular contig whose start
+repeats at its end and keeps one copy, before Medaka polishes the assembly. Only the contigs Flye marks circular in
+`assembly_info.txt` are checked; linear contigs pass through unchanged. It runs by default in Flye mode; Autocycler
+removes these overlaps in its own `trim` step, so Berokka does not run there. What was trimmed is listed in
+`<sample>/assemblies/berokka/<sample>.berokka.tsv`.
+
+| Parameter       | Default | Description                                                                |
+| --------------- | ------- | -------------------------------------------------------------------------- |
+| `--run_berokka` | `true`  | Trim the end overlap of Flye's circular contigs with Berokka before Medaka |
 
 ### Dnaapler Contig Reorientation (ONT)
 

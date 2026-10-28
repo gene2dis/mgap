@@ -24,6 +24,7 @@ include { FLYE                       } from '../../modules/nf-core/flye/main'
 // MODULE: Local modules (no nf-core equivalent yet)
 //
 include { LRGE         } from '../../modules/local/lrge/main'
+include { BEROKKA      } from '../../modules/local/berokka/main'
 include { MEDAKA       } from '../../modules/local/medaka/main'
 include { DNAAPLER     } from '../../modules/local/dnaapler/main'
 
@@ -253,15 +254,29 @@ workflow ONT {
         )
         ch_versions = ch_versions.mix(FLYE.out.versions.first())
 
-        //
-        // MODULE: Polish assembly with Medaka
         // genome_size is dropped from meta so the assembly joins the reads again
-        //
         ch_flye_fasta = FLYE.out.fasta
             .map { meta, fasta -> [ meta.findAll { key, _value -> key != 'genome_size' }, fasta ] }
         ch_assembly_info = FLYE.out.txt
             .map { meta, info -> [ meta.findAll { key, _value -> key != 'genome_size' }, info ] }
-        ch_medaka_input = ch_qc_reads.join(ch_flye_fasta)
+
+        //
+        // MODULE: Trim the end overlap of Flye's circular contigs with Berokka (optional)
+        // Flye can assemble a small plasmid as two or three tandem copies (Phase 9b:
+        // 10,432 bp = 2 x 5,216); Berokka keeps one copy, before Medaka polishes it
+        //
+        if (params.run_berokka.toString().toBoolean()) {
+            BEROKKA ( ch_flye_fasta.join(ch_assembly_info) )
+            ch_versions = ch_versions.mix(BEROKKA.out.versions.first())
+            ch_polish_input = BEROKKA.out.fasta
+        } else {
+            ch_polish_input = ch_flye_fasta
+        }
+
+        //
+        // MODULE: Polish assembly with Medaka
+        //
+        ch_medaka_input = ch_qc_reads.join(ch_polish_input)
         MEDAKA ( ch_medaka_input )
         ch_versions = ch_versions.mix(MEDAKA.out.versions.first())
 

@@ -1,0 +1,6 @@
+name: berokka
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconda::berokka=0.2.3
