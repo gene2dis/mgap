@@ -26,6 +26,7 @@ per sample
     mobsuite_contigs   MOB-suite ``contig_report.txt``
     mobsuite_mobtyper  MOB-suite ``mobtyper_results.txt``
     plasmid_consensus  ``<sample>.plasmid_consensus.tsv`` (bin/plasmid_consensus.py: one row per contig)
+    isescan            ISEScan ``<sample>.isescan.tsv`` (one row per IS element; header only when none was found)
     kleborate          Kleborate 3 ``klebsiella_pneumo_complex_output.txt``
     sistr              SISTR ``<sample>.tab``
     sccmec             sccmec ``<sample>.tsv``
@@ -89,6 +90,7 @@ SAMPLE_TOOLS = (
     "mobsuite_contigs",
     "mobsuite_mobtyper",
     "plasmid_consensus",
+    "isescan",
     "kleborate",
     "sistr",
     "sccmec",
@@ -486,6 +488,15 @@ def parse_plasmid_consensus(path):
     return pd.read_csv(path, sep="\t", dtype=str).fillna("").drop(columns="sample", errors="ignore")
 
 
+def parse_isescan(path):
+    """ISEScan table: one row per IS element (seqID, family, isLen, type c complete or p partial, ...)."""
+    table = pd.read_csv(path, sep="\t", dtype=str).fillna("")
+    for name in ("isBegin", "isEnd", "isLen", "ncopy4is"):
+        if name in table:
+            table[name] = pd.to_numeric(table[name], errors="coerce")
+    return table
+
+
 def parse_sample_status(path):
     """pipeline_info/sample_status.tsv (Phase 7 columns)."""
     return pd.read_csv(path, sep="\t", dtype=str).fillna("")
@@ -563,6 +574,7 @@ class RunData:
         self.mobsuite_contigs = {}
         self.mobsuite_mobtyper = {}
         self.plasmid_consensus = {}
+        self.isescan = {}  # sample -> DataFrame, empty when ISEScan found no IS element
         self.status = None  # DataFrame
         self.versions = []
         self.citations = []
@@ -596,6 +608,7 @@ class RunData:
             "mobsuite_contigs": (parse_mobsuite_contigs, self.mobsuite_contigs),
             "mobsuite_mobtyper": (parse_mobsuite_mobtyper, self.mobsuite_mobtyper),
             "plasmid_consensus": (parse_plasmid_consensus, self.plasmid_consensus),
+            "isescan": (parse_isescan, self.isescan),
         }
         for tool in ("fastp", "fastplong"):
             for sample, paths in manifest.get(tool, {}).items():
@@ -2221,6 +2234,151 @@ def section_plasmids(run):
     return Section("plasmids", "Plasmid consensus", intro, body)
 
 
+# IS families named in the chart; the rest are summed as "other families" (PALETTE has 8 colours)
+TOP_IS_FAMILIES = 7
+
+
+def is_families(table):
+    """{family: elements} for one sample's ISEScan table, most elements first."""
+    if table is None or "family" not in table or not len(table):
+        return {}
+    counts = table["family"].replace("", "unknown").value_counts()
+    return {family: int(n) for family, n in sorted(counts.items(), key=lambda item: (-item[1], natural_key(item[0])))}
+
+
+def is_complete(table):
+    """Complete IS elements (ISEScan type c); the others are partial (type p)."""
+    return int((column(table, "type") == "c").sum()) if table is not None and len(table) else 0
+
+
+def is_family_text(families, limit=None):
+    """ "IS3 12, IS5 6, ..." with the most elements first; limit cuts the list to that many families."""
+    named = list(families.items())[:limit] if limit else list(families.items())
+    text = ", ".join(f"{family} {n}" for family, n in named)
+    return text + (", ..." if limit and len(families) > limit else "")
+
+
+def is_on_plasmids(run, sample):
+    """IS elements on contigs the plasmid consensus calls plasmid, or None without a consensus table."""
+    table = run.isescan.get(sample)
+    consensus = run.plasmid_consensus.get(sample)
+    if table is None or consensus is None or "consensus" not in consensus or "seqID" not in table:
+        return None
+    plasmids = set(consensus.loc[consensus["consensus"] == "plasmid", "contig"])
+    return int(table["seqID"].isin(plasmids).sum())
+
+
+def section_isescan(run):
+    samples = [s for s in run.samples if s in run.isescan]
+    if not samples:
+        return None
+    families = {s: is_families(run.isescan[s]) for s in samples}
+    body = ""
+    if len(samples) > LARGE_RUN:
+        body += distribution_html(
+            [
+                Panel("IS elements", "elements", {s: len(run.isescan[s]) for s in samples}, digits=0),
+                Panel("Complete IS elements", "elements", {s: is_complete(run.isescan[s]) for s in samples}, digits=0),
+                Panel("IS families", "families", {s: len(families[s]) for s in samples}, digits=0),
+            ]
+        )
+    elif any(families.values()):
+        totals = defaultdict(int)
+        for counts in families.values():
+            for family, n in counts.items():
+                totals[family] += n
+        ranked = sorted(totals, key=lambda family: (-totals[family], natural_key(family)))
+        top = ranked[:TOP_IS_FAMILIES] if len(ranked) > TOP_IS_FAMILIES + 1 else ranked
+        ordered = list(reversed(samples))
+        fig = go.Figure()
+        for index, family in enumerate(top):
+            fig.add_trace(
+                go.Bar(
+                    y=ordered,
+                    x=[families[s].get(family, 0) for s in ordered],
+                    orientation="h",
+                    name=family,
+                    marker=dict(color=PALETTE[index], line=dict(color=SURFACE, width=1)),
+                    hovertemplate=f"%{{y}}<br>{esc(family)}: %{{x}} elements<extra></extra>",
+                )
+            )
+        if len(top) < len(ranked):
+            other = [sum(n for family, n in families[s].items() if family not in top) for s in ordered]
+            fig.add_trace(
+                go.Bar(
+                    y=ordered,
+                    x=other,
+                    orientation="h",
+                    name="Other families",
+                    marker=dict(color=OTHER_COLOUR, line=dict(color=SURFACE, width=1)),
+                    hovertemplate="%{y}<br>Other families: %{x} elements<extra></extra>",
+                )
+            )
+        # legend in family order (Plotly lists stacked horizontal traces last-first)
+        fig.update_layout(
+            barmode="stack", bargap=0.25, margin=dict(l=10, r=20, t=60, b=50), legend=dict(traceorder="normal")
+        )
+        most = max(len(run.isescan[s]) for s in samples)
+        fig.update_xaxes(title_text="IS elements by family", dtick=1 if most <= 10 else None)
+        body += figure_html(fig, bar_height(len(samples), per_row=26, extra=150))
+
+    on_plasmids = {s: is_on_plasmids(run, s) for s in samples}
+    rows = []
+    for s in samples:
+        table = run.isescan[s]
+        length = run.filter_stats.get(s, {}).get("annotation_length")
+        is_bp = float(pd.to_numeric(column(table, "isLen"), errors="coerce").sum()) if len(table) else 0.0
+        rows.append(
+            {
+                "sample": sample_link(s),
+                "elements": len(table),
+                "complete": is_complete(table),
+                "partial": len(table) - is_complete(table),
+                "families": len(families[s]),
+                "kb": fmt_float(is_bp / 1e3),
+                "percent": fmt_float(100 * is_bp / length, 2) if length else "",
+                "plasmids": "" if on_plasmids[s] is None else on_plasmids[s],
+                "by_family": is_family_text(families[s]) or "none found",
+            }
+        )
+    columns = [
+        ("sample", "Sample"),
+        ("elements", "IS elements"),
+        ("complete", "Complete"),
+        ("partial", "Partial"),
+        ("families", "Families"),
+        ("kb", "IS length (kb)"),
+        ("percent", "Share of assembly (%)"),
+        ("plasmids", "On plasmid contigs"),
+        ("by_family", "Elements by family"),
+    ]
+    if all(value is None for value in on_plasmids.values()):
+        columns.remove(("plasmids", "On plasmid contigs"))
+    if not any(row["percent"] for row in rows):
+        columns.remove(("percent", "Share of assembly (%)"))
+    body += render_table(
+        columns,
+        rows,
+        numeric=("elements", "complete", "partial", "families", "kb", "percent", "plasmids"),
+        raw=("sample",),
+    )
+    intro = [
+        "Insertion sequences (IS elements) are short mobile elements, usually 0.7 to 2.5 kb, that carry little "
+        "more than the transposase gene that moves them. They copy or move themselves within and between the "
+        "chromosome and plasmids, can switch genes off or on where they land, and pairs of them can move "
+        "resistance genes together (IS26 of the IS6 family, for example, around many plasmid resistance genes). "
+        "ISEScan finds them from their transposase genes and terminal inverted repeats and names the IS family "
+        "as in ISfinder; ISNCY is ISfinder's group of elements not yet assigned to a family, and new marks an "
+        "element whose transposase matches one of ISEScan's own groups that has no ISfinder family.",
+        "Partial elements are shorter than the smallest known member of their family, or single copies with a "
+        "weak transposase match or without clear inverted repeats at their ends; in a short-read assembly they "
+        "are often cut at the end of a contig. Repeated IS copies break short-read assemblies, so an Illumina assembly can "
+        "show fewer complete elements than a long-read one of the same strain. The XLSX workbook lists every "
+        "element with its contig and position.",
+    ]
+    return Section("isescan", "Insertion sequences", intro, body)
+
+
 def section_cards(run):
     if not run.samples:
         return None
@@ -2292,6 +2450,18 @@ def section_cards(run):
                     "Plasmid consensus",
                     ", ".join(f"{calls[call]} {label}" for call, label in PLASMID_CALL_LABELS.items() if call in calls)
                     or "no plasmid contig",
+                )
+            )
+        if s in run.isescan:
+            table = run.isescan[s]
+            facts.append(
+                (
+                    "IS elements",
+                    (
+                        f"{len(table)} ({is_complete(table)} complete): {esc(is_family_text(is_families(table), 3))}"
+                        if len(table)
+                        else "none found"
+                    ),
                 )
             )
         warnings = run.warnings(s)
@@ -2481,6 +2651,12 @@ def summary_rows(run):
         for call in PLASMID_CALL_LABELS:
             row[f"plasmid_consensus_{call}"] = calls.get(call, 0) if consensus is not None else None
         row["plasmid_replicons"] = plasmid_replicons(consensus) if consensus is not None else ""
+        is_table = run.isescan.get(s)
+        row["isescan_elements"] = len(is_table) if is_table is not None else None
+        row["isescan_complete"] = is_complete(is_table) if is_table is not None else None
+        row["isescan_families"] = (
+            ",".join(f"{family}:{n}" for family, n in is_families(is_table).items()) if is_table is not None else ""
+        )
         row["warnings"] = "; ".join(run.warnings(s))
         rows.append(row)
     return pd.DataFrame(rows)
@@ -2556,6 +2732,7 @@ def tool_tables(run):
             ("MOB-suite contigs", per_sample(run.mobsuite_contigs)),
             ("MOB-suite plasmids", per_sample(run.mobsuite_mobtyper)),
             ("Plasmid consensus", per_sample(run.plasmid_consensus)),
+            ("ISEScan", per_sample(run.isescan)),
             ("Software versions", versions),
         ]
     )
@@ -2766,6 +2943,7 @@ def main(argv=None):
         section_amr,
         section_mobile,
         section_plasmids,
+        section_isescan,
         section_cards,
         section_methods,
     )
