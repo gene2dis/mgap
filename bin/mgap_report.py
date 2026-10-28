@@ -2262,7 +2262,7 @@ def is_on_plasmids(run, sample, call="plasmid"):
     """IS elements on contigs the plasmid consensus gives this call, or None without a consensus table."""
     table = run.isescan.get(sample)
     consensus = run.plasmid_consensus.get(sample)
-    if table is None or consensus is None or "consensus" not in consensus or "seqID" not in table:
+    if table is None or consensus is None or not {"consensus", "contig"} <= set(consensus) or "seqID" not in table:
         return None
     plasmids = set(consensus.loc[consensus["consensus"] == call, "contig"])
     return int(table["seqID"].isin(plasmids).sum())
@@ -2328,7 +2328,7 @@ def section_isescan(run):
     for s in samples:
         table = run.isescan[s]
         length = run.filter_stats.get(s, {}).get("annotation_length")
-        is_bp = float(pd.to_numeric(column(table, "isLen"), errors="coerce").sum()) if len(table) else 0.0
+        is_bp = float(table["isLen"].sum()) if "isLen" in table else 0.0
         rows.append(
             {
                 "sample": sample_link(s),
@@ -2350,7 +2350,7 @@ def section_isescan(run):
         ("partial", "Partial"),
         ("families", "Families"),
         ("kb", "IS length (kb)"),
-        ("percent", "Share of assembly (%)"),
+        ("percent", "Share of annotated contigs (%)"),
         ("plasmids", "On plasmid contigs"),
         ("candidates", "On candidate plasmid contigs"),
         ("by_family", "Elements by family"),
@@ -2361,7 +2361,7 @@ def section_isescan(run):
     if not any(on_candidates.values()):
         columns.remove(("candidates", "On candidate plasmid contigs"))
     if not any(row["percent"] for row in rows):
-        columns.remove(("percent", "Share of assembly (%)"))
+        columns.remove(("percent", "Share of annotated contigs (%)"))
     body += render_table(
         columns,
         rows,

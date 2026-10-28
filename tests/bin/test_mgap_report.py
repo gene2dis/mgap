@@ -693,7 +693,7 @@ def test_isescan_section_summary_and_sheet(tmp_path, data):
     assert [cell.value for cell in sheet[1]][:3] == ["sample", "seqID", "family"]
 
 
-def test_isescan_elements_on_plasmid_contigs(data):
+def test_isescan_elements_on_plasmid_contigs(tmp_path, data):
     run = report.RunData(
         {
             "isescan": {"SCL2535": [data / "SCL2535.isescan.tsv"]},
@@ -707,6 +707,13 @@ def test_isescan_elements_on_plasmid_contigs(data):
     assert report.is_on_plasmids(run, "SCL2535", "candidate") == 5
     without = report.RunData({"isescan": {"SCL2535": [data / "SCL2535.isescan.tsv"]}}, {})
     assert report.is_on_plasmids(without, "SCL2535") is None
+    # a consensus table without a contig column (hand-built or older) is skipped, not an error
+    broken = tmp_path / "consensus.tsv"
+    broken.write_text("consensus\nplasmid\n")
+    no_contig = report.RunData(
+        {"isescan": {"SCL2535": [data / "SCL2535.isescan.tsv"]}, "plasmid_consensus": {"SCL2535": [broken]}}, {}
+    )
+    assert report.is_on_plasmids(no_contig, "SCL2535") is None
 
 
 def test_isescan_large_run_uses_distributions(tmp_path, data):
