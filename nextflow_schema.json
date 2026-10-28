@@ -220,6 +220,13 @@
                     "fa_icon": "fas fa-circle-nodes",
                     "help_text": "Uses the database bundled in the PlasmidFinder 2.1.6 container (2019) unless --plasmidfinder_db is set. Its replicon calls feed the per-contig plasmid consensus with geNomad and MOB-suite."
                 },
+                "run_isescan": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run ISEScan to find insertion sequence (IS) elements in each assembly.",
+                    "fa_icon": "fas fa-dna",
+                    "help_text": "ISEScan reads the annotation FASTA (contigs >= --min_contig_length) and needs no database. It reports complete and partial IS elements with their family; it takes 10-30 minutes per bacterial genome."
+                },
                 "skip_report": {
                     "type": "boolean",
                     "default": false,

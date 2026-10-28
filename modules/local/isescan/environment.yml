@@ -1,0 +1,6 @@
+name: isescan
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconda::isescan=1.7.3

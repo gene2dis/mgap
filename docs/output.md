@@ -57,6 +57,8 @@ All results are written to the directory specified with `--outdir`. The layout b
 │       ├── plasmidfinder/               # Plasmid replicons: *.tsv, *.txt, *.json, *.fsa (--run_plasmidfinder true [default])
 │       ├── plasmid_consensus/           # Per-contig plasmid calls: *.plasmid_consensus.tsv
 │       │                                #   (when PlasmidFinder, geNomad or MOB-suite ran)
+│       ├── isescan/                     # Insertion sequences: *.isescan.{tsv,sum,gff,is.fna,orf.fna,orf.faa}
+│       │                                #   (requires --run_isescan true)
 │       ├── rgi/                         # Resistance gene prediction: *.txt, *.json
 │       │                                #   (requires --run_rgi true)
 │       ├── kleborate/                   # Klebsiella virulence/resistance: *.txt
@@ -87,7 +89,7 @@ All results are written to the directory specified with `--outdir`. The layout b
 > - `bracken/` only appears for `--seq_type illumina`; ONT mode runs Kraken2 only.
 > - `subsampled/` only appears when reads exceed `--max_coverage` and `--adjust_coverage true` (default).
 > - `dnaapler/` also receives `autocycler gfa2fasta` output when using Autocycler mode.
-> - `rgi/`, `mobsuite/`, `kleborate/`, `sccmec/`, and `sistr/` are conditional and only appear when triggered.
+> - `rgi/`, `mobsuite/`, `isescan/`, `kleborate/`, `sccmec/`, and `sistr/` are conditional and only appear when triggered.
 
 ---
 
@@ -125,6 +127,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - [MOB-suite](#mob-suite) - Plasmid detection and reconstruction _(optional)_
 - [PlasmidFinder](#plasmidfinder) - Plasmid replicon detection
 - [Plasmid consensus](#plasmid-consensus) - One plasmid call per contig from geNomad, MOB-suite and PlasmidFinder
+- [ISEScan](#isescan) - Insertion sequence (IS element) detection _(optional)_
 
 ### Species-Specific Analysis
 
@@ -559,6 +562,21 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 
 ---
 
+### ISEScan
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/isescan/`
+  - `<sample_id>.isescan.tsv`: one row per IS element: contig (`seqID`), `family`, `cluster`, start and end (`isBegin`, `isEnd`), length (`isLen`), copies of the element in the genome (`ncopy4is`), terminal inverted repeats, transposase ORF and its E-value, and `type` (`c` complete, `p` partial). Header only when no IS element was found.
+  - `<sample_id>.isescan.sum`: elements and bases per family and contig.
+  - `<sample_id>.isescan.gff`: the elements and their inverted repeats as GFF3.
+  - `<sample_id>.isescan.is.fna`, `<sample_id>.isescan.orf.fna`, `<sample_id>.isescan.orf.faa`: element sequences, transposase ORF nucleotide and protein sequences (absent when no IS element was found).
+
+</details>
+
+[ISEScan](https://github.com/xiezhq/ISEScan) finds insertion sequences (IS elements: short transposons that carry little more than their transposase) in the [annotation input](#annotation-input). It predicts proteins with FragGeneScan, searches them with HMMER against its transposase profiles for the IS families of [ISfinder](https://isfinder.biotoul.fr), and then looks for the element's ends (terminal inverted repeats). It runs only with `--run_isescan` (off by default) and needs no database. ISEScan reports complete and partial elements, and `type` tells them apart: an element is partial when it is shorter than the smallest known member of its family or, as a single copy, when its transposase match is weak (E-value above 1e-50) or its terminal inverted repeats are missing or short. Contig names are the annotation input's (`contig_N`), so elements can be matched to the [plasmid consensus](#plasmid-consensus) and to Bakta's annotation. ISEScan takes about 30 minutes per bacterial genome, most of it in one HMMER search that uses a single CPU.
+
 ## Species-Specific Analysis
 
 ### Kleborate
@@ -625,26 +643,27 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 - `report/`
   - `mgap_report.html`: one self-contained page (Plotly is inlined, about 5 MB): it opens offline, from a shared drive or as an e-mail attachment.
   - `mgap_summary.tsv`: one row per sample with its status, read, assembly, quality and typing numbers, AMR genes and warnings; columns no sample has a value for are left out.
-  - `mgap_summary.xlsx`: the same summary as the first sheet, then one sheet per tool that ran (sample status, reads, species in the reads, QUAST, length filter, CheckM2, MLST, GTDB-Tk, Kleborate, SISTR, SCCmec, AMRFinderPlus, RGI without its sequence columns, geNomad plasmids and viruses, MOB-suite contigs and plasmids, plasmid consensus, software versions), each with a `sample` column.
+  - `mgap_summary.xlsx`: the same summary as the first sheet, then one sheet per tool that ran (sample status, reads, species in the reads, QUAST, length filter, CheckM2, MLST, GTDB-Tk, Kleborate, SISTR, SCCmec, AMRFinderPlus, RGI without its sequence columns, geNomad plasmids and viruses, MOB-suite contigs and plasmids, plasmid consensus, ISEScan, software versions), each with a `sample` column.
 
 </details>
 
 `MGAP_REPORT` (`bin/mgap_report.py`) reads every tool's output for the run and writes a report for lab staff: each section says what the tool does and how to read its result. Sections appear only for the tools that ran; skipped and failed samples are listed from `pipeline_info/sample_status.tsv`.
 
-| Section                            | What it shows                                                                                                                                                                                                                                                                                                                                                                                      |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Run overview                       | Pipeline and Nextflow versions, run date and sequencing type; pass, skipped and failed counts with the samples that did not pass and why; key thresholds; the databases used, with their version where the database records one (Bakta, AMRFinderPlus, geNomad, GTDB-Tk, CARD; Kraken2, CheckM2 and MOB-suite databases show "not recorded").                                                      |
-| Read quality and species           | Reads and bases before and after fastp/fastplong with the `--min_bases` limit, Q30, GC, duplication and (Illumina) coverage from Mash's genome size; the species in the reads from Bracken (or Kraken2), with a warning when a second species has more than 5 % of the reads.                                                                                                                      |
-| Assembly                           | QUAST total length (with the usual genome length for the MLST species), contigs and N50, and the contigs kept for annotation by `--min_contig_length`.                                                                                                                                                                                                                                             |
-| Genome quality (CheckM2)           | Completeness against contamination, with the 90 % / 5 % high-quality limits; genomes with low completeness, high contamination or both have their own colour and marker and are listed first.                                                                                                                                                                                                      |
-| Species and typing                 | MLST scheme and ST, the GTDB-Tk species and ANI and the top species in the reads; rows where the genus from MLST differs from GTDB-Tk or the reads are flagged and listed first. Kleborate, SISTR and SCCmec tables for the samples routed to them; SCCmec calls not made from the cassette's target genes are flagged and listed first.                                                           |
-| Antimicrobial resistance           | Heatmaps of the AMRFinderPlus acquired genes and the RGI Perfect and Strict hits (gene by sample, colour = identity), the point mutations and every AMRFinderPlus hit.                                                                                                                                                                                                                             |
-| Plasmids and other mobile elements | geNomad plasmid and virus sequences per sample and the MOB-suite reconstructed plasmids with replicon, relaxase, mobility and host range.                                                                                                                                                                                                                                                          |
-| Plasmid consensus                  | Contigs called plasmid, candidate and to check per sample (stacked bars; distributions above 100 samples), a per-sample table (plasmid contigs and length, circular ones, replicons, mobility) and every contig with plasmid evidence with its call, evidence, replicons, relaxase, mobility and MOB-suite cluster. The summary TSV gets the counts per call and the replicons on plasmid contigs. |
-| Samples                            | One card per sample with its key numbers and warnings. Cards start collapsed; a search box and a sample list open them, and samples with warnings are marked (warning sign and red outline) and listed first.                                                                                                                                                                                      |
-| Methods, versions and citations    | Every tool version from `pipeline_info/software_versions.yml` and the citations from `CITATIONS.md`, with any tool that has no citation entry.                                                                                                                                                                                                                                                     |
+| Section                            | What it shows                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Run overview                       | Pipeline and Nextflow versions, run date and sequencing type; pass, skipped and failed counts with the samples that did not pass and why; key thresholds; the databases used, with their version where the database records one (Bakta, AMRFinderPlus, geNomad, GTDB-Tk, CARD; Kraken2, CheckM2 and MOB-suite databases show "not recorded").                                                                                     |
+| Read quality and species           | Reads and bases before and after fastp/fastplong with the `--min_bases` limit, Q30, GC, duplication and (Illumina) coverage from Mash's genome size; the species in the reads from Bracken (or Kraken2), with a warning when a second species has more than 5 % of the reads.                                                                                                                                                     |
+| Assembly                           | QUAST total length (with the usual genome length for the MLST species), contigs and N50, and the contigs kept for annotation by `--min_contig_length`.                                                                                                                                                                                                                                                                            |
+| Genome quality (CheckM2)           | Completeness against contamination, with the 90 % / 5 % high-quality limits; genomes with low completeness, high contamination or both have their own colour and marker and are listed first.                                                                                                                                                                                                                                     |
+| Species and typing                 | MLST scheme and ST, the GTDB-Tk species and ANI and the top species in the reads; rows where the genus from MLST differs from GTDB-Tk or the reads are flagged and listed first. Kleborate, SISTR and SCCmec tables for the samples routed to them; SCCmec calls not made from the cassette's target genes are flagged and listed first.                                                                                          |
+| Antimicrobial resistance           | Heatmaps of the AMRFinderPlus acquired genes and the RGI Perfect and Strict hits (gene by sample, colour = identity), the point mutations and every AMRFinderPlus hit.                                                                                                                                                                                                                                                            |
+| Plasmids and other mobile elements | geNomad plasmid and virus sequences per sample and the MOB-suite reconstructed plasmids with replicon, relaxase, mobility and host range.                                                                                                                                                                                                                                                                                         |
+| Plasmid consensus                  | Contigs called plasmid, candidate and to check per sample (stacked bars; distributions above 100 samples), a per-sample table (plasmid contigs and length, circular ones, replicons, mobility) and every contig with plasmid evidence with its call, evidence, replicons, relaxase, mobility and MOB-suite cluster. The summary TSV gets the counts per call and the replicons on plasmid contigs.                                |
+| Insertion sequences                | IS elements per sample by family (stacked bars of the most common families; distributions of elements, complete elements and families above 100 samples) and a per-sample table: elements, complete and partial, families, IS length and share of the annotation input, elements on contigs the plasmid consensus calls plasmid, and the count per family. The summary TSV gets the element and complete counts and the families. |
+| Samples                            | One card per sample with its key numbers and warnings. Cards start collapsed; a search box and a sample list open them, and samples with warnings are marked (warning sign and red outline) and listed first.                                                                                                                                                                                                                     |
+| Methods, versions and citations    | Every tool version from `pipeline_info/software_versions.yml` and the citations from `CITATIONS.md`, with any tool that has no citation entry.                                                                                                                                                                                                                                                                                    |
 
-With more than 100 samples the one-bar-per-sample charts (read QC, species, assembly, geNomad, plasmid consensus) become distributions: one box per metric with a point per sample, the outliers (outside 1.5 times the interquartile range or a QC limit) marked, and the most extreme named; long tables scroll inside their box. On copies of the 10 test genomes, a 300-sample report is about 9 MB and opens in about 13 s; real runs with more varied resistance genes have larger heatmaps.
+With more than 100 samples the one-bar-per-sample charts (read QC, species, assembly, geNomad, plasmid consensus, insertion sequences) become distributions: one box per metric with a point per sample, the outliers (outside 1.5 times the interquartile range or a QC limit) marked, and the most extreme named; long tables scroll inside their box. On copies of the 10 test genomes, a 300-sample report is about 9 MB and opens in about 13 s; real runs with more varied resistance genes have larger heatmaps.
 
 `--skip_report` turns the report off. `accessory_scripts/build_report_manifest.py` builds the report's inputs from an existing results folder, so the report can be rebuilt for a run made before it existed.
 

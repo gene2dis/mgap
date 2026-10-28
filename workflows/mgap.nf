@@ -92,6 +92,7 @@ include { MOBSUITE_TYPER } from '../modules/nf-core/mobsuite/typer/main'
 include { PLASMIDFINDER } from '../modules/nf-core/plasmidfinder/main'
 include { PLASMID_CIRCULAR } from '../modules/local/plasmid/circular/main'
 include { PLASMID_CONSENSUS } from '../modules/local/plasmid/consensus/main'
+include { ISESCAN } from '../modules/local/isescan/main'
 include { MGAP_REPORT } from '../modules/local/mgap_report/main'
 
 /*
@@ -474,6 +475,13 @@ workflow MGAP {
         PLASMID_CONSENSUS( ch_consensus_input )
         ch_versions = ch_versions.mix(PLASMID_CONSENSUS.out.versions.first())
         ch_report_files = ch_report_files.mix(PLASMID_CONSENSUS.out.tsv.map { meta, tsv -> [ meta, 'plasmid_consensus', tsv ] })
+    }
+
+    // RUN ISEScan for insertion sequences (no database; off by default, D-9)
+    if (params.run_isescan.toString().toBoolean()) {
+        ISESCAN( ch_annotation_fasta )
+        ch_versions = ch_versions.mix(ISESCAN.out.versions.first())
+        ch_report_files = ch_report_files.mix(ISESCAN.out.tsv.map { meta, tsv -> [ meta, 'isescan', tsv ] })
     }
 
     // RUN RGI for antimicrobial resistance gene prediction

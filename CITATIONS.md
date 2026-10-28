@@ -22,6 +22,10 @@
 
   > Chaumeil PA, Mussig AJ, Hugenholtz P, Parks DH. GTDB-Tk: a toolkit to classify genomes with the Genome Taxonomy Database. Bioinformatics. 2020 Mar 15;36(6):1925-1927. doi: 10.1093/bioinformatics/btz848. PubMed PMID: 31730192; PubMed Central PMCID: PMC7703759.
 
+- [ISEScan](https://pubmed.ncbi.nlm.nih.gov/29077810/)
+
+  > Xie Z, Tang H. ISEScan: automated identification of insertion sequence elements in prokaryotic genomes. Bioinformatics. 2017 Nov 1;33(21):3340-3347. doi: 10.1093/bioinformatics/btx433. PubMed PMID: 29077810.
+
 - [LRGE](https://doi.org/10.1093/bioinformatics/btaf593)
 
   > Hall MB, Zhou C, Coin LJM. Genome size estimation from long read overlaps. Bioinformatics. 2025 Nov;41(11):btaf593. doi: 10.1093/bioinformatics/btaf593.

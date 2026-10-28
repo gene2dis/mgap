@@ -518,6 +518,30 @@ nextflow run gene2dis/mgap \
     -profile docker
 ```
 
+### ISEScan Insertion Sequences
+
+[ISEScan](https://github.com/xiezhq/ISEScan) (v1.7.3) finds insertion sequences (IS elements) and names their family. It
+is off by default; `--run_isescan` turns it on. It reads the annotation FASTA (contigs >= `--min_contig_length`) and
+needs no database. Expect about 30 minutes per bacterial genome: most of it is one HMMER search that uses a single CPU,
+so samples run in parallel rather than faster with more CPUs. Results are in `<sample>/annotation/isescan/` and in the
+run report's "Insertion sequences" section (see `docs/output.md`).
+
+```bash
+nextflow run gene2dis/mgap \
+    --input samplesheet.csv \
+    --outdir results \
+    --seq_type ont \
+    --run_isescan \
+    -profile docker
+```
+
+| Parameter       | Default | Description                                              |
+| --------------- | ------- | -------------------------------------------------------- |
+| `--run_isescan` | `false` | Enable ISEScan insertion sequence (IS element) detection |
+
+ISEScan reports complete and partial elements. To keep only complete ones, set `ext.args = '--removeShortIS'` for
+`ISESCAN` in a custom config (`-c`).
+
 ### MLST Typing
 
 [MLST](https://github.com/tseemann/mlst) (Torsten Seemann's classic MLST) scans assemblies against PubMLST typing schemes and is run automatically on every sample. The scheme it reports also drives downstream logic in the pipeline (for example, a `senterica_achtman_2` call triggers SISTR).
