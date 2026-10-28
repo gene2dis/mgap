@@ -225,7 +225,7 @@
                     "default": false,
                     "description": "Run ISEScan to find insertion sequence (IS) elements in each assembly.",
                     "fa_icon": "fas fa-dna",
-                    "help_text": "ISEScan reads the annotation FASTA (contigs >= --min_contig_length) and needs no database. It reports complete and partial IS elements with their family; it takes 10-30 minutes per bacterial genome."
+                    "help_text": "ISEScan reads the annotation FASTA (contigs >= --min_contig_length) and needs no database. It reports complete and partial IS elements with their family; it takes about 20 minutes per bacterial genome with 6 CPUs."
                 },
                 "skip_report": {
                     "type": "boolean",

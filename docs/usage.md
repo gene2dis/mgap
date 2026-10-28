@@ -522,9 +522,9 @@ nextflow run gene2dis/mgap \
 
 [ISEScan](https://github.com/xiezhq/ISEScan) (v1.7.3) finds insertion sequences (IS elements) and names their family. It
 is off by default; `--run_isescan` turns it on. It reads the annotation FASTA (contigs >= `--min_contig_length`) and
-needs no database. Expect about 30 minutes per bacterial genome: most of it is one HMMER search that uses a single CPU,
-so samples run in parallel rather than faster with more CPUs. Results are in `<sample>/annotation/isescan/` and in the
-run report's "Insertion sequences" section (see `docs/output.md`).
+needs no database. It is the slowest annotation step: about 20 minutes per bacterial genome with 6 CPUs (19 min for a
+5.5 Mb Illumina and a 6.0 Mb ONT assembly, under 2 GB of memory), most of it in HMMER searches. Results are in
+`<sample>/annotation/isescan/` and in the run report's "Insertion sequences" section (see `docs/output.md`).
 
 ```bash
 nextflow run gene2dis/mgap \
