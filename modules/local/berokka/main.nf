@@ -51,15 +51,23 @@ process BEROKKA {
 
     # Flye's contig order: circular contigs as Berokka wrote them (a contig it
     # removed as a control sequence stays out), linear contigs unchanged
+    # (Berokka's lines are kept as an array with each contig's first and last
+    # line: appending them to one string per contig is quadratic, 30 min for a
+    # 5.3 Mb chromosome)
     awk '
         BEGIN {
             while ((getline name < "circular.txt") > 0) circular[name]
             while ((getline line < "trimmed.fa") > 0) {
-                if (line ~ /^>/) { split(substr(line, 2), word, /[ \\t]/); id = word[1] }
-                record[id] = record[id] line "\\n"
+                trimmed[++n] = line
+                if (line ~ /^>/) { split(substr(line, 2), word, /[ \\t]/); id = word[1]; first[id] = n }
+                last[id] = n
             }
         }
-        /^>/ { id = substr(\$1, 2); linear = !(id in circular); if (!linear && id in record) printf "%s", record[id] }
+        /^>/ {
+            id = substr(\$1, 2)
+            linear = !(id in circular)
+            if (!linear && id in first) for (i = first[id]; i <= last[id]; i++) print trimmed[i]
+        }
         linear
     ' assembly.fa > ${prefix}.berokka.fasta
 
