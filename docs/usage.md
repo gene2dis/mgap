@@ -309,7 +309,7 @@ Every sample gets a row in `<outdir>/pipeline_info/sample_status.tsv` (pass, ski
 Samples: 4 (2 pass, 1 skipped, 1 failed) - skipped: S2 (read_qc); failed: S3 (assembly). Details: results/pipeline_info/sample_status.tsv
 ```
 
-A QUAST failure leaves the sample as _pass_, so the line counts it separately, out of the samples with an assembly: `QUAST failed: 3 of 3 samples with an assembly (S1, S2, S4)`. QUAST failing for every sample usually means a problem with QUAST itself (its container or environment), not with the assemblies.
+A QUAST failure leaves the sample as _pass_, so the line counts it separately, out of the samples with an assembly: `QUAST failed: 3 of 3 samples with an assembly (S1, S2, S4)`. QUAST failing for every sample usually means a problem with QUAST itself (its container or environment), not with the assemblies. An ISEScan failure (with `--run_isescan`) is counted the same way: `ISEScan failed: ...`.
 
 The run exits 0 when samples were skipped or failed. It fails only when every sample that went into assembly failed there (samples skipped by `--min_bases` do not count; a run where all samples were skipped exits 0). The exit status and work directory of a failed task are in `.nextflow.log` (`NOTE: Process ... terminated with an error exit status (N) -- Error is ignored`).
 
@@ -543,7 +543,9 @@ ISEScan reports complete and partial elements. To keep only complete ones, set `
 `ISESCAN` in a custom config (`-c`).
 
 A sample whose ISEScan task fails (after one retry with more memory for an out-of-memory exit) has no ISEScan results;
-the run goes on, and the run log warns `Sample '<sample>': ISEScan failed`.
+the run goes on, the run log warns `Sample '<sample>': ISEScan failed`, and `sample_status.tsv` and the report's sample
+card note `ISEScan failed`. A task where ISEScan wrote no table and did not reach its last step also counts as failed,
+rather than as no IS element found.
 
 ### MLST Typing
 

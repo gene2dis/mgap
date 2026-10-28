@@ -30,7 +30,8 @@ process ISESCAN {
         $args \\
         --seqfile ${fasta} \\
         --output isescan \\
-        --nthread ${task.cpus}
+        --nthread ${task.cpus} \
+        | tee isescan.log
 
     # ISEScan names its results after the input file (<fasta>.tsv, .sum, ...) and
     # writes none when it finds no IS element
@@ -41,8 +42,13 @@ process ISESCAN {
         fi
     done
     # a header-only table when no IS element was found, so the sample is reported
-    # with none rather than as not run
+    # with none rather than as not run; without ISEScan's last log line it stopped
+    # early, and the task fails rather than report none
     if [ ! -f ${prefix}.isescan.tsv ]; then
+        if ! grep -q '^ISEScan ends at' isescan.log; then
+            echo "ISEScan wrote no table and did not finish (no 'ISEScan ends at' line in its log)" >&2
+            exit 1
+        fi
         printf '%s\\n' "${tsv_header()}" > ${prefix}.isescan.tsv
     fi
 

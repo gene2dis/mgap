@@ -124,19 +124,20 @@ nextflow_pipeline {
                 { assert status.TEST_QUAST_FAIL.subMap('status', 'stage', 'reason') == [ status: 'pass', stage: 'annotation', reason: 'QUAST failed' ] },
                 { assert succeeded.any { it.contains('MLST (TEST_QUAST_FAIL)') } },
                 { assert path("$metaDir/nextflow.log").text.contains("Sample 'TEST_QUAST_FAIL': QUAST failed") },
-                // a failed ISEScan task is ignored: no ISEScan results, the run and report go on
+                // a failed ISEScan task is ignored and noted: no ISEScan results, the run and report go on
                 { assert workflow.trace.tasks().count { it.name.contains('ISESCAN (TEST_ISESCAN_FAIL)') } == 1 },
-                { assert status.TEST_ISESCAN_FAIL.subMap('status', 'stage', 'reason') == [ status: 'pass', stage: 'annotation', reason: '' ] },
+                { assert status.TEST_ISESCAN_FAIL.subMap('status', 'stage', 'reason') == [ status: 'pass', stage: 'annotation', reason: 'ISEScan failed' ] },
                 { assert succeeded.any { it.contains('MLST (TEST_ISESCAN_FAIL)') } },
                 { assert path("$metaDir/nextflow.log").text.contains("Sample 'TEST_ISESCAN_FAIL': ISEScan failed (exit status in the run log) - no insertion sequence results for this sample.") },
                 { assert !path("$outputDir/TEST_ISESCAN_FAIL/annotation/isescan").exists() },
                 { assert path("$outputDir/TEST_PASS/annotation/isescan/TEST_PASS.isescan.tsv").exists() },
                 // exit 137 (out-of-memory kill): retried once, then passes
                 { assert workflow.trace.tasks().count { it.name.contains('ISESCAN (TEST_ISESCAN_OOM)') } == 2 },
+                { assert status.TEST_ISESCAN_OOM.reason == '' },
                 { assert path("$outputDir/TEST_ISESCAN_OOM/annotation/isescan/TEST_ISESCAN_OOM.isescan.tsv").exists() },
                 { assert !path("$metaDir/nextflow.log").text.contains("Sample 'TEST_ISESCAN_OOM': ISEScan failed") },
                 { assert succeeded.any { it.contains('MGAP_REPORT') } },
-                { assert path("$metaDir/nextflow.log").text.contains('Samples: 4 (4 pass, 0 skipped, 0 failed) - QUAST failed: 1 of 4 samples with an assembly (TEST_QUAST_FAIL).') }
+                { assert path("$metaDir/nextflow.log").text.contains('Samples: 4 (4 pass, 0 skipped, 0 failed) - ISEScan failed: 1 of 4 samples with an assembly (TEST_ISESCAN_FAIL); QUAST failed: 1 of 4 samples with an assembly (TEST_QUAST_FAIL).') }
             )
         }
     }

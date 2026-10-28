@@ -2329,12 +2329,13 @@ def section_isescan(run):
         table = run.isescan[s]
         length = run.filter_stats.get(s, {}).get("annotation_length")
         is_bp = float(table["isLen"].sum()) if "isLen" in table else 0.0
+        complete = is_complete(table)
         rows.append(
             {
                 "sample": sample_link(s),
                 "elements": len(table),
-                "complete": is_complete(table),
-                "partial": len(table) - is_complete(table),
+                "complete": complete,
+                "partial": len(table) - complete,
                 "families": len(families[s]),
                 "kb": fmt_float(is_bp / 1e3),
                 "percent": fmt_float(100 * is_bp / length, 2) if length else "",

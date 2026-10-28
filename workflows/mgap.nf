@@ -478,15 +478,17 @@ workflow MGAP {
     }
 
     // RUN ISEScan for insertion sequences (no database; off by default, D-9)
+    ch_isescan_failed = channel.empty()
     if (params.run_isescan.toString().toBoolean()) {
         ISESCAN( ch_annotation_fasta )
         ch_versions = ch_versions.mix(ISESCAN.out.versions.first())
         ch_report_files = ch_report_files.mix(ISESCAN.out.tsv.map { meta, tsv -> [ meta, 'isescan', tsv ] })
-        // ISEScan failures are ignored (conf/modules.config); the report has no
-        // ISEScan results for that sample
-        missingOutputs(ch_annotation_fasta, ISESCAN.out.tsv, channel.empty())
-            .subscribe { meta, _has_other ->
+        // ISEScan failures are ignored (conf/modules.config); the sample has no
+        // ISEScan results and the failure is noted in sample_status.tsv
+        ch_isescan_failed = missingOutputs(ch_annotation_fasta, ISESCAN.out.tsv, channel.empty())
+            .map { meta, _has_other ->
                 log.warn("Sample '${meta.id}': ISEScan failed (exit status in the run log) - no insertion sequence results for this sample.")
+                [ meta.id, 'ISEScan failed' ]
             }
     }
 
@@ -538,7 +540,7 @@ workflow MGAP {
         ch_read_stats,
         ch_sample_outcomes.mix(ch_no_contigs),
         SEQKIT_FILTER.out.stats,
-        ch_quast_failed,
+        ch_quast_failed.mix(ch_isescan_failed),
         params.seq_type
     )
 
