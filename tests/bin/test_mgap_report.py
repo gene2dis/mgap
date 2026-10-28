@@ -678,6 +678,7 @@ def test_isescan_section_summary_and_sheet(tmp_path, data):
     assert "none found" in page  # the sample whose table has no element
     assert "Other families" in page  # 11 families: 7 named in the chart
     assert "On plasmid contigs" in page
+    assert "On candidate plasmid contigs" in page
     lines = tsv.read_text().splitlines()
     rows = {line.split("\t")[0]: dict(zip(lines[0].split("\t"), line.split("\t"))) for line in lines[1:]}
     assert rows["SCL2535"]["isescan_elements"] == "31"
@@ -702,6 +703,8 @@ def test_isescan_elements_on_plasmid_contigs(data):
     )
     # contigs 15, 20, 21, 25 and 31 are called plasmid and carry 13 of the 31 elements
     assert report.is_on_plasmids(run, "SCL2535") == 13
+    # candidates (one tool only): contig_22 with 3 elements, contig_29 and contig_38 with 1 each
+    assert report.is_on_plasmids(run, "SCL2535", "candidate") == 5
     without = report.RunData({"isescan": {"SCL2535": [data / "SCL2535.isescan.tsv"]}}, {})
     assert report.is_on_plasmids(without, "SCL2535") is None
 

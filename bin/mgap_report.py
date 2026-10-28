@@ -2258,13 +2258,13 @@ def is_family_text(families, limit=None):
     return text + (", ..." if limit and len(families) > limit else "")
 
 
-def is_on_plasmids(run, sample):
-    """IS elements on contigs the plasmid consensus calls plasmid, or None without a consensus table."""
+def is_on_plasmids(run, sample, call="plasmid"):
+    """IS elements on contigs the plasmid consensus gives this call, or None without a consensus table."""
     table = run.isescan.get(sample)
     consensus = run.plasmid_consensus.get(sample)
     if table is None or consensus is None or "consensus" not in consensus or "seqID" not in table:
         return None
-    plasmids = set(consensus.loc[consensus["consensus"] == "plasmid", "contig"])
+    plasmids = set(consensus.loc[consensus["consensus"] == call, "contig"])
     return int(table["seqID"].isin(plasmids).sum())
 
 
@@ -2323,6 +2323,7 @@ def section_isescan(run):
         body += figure_html(fig, bar_height(len(samples), per_row=26, extra=150))
 
     on_plasmids = {s: is_on_plasmids(run, s) for s in samples}
+    on_candidates = {s: is_on_plasmids(run, s, "candidate") for s in samples}
     rows = []
     for s in samples:
         table = run.isescan[s]
@@ -2338,6 +2339,7 @@ def section_isescan(run):
                 "kb": fmt_float(is_bp / 1e3),
                 "percent": fmt_float(100 * is_bp / length, 2) if length else "",
                 "plasmids": "" if on_plasmids[s] is None else on_plasmids[s],
+                "candidates": "" if on_candidates[s] is None else on_candidates[s],
                 "by_family": is_family_text(families[s]) or "none found",
             }
         )
@@ -2350,16 +2352,20 @@ def section_isescan(run):
         ("kb", "IS length (kb)"),
         ("percent", "Share of assembly (%)"),
         ("plasmids", "On plasmid contigs"),
+        ("candidates", "On candidate plasmid contigs"),
         ("by_family", "Elements by family"),
     ]
     if all(value is None for value in on_plasmids.values()):
         columns.remove(("plasmids", "On plasmid contigs"))
+    # candidates (one plasmid tool only, e.g. PlasmidFinder without geNomad and MOB-suite) only when they carry any
+    if not any(on_candidates.values()):
+        columns.remove(("candidates", "On candidate plasmid contigs"))
     if not any(row["percent"] for row in rows):
         columns.remove(("percent", "Share of assembly (%)"))
     body += render_table(
         columns,
         rows,
-        numeric=("elements", "complete", "partial", "families", "kb", "percent", "plasmids"),
+        numeric=("elements", "complete", "partial", "families", "kb", "percent", "plasmids", "candidates"),
         raw=("sample",),
     )
     intro = [
