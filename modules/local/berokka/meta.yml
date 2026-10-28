@@ -39,7 +39,7 @@ output:
       pattern: "*.berokka.fasta"
   - results:
       type: file
-      description: Berokka's table for the circular contigs (sequence, status kept/trimmed/removed, old_len, new_len, trimmed)
+      description: Berokka's table for the circular contigs (sequence, status kept/trimmed, or removed when its control filter is on, old_len, new_len, trimmed)
       pattern: "*.berokka.tsv"
   - versions:
       type: file

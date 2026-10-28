@@ -30,8 +30,8 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   │                                #   (ONT, --ont_assembler flye)
 │   │   ├── lrge/                        # Genome size estimate for Flye: *.genome_size.txt
 │   │   │                                #   (ONT, --flye_asm_coverage without --genome_size)
-│   │   ├── berokka/                     # Flye assembly with circular end overlaps trimmed: *.berokka.fasta,
-│   │   │                                #   *.berokka.tsv (ONT, --ont_assembler flye, --run_berokka true [default])
+│   │   ├── berokka/                     # End overlaps trimmed from Flye's circular contigs: *.berokka.tsv
+│   │   │                                #   (ONT, --ont_assembler flye, --run_berokka true [default])
 │   │   ├── medaka/                      # Medaka-polished assembly: *.fasta
 │   │   │                                #   (ONT, --ont_assembler flye)
 │   │   ├── autocycler/                  # Autocycler consensus assembly
@@ -258,12 +258,11 @@ This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
 <summary>Output files</summary>
 
 - `<sample_id>/assemblies/berokka/`
-  - `<sample_id>.berokka.fasta`: The Flye assembly, in Flye's contig order, with the end overlap of each circular contig removed. A trimmed contig is tagged `circular=true overhang=<bp>` in its header (Medaka drops the tag); linear contigs are unchanged.
-  - `<sample_id>.berokka.tsv`: Berokka's table for the circular contigs: `#sequence`, `status` (`kept`, `trimmed`, or `removed` for a contig matching Berokka's control sequence), `old_len`, `new_len`, `trimmed` (bp removed).
+  - `<sample_id>.berokka.tsv`: Berokka's table for the contigs Flye marks circular: `#sequence` (Flye's contig name), `status` (`kept` or `trimmed`), `old_len`, `new_len`, `trimmed` (bp removed). The trimmed assembly itself is not published; Medaka's polished assembly (below) is built from it.
 
 </details>
 
-[Berokka](https://github.com/tseemann/berokka) looks for a circular contig whose start is repeated at its end and keeps one copy. Flye writes circular contigs without the overhang that other assemblers leave, but it can assemble a small plasmid as two or three tandem copies on one circular contig: on the SCL10571 fixture a 5,216 bp plasmid came out as a 10,432 bp contig and a 4,163 bp plasmid as 12,428 bp, while the reads (each at most one plasmid long) showed single-copy molecules. Without this step those plasmids' genes are annotated two or three times. Only contigs that Flye marks circular (`circ.` = Y in `assembly_info.txt`) are checked: on a linear contig, a short end match (an unresolved repeat) would be trimmed and tagged circular. Medaka then polishes the trimmed assembly.
+[Berokka](https://github.com/tseemann/berokka) looks for a circular contig whose start is repeated at its end and keeps one copy. Flye writes circular contigs without the overhang that other assemblers leave, but it can assemble a small plasmid as two or three tandem copies on one circular contig: on the SCL10571 fixture a 5,216 bp plasmid came out as a 10,432 bp contig and a 4,163 bp plasmid as 12,428 bp, while the reads (each at most one plasmid long) showed single-copy molecules. Without this step those plasmids' genes are annotated two or three times. Only contigs that Flye marks circular (`circ.` = Y in `assembly_info.txt`) are checked: on a linear contig, a short end match (an unresolved repeat) would be trimmed and tagged circular. Berokka's removal of contigs matching its control sequence is turned off (`--filter ''`), so no contig is dropped. Medaka then polishes the trimmed assembly; if Berokka fails for a sample, Medaka polishes the untrimmed Flye assembly and the log says so.
 
 This step runs for `--seq_type ont` with `--ont_assembler flye` (default) and `--run_berokka true` (default). Autocycler does not need it: its `trim` step removes these overlaps (see `autocycler_out/clustering/qc_pass/cluster_*/2_trimmed.yaml`).
 

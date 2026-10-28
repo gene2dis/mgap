@@ -30,7 +30,9 @@ process BEROKKA {
     # would be trimmed and tagged circular
     # (side files are read with getline: with NR == FNR an empty first file
     # would make awk treat the assembly as that file)
-    awk -F '\\t' '!/^#/ && \$4 == "Y" { print \$1 }' ${assembly_info} > circular.txt
+    # (the rule of bin/plasmid_consensus.py flye_circular: column 4 trimmed, any case)
+    awk -F '\\t' '!/^#/ && NF >= 4 { flag = toupper(\$4); gsub(/[ \\r]/, "", flag); name = \$1; gsub(/ /, "", name); if (flag == "Y") print name }' \\
+        ${assembly_info} > circular.txt
     awk '
         BEGIN { while ((getline name < "circular.txt") > 0) circular[name] }
         /^>/  { keep = (substr(\$1, 2) in circular) }

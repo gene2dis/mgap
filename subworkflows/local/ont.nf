@@ -268,7 +268,16 @@ workflow ONT {
         if (params.run_berokka.toString().toBoolean()) {
             BEROKKA ( ch_flye_fasta.join(ch_assembly_info) )
             ch_versions = ch_versions.mix(BEROKKA.out.versions.first())
-            ch_polish_input = BEROKKA.out.fasta
+
+            // a failed Berokka task is ignored (conf/modules.config): Medaka then
+            // polishes the untrimmed Flye assembly instead of dropping the sample
+            ch_berokka_fallback = missingOutputs(ch_flye_fasta, BEROKKA.out.fasta, channel.empty())
+                .join(ch_flye_fasta)
+                .map { meta, _has_other, fasta ->
+                    log.warn("Sample '${meta.id}': Berokka failed - Medaka polishes the untrimmed Flye assembly.")
+                    [ meta, fasta ]
+                }
+            ch_polish_input = BEROKKA.out.fasta.mix(ch_berokka_fallback)
         } else {
             ch_polish_input = ch_flye_fasta
         }
