@@ -542,6 +542,9 @@ nextflow run gene2dis/mgap \
 ISEScan reports complete and partial elements. To keep only complete ones, set `ext.args = '--removeShortIS'` for
 `ISESCAN` in a custom config (`-c`).
 
+A sample whose ISEScan task fails (after one retry with more memory for an out-of-memory exit) has no ISEScan results;
+the run goes on, and the run log warns `Sample '<sample>': ISEScan failed`.
+
 ### MLST Typing
 
 [MLST](https://github.com/tseemann/mlst) (Torsten Seemann's classic MLST) scans assemblies against PubMLST typing schemes and is run automatically on every sample. The scheme it reports also drives downstream logic in the pipeline (for example, a `senterica_achtman_2` call triggers SISTR).

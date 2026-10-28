@@ -482,6 +482,12 @@ workflow MGAP {
         ISESCAN( ch_annotation_fasta )
         ch_versions = ch_versions.mix(ISESCAN.out.versions.first())
         ch_report_files = ch_report_files.mix(ISESCAN.out.tsv.map { meta, tsv -> [ meta, 'isescan', tsv ] })
+        // ISEScan failures are ignored (conf/modules.config); the report has no
+        // ISEScan results for that sample
+        missingOutputs(ch_annotation_fasta, ISESCAN.out.tsv, channel.empty())
+            .subscribe { meta, _has_other ->
+                log.warn("Sample '${meta.id}': ISEScan failed (exit status in the run log) - no insertion sequence results for this sample.")
+            }
     }
 
     // RUN RGI for antimicrobial resistance gene prediction
