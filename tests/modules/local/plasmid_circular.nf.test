@@ -1,0 +1,87 @@
+nextflow_process {
+
+    name "Test PLASMID_CIRCULAR module"
+    script "../../../modules/local/plasmid/circular/main.nf"
+    process "PLASMID_CIRCULAR"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plasmid_circular"
+
+    // tests/bin/data/plasmid: short sequences under renamed contig headers and a Flye assembly_info.txt
+
+    test("PLASMID_CIRCULAR - Flye assembly_info") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'ont' ],
+                    file("${projectDir}/tests/bin/data/plasmid/ont.fasta", checkIfExists: true),
+                    file("${projectDir}/tests/bin/data/plasmid/ont.assembly_info.txt", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def headers = path(process.out.fasta[0][1]).readLines().findAll { it.startsWith('>') }
+            assertAll(
+                { assert process.success },
+                // contig_2 is Flye's contig_7: matched through the description
+                { assert headers == [ '>contig_1 contig_1', '>contig_2 contig_7 rotated=True' ] },
+                { assert path(process.out.versions[0]).text.contains('python:') }
+            )
+        }
+
+    }
+
+    test("PLASMID_CIRCULAR - no circular contig writes nothing") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'SCL2535' ],
+                    file("${projectDir}/tests/bin/data/plasmid/SCL2535.fasta", checkIfExists: true),
+                    []
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.fasta == [] }
+            )
+        }
+
+    }
+
+    test("PLASMID_CIRCULAR - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'SCL2535' ],
+                    file("${projectDir}/tests/bin/data/plasmid/SCL2535.fasta", checkIfExists: true),
+                    []
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.fasta[0][1]).exists() }
+            )
+        }
+
+    }
+
+}

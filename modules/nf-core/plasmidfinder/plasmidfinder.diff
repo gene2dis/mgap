@@ -1,0 +1,70 @@
+Changes in component 'nf-core/plasmidfinder'
+Changes in 'plasmidfinder/main.nf':
+--- modules/nf-core/plasmidfinder/main.nf
++++ modules/nf-core/plasmidfinder/main.nf
+@@ -10,6 +10,7 @@
+ 
+     input:
+     tuple val(meta), path(fasta)
++    path db
+ 
+     output:
+     tuple val(meta), path("*.json")                 , emit: json
+@@ -28,6 +29,7 @@
+     def prefix = task.ext.prefix ?: "${meta.id}"
+     def is_compressed = fasta.getName().endsWith(".gz") ? true : false
+     def fasta_name = fasta.getName().replace(".gz", "")
++    def db_arg = db ? "-p ${db}" : ''
+     """
+     # Decompress input FASTA if needed
+     if [ "$is_compressed" == "true" ]; then
+@@ -36,6 +38,7 @@
+ 
+     plasmidfinder.py \\
+         $args \\
++        $db_arg \\
+         -i $fasta_name \\
+         -o ./ \\
+         -x
+
+'modules/nf-core/plasmidfinder/environment.yml' is unchanged
+Changes in 'plasmidfinder/meta.yml':
+--- modules/nf-core/plasmidfinder/meta.yml
++++ modules/nf-core/plasmidfinder/meta.yml
+@@ -26,6 +26,13 @@
+         description: Input FASTA or FASTQ formatted genome sequences
+         pattern: "*.{fastq.gz,fq.gz,fastq.gz,fna.gz,fa.gz}"
+         ontologies: []
++  - db:
++      type: directory
++      description: |
++        Optional PlasmidFinder database directory, forwarded to
++        `plasmidfinder.py -p`. Pass `[]` to use the database bundled
++        with the container.
++      ontologies: []
+ output:
+   json:
+     - - meta:
+
+Changes in 'plasmidfinder/tests/main.nf.test':
+--- modules/nf-core/plasmidfinder/tests/main.nf.test
++++ modules/nf-core/plasmidfinder/tests/main.nf.test
+@@ -18,6 +18,7 @@
+                     [ id:'test', single_end:false ], // meta map
+ 				    file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta', checkIfExists: true)
+                 ]
++                input[1] = []
+ 
+                 """
+             }
+@@ -49,6 +50,7 @@
+                     [ id:'test', single_end:false ], // meta map
+ 				    file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta', checkIfExists: true)
+                 ]
++                input[1] = []
+ 
+                 """
+             }
+
+'modules/nf-core/plasmidfinder/tests/main.nf.test.snap' is unchanged
+************************************************************

@@ -65,10 +65,21 @@
                         "installed_by": ["modules"],
                         "patch": "modules/nf-core/mobsuite/recon/mobsuite-recon.diff"
                     },
+                    "mobsuite/typer": {
+                        "branch": "master",
+                        "git_sha": "2080397432fcb0d079121dbacf22ce42ef175cec",
+                        "installed_by": ["modules"]
+                    },
                     "multiqc": {
                         "branch": "master",
                         "git_sha": "5bdb098216aaf5df9c3b6343e6204cd932503c16",
                         "installed_by": ["modules"]
+                    },
+                    "plasmidfinder": {
+                        "branch": "master",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
+                        "installed_by": ["modules"],
+                        "patch": "modules/nf-core/plasmidfinder/plasmidfinder.diff"
                     },
                     "quast": {
                         "branch": "master",

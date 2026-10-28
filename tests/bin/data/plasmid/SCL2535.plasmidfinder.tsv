@@ -1,0 +1,4 @@
+Database	Plasmid	Identity	Query / Template length	Contig	Position in contig	Note	Accession number
+enterobacteriaceae	IncFIB(K)	98.93	560 / 560	contig_15 NODE_15_length_77311_cov_25.577244	20891..21450	Kpn3	JN233704
+enterobacteriaceae	IncFIB(pKPHS1)	97.32	560 / 560	contig_11 NODE_11_length_110042_cov_17.045271	25617..26176	pKPHS1	CP003223
+enterobacteriaceae	IncFII(K)	95.95	148 / 148	contig_16 NODE_16_length_43835_cov_25.974192	41971..42118		CP000648

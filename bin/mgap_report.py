@@ -25,6 +25,7 @@ per sample
     genomad_virus      geNomad ``*_virus_summary.tsv``
     mobsuite_contigs   MOB-suite ``contig_report.txt``
     mobsuite_mobtyper  MOB-suite ``mobtyper_results.txt``
+    plasmid_consensus  ``<sample>.plasmid_consensus.tsv`` (bin/plasmid_consensus.py: one row per contig)
     kleborate          Kleborate 3 ``klebsiella_pneumo_complex_output.txt``
     sistr              SISTR ``<sample>.tab``
     sccmec             sccmec ``<sample>.tsv``
@@ -87,6 +88,7 @@ SAMPLE_TOOLS = (
     "genomad_virus",
     "mobsuite_contigs",
     "mobsuite_mobtyper",
+    "plasmid_consensus",
     "kleborate",
     "sistr",
     "sccmec",
@@ -479,6 +481,11 @@ def parse_mobsuite_mobtyper(path):
     return pd.read_csv(path, sep="\t", dtype=str).fillna("")
 
 
+def parse_plasmid_consensus(path):
+    """Plasmid consensus: one row per contig with each tool's evidence and the call (the manifest gives the sample)."""
+    return pd.read_csv(path, sep="\t", dtype=str).fillna("").drop(columns="sample", errors="ignore")
+
+
 def parse_sample_status(path):
     """pipeline_info/sample_status.tsv (Phase 7 columns)."""
     return pd.read_csv(path, sep="\t", dtype=str).fillna("")
@@ -555,6 +562,7 @@ class RunData:
         self.genomad_virus = {}
         self.mobsuite_contigs = {}
         self.mobsuite_mobtyper = {}
+        self.plasmid_consensus = {}
         self.status = None  # DataFrame
         self.versions = []
         self.citations = []
@@ -587,6 +595,7 @@ class RunData:
             "genomad_virus": (parse_genomad, self.genomad_virus),
             "mobsuite_contigs": (parse_mobsuite_contigs, self.mobsuite_contigs),
             "mobsuite_mobtyper": (parse_mobsuite_mobtyper, self.mobsuite_mobtyper),
+            "plasmid_consensus": (parse_plasmid_consensus, self.plasmid_consensus),
         }
         for tool in ("fastp", "fastplong"):
             for sample, paths in manifest.get(tool, {}).items():
@@ -2058,6 +2067,160 @@ def section_mobile(run):
     return Section("mobile", "Plasmids and other mobile elements", intro, body)
 
 
+# consensus calls that point to a plasmid, in display order (bin/plasmid_consensus.py)
+PLASMID_CALL_LABELS = OrderedDict((("plasmid", "plasmid"), ("candidate", "candidate"), ("check", "to check")))
+
+
+def plasmid_calls(table):
+    """{call: contigs} for the plasmid calls of one sample's consensus table."""
+    if table is None or "consensus" not in table:
+        return {}
+    counts = table["consensus"].value_counts()
+    return {call: int(counts[call]) for call in PLASMID_CALL_LABELS if call in counts}
+
+
+def unique_items(values):
+    items = []
+    for value in values:
+        for item in str(value).split(","):
+            item = item.strip()
+            if item and item not in ("-", "not run") and item not in items:
+                items.append(item)
+    return items
+
+
+def plasmid_replicons(table):
+    """Replicons (PlasmidFinder, then MOB-suite) on the contigs called plasmid."""
+    if table is None or "consensus" not in table:
+        return ""
+    plasmids = table[table["consensus"] == "plasmid"]
+    return ", ".join(
+        unique_items(list(column(plasmids, "plasmidfinder_replicons")) + list(column(plasmids, "mobsuite_replicons")))
+    )
+
+
+def section_plasmids(run):
+    samples = [s for s in run.samples if s in run.plasmid_consensus]
+    if not samples:
+        return None
+    body = ""
+    counts = {s: plasmid_calls(run.plasmid_consensus[s]) for s in samples}
+    if len(samples) > LARGE_RUN:
+        body += distribution_html(
+            [
+                Panel(f"Contigs called {label}", "contigs", {s: counts[s].get(call, 0) for s in samples}, digits=0)
+                for call, label in PLASMID_CALL_LABELS.items()
+            ]
+        )
+    else:
+        ordered = list(reversed(samples))
+        fig = go.Figure()
+        for slot, (call, label) in enumerate(PLASMID_CALL_LABELS.items()):
+            fig.add_trace(
+                go.Bar(
+                    y=ordered,
+                    x=[counts[s].get(call, 0) for s in ordered],
+                    orientation="h",
+                    name=label,
+                    marker_color=PALETTE[slot],
+                    hovertemplate=f"%{{y}}<br>{label}: %{{x}} contigs<extra></extra>",
+                )
+            )
+        # legend in call order (Plotly lists stacked horizontal traces last-first)
+        fig.update_layout(
+            barmode="stack", bargap=0.25, margin=dict(l=10, r=20, t=40, b=50), legend=dict(traceorder="normal")
+        )
+        most = max((sum(c.values()) for c in counts.values()), default=0)
+        fig.update_xaxes(title_text="Contigs by consensus call", dtick=1 if most <= 10 else None)
+        body += figure_html(fig, bar_height(len(samples), per_row=26))
+
+    summary, contigs = [], []
+    for s in samples:
+        table = run.plasmid_consensus[s]
+        plasmids = table[table["consensus"] == "plasmid"] if "consensus" in table else table.iloc[0:0]
+        length = pd.to_numeric(column(plasmids, "length"), errors="coerce").sum()
+        mobility = pd.Series(column(plasmids, "predicted_mobility")).replace({"-": "", "not run": ""})
+        mobility = mobility[mobility != ""].value_counts()
+        summary.append(
+            {
+                "sample": sample_link(s),
+                "plasmid": counts[s].get("plasmid", 0),
+                "plasmid_kb": fmt_float(length / 1e3) if len(plasmids) else "",
+                "circular": int((pd.Series(column(plasmids, "circular")) == "yes").sum()) if len(plasmids) else "",
+                "candidate": counts[s].get("candidate", 0),
+                "check": counts[s].get("check", 0),
+                "replicons": plasmid_replicons(table),
+                "mobility": ", ".join(f"{n} {name}" for name, n in mobility.items()),
+            }
+        )
+        if "consensus" not in table:
+            continue
+        for _, row in table[table["consensus"].isin(list(PLASMID_CALL_LABELS))].iterrows():
+            contigs.append(
+                {
+                    "sample": sample_link(s),
+                    "contig": row.get("contig", ""),
+                    "length": fmt_float(to_number(row.get("length")) / 1e3) if to_number(row.get("length")) else "",
+                    "circular": row.get("circular", ""),
+                    "call": PLASMID_CALL_LABELS.get(row.get("consensus", ""), row.get("consensus", "")),
+                    "evidence": row.get("evidence", ""),
+                    # one name per replicon or relaxase type; the consensus TSV keeps every hit
+                    "plasmidfinder": ", ".join(unique_items([row.get("plasmidfinder_replicons", "")])) or "-",
+                    "mobsuite": ", ".join(unique_items([row.get("mobsuite_replicons", "")])) or "-",
+                    "relaxase": ", ".join(unique_items([row.get("mobsuite_relaxases", "")])) or "-",
+                    "mobility": row.get("predicted_mobility", ""),
+                    "cluster": row.get("mobsuite_cluster", ""),
+                }
+            )
+    body += render_table(
+        [
+            ("sample", "Sample"),
+            ("plasmid", "Plasmid contigs"),
+            ("plasmid_kb", "Plasmid length (kb)"),
+            ("circular", "Circular plasmid contigs"),
+            ("candidate", "Candidate contigs"),
+            ("check", "Contigs to check"),
+            ("replicons", "Replicons on plasmid contigs"),
+            ("mobility", "Mobility of plasmid contigs"),
+        ],
+        summary,
+        numeric=("plasmid", "plasmid_kb", "circular", "candidate", "check"),
+        raw=("sample",),
+    )
+    if contigs:
+        body += "<h3>Contigs with plasmid evidence</h3>" + render_table(
+            [
+                ("sample", "Sample"),
+                ("contig", "Contig"),
+                ("length", "Length (kb)"),
+                ("circular", "Circular"),
+                ("call", "Call"),
+                ("evidence", "Evidence"),
+                ("plasmidfinder", "PlasmidFinder replicons"),
+                ("mobsuite", "MOB-suite replicons"),
+                ("relaxase", "Relaxase"),
+                ("mobility", "Predicted mobility"),
+                ("cluster", "MOB-suite cluster"),
+            ],
+            contigs,
+            numeric=("length",),
+            raw=("sample",),
+            max_height=480,
+        )
+    intro = [
+        "Each contig is checked by up to three tools that find plasmids in different ways: geNomad (genes "
+        "typical of plasmids), MOB-suite (similarity to known plasmids, replicon and relaxase genes; on long-read "
+        "and finished assemblies MOB-typer types each circular contig) and PlasmidFinder (replicon sequences). "
+        "A contig is called plasmid when at least two of them agree, candidate when only one does, and "
+        "to check when the evidence sits on a chromosome-sized contig (1 Mb or more).",
+        "A short-read assembly splits a plasmid into several contigs, so the counts are contigs, not plasmids; "
+        "the MOB-suite cluster groups the contigs of one plasmid. Circular contigs from a long-read assembly are "
+        "usually whole plasmids. Mobility: conjugative plasmids can transfer themselves, mobilizable ones need "
+        "another plasmid's help, non-mobilizable ones cannot move. The rules are in docs/output.md.",
+    ]
+    return Section("plasmids", "Plasmid consensus", intro, body)
+
+
 def section_cards(run):
     if not run.samples:
         return None
@@ -2122,6 +2285,15 @@ def section_cards(run):
             )
         if s in run.mobsuite_mobtyper:
             facts.append(("MOB-suite plasmids", str(len(run.mobsuite_mobtyper[s]))))
+        if s in run.plasmid_consensus:
+            calls = plasmid_calls(run.plasmid_consensus[s])
+            facts.append(
+                (
+                    "Plasmid consensus",
+                    ", ".join(f"{calls[call]} {label}" for call, label in PLASMID_CALL_LABELS.items() if call in calls)
+                    or "no plasmid contig",
+                )
+            )
         warnings = run.warnings(s)
         fact_html = "".join(f"<dt>{esc(label)}</dt><dd>{value}</dd>" for label, value in facts)
         warning_html = "".join(f"<li>{esc(w)}</li>" for w in warnings)
@@ -2304,6 +2476,11 @@ def summary_rows(run):
         row["genomad_plasmids"] = len(run.genomad_plasmid[s]) if s in run.genomad_plasmid else None
         row["genomad_viruses"] = len(run.genomad_virus[s]) if s in run.genomad_virus else None
         row["mobsuite_plasmids"] = len(run.mobsuite_mobtyper[s]) if s in run.mobsuite_mobtyper else None
+        consensus = run.plasmid_consensus.get(s)
+        calls = plasmid_calls(consensus) if consensus is not None else {}
+        for call in PLASMID_CALL_LABELS:
+            row[f"plasmid_consensus_{call}"] = calls.get(call, 0) if consensus is not None else None
+        row["plasmid_replicons"] = plasmid_replicons(consensus) if consensus is not None else ""
         row["warnings"] = "; ".join(run.warnings(s))
         rows.append(row)
     return pd.DataFrame(rows)
@@ -2378,6 +2555,7 @@ def tool_tables(run):
             ("geNomad viruses", per_sample(run.genomad_virus)),
             ("MOB-suite contigs", per_sample(run.mobsuite_contigs)),
             ("MOB-suite plasmids", per_sample(run.mobsuite_mobtyper)),
+            ("Plasmid consensus", per_sample(run.plasmid_consensus)),
             ("Software versions", versions),
         ]
     )
@@ -2587,6 +2765,7 @@ def main(argv=None):
         section_typing,
         section_amr,
         section_mobile,
+        section_plasmids,
         section_cards,
         section_methods,
     )

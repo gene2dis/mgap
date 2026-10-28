@@ -88,6 +88,10 @@ include { RGI_LOAD } from '../modules/local/rgi/load/main'
 include { RGI_MAIN } from '../modules/local/rgi/main/main'
 include { GENOMAD_ENDTOEND as GENOMAD } from '../modules/nf-core/genomad/endtoend/main'
 include { MOBSUITE_RECON } from '../modules/nf-core/mobsuite/recon/main'
+include { MOBSUITE_TYPER } from '../modules/nf-core/mobsuite/typer/main'
+include { PLASMIDFINDER } from '../modules/nf-core/plasmidfinder/main'
+include { PLASMID_CIRCULAR } from '../modules/local/plasmid/circular/main'
+include { PLASMID_CONSENSUS } from '../modules/local/plasmid/consensus/main'
 include { MGAP_REPORT } from '../modules/local/mgap_report/main'
 
 /*
@@ -133,6 +137,8 @@ workflow MGAP {
     ch_sample_outcomes = channel.empty()
     // [ meta, tool, file ] for the run report; tool names as in bin/mgap_report.py
     ch_report_files = channel.empty()
+    // Flye's assembly_info.txt per sample (ONT with Flye only): which contigs are circular
+    ch_assembly_info = channel.empty()
 
     if (params.seq_type == "illumina") {
         //
@@ -174,6 +180,7 @@ workflow MGAP {
         ch_versions = ch_versions.mix(ONT.out.versions)
         ch_multiqc_files = ch_multiqc_files.mix(ONT.out.reports)
         ch_report_files = ch_report_files.mix(ONT.out.report_files)
+        ch_assembly_info = ONT.out.assembly_info
 
     } else if (params.seq_type == "contig") {
         //
@@ -352,6 +359,38 @@ workflow MGAP {
     }
 
 
+    //
+    // Plasmid evidence per contig for PLASMID_CONSENSUS (D-22): [ meta, source, file ]
+    //
+    ch_plasmid_files = channel.empty()
+    // the annotation FASTA with Flye's assembly_info.txt, or [] where circularity comes from the headers
+    // (Autocycler's circular=true, tags in a contig-mode FASTA). Flye's info exists for every sample that
+    // reached annotation, so a plain join keeps them all
+    if (params.seq_type == 'ont' && params.ont_assembler == 'flye') {
+        ch_topology_input = ch_annotation_fasta
+            .map { meta, fasta -> [ meta.id, meta, fasta ] }
+            .join(ch_assembly_info.map { meta, info -> [ meta.id, info ] })
+            .map { _id, meta, fasta, info -> [ meta, fasta, info ] }
+    } else {
+        ch_topology_input = ch_annotation_fasta.map { meta, fasta -> [ meta, fasta, [] ] }
+    }
+
+    // RUN PLASMIDFINDER (replicons; database bundled in the container unless --plasmidfinder_db)
+    if (params.run_plasmidfinder.toString().toBoolean()) {
+        PLASMIDFINDER(
+            ch_annotation_fasta,
+            params.plasmidfinder_db ? file(params.plasmidfinder_db, checkIfExists: true) : []
+        )
+        // nf-core plasmidfinder reports its version as a topic tuple, not a versions.yml
+        ch_versions = ch_versions.mix(
+            PLASMIDFINDER.out.versions_plasmidfinder
+                .first()
+                .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
+                .collectFile(name: 'plasmidfinder_versions.yml')
+        )
+        ch_plasmid_files = ch_plasmid_files.mix(PLASMIDFINDER.out.tsv.map { meta, tsv -> [ meta, 'plasmidfinder', tsv ] })
+    }
+
     // RUN GENOMAD (only when --genomad_db is provided)
     if (params.genomad_db) {
         GENOMAD(
@@ -363,6 +402,7 @@ workflow MGAP {
             GENOMAD.out.plasmid_summary.map { meta, tsv -> [ meta, 'genomad_plasmid', tsv ] },
             GENOMAD.out.virus_summary.map { meta, tsv -> [ meta, 'genomad_virus', tsv ] }
         )
+        ch_plasmid_files = ch_plasmid_files.mix(GENOMAD.out.plasmid_summary.map { meta, tsv -> [ meta, 'genomad', tsv ] })
     }
 
     // RUN MOB-suite for plasmid detection and reconstruction
@@ -377,6 +417,63 @@ workflow MGAP {
             MOBSUITE_RECON.out.contig_report.map { meta, txt -> [ meta, 'mobsuite_contigs', txt ] },
             MOBSUITE_RECON.out.mobtyper_results.map { meta, txt -> [ meta, 'mobsuite_mobtyper', txt ] }
         )
+        ch_plasmid_files = ch_plasmid_files.mix(
+            MOBSUITE_RECON.out.contig_report.map { meta, txt -> [ meta, 'mob_contigs', txt ] },
+            MOBSUITE_RECON.out.mobtyper_results.map { meta, txt -> [ meta, 'mob_plasmids', txt ] }
+        )
+
+        // F8: mob_recon reconstructs no plasmids from complete ONT assemblies (issue #17), so
+        // MOB-typer types each circular contig of ONT and contig-mode assemblies on its own
+        if (params.seq_type in [ 'ont', 'contig' ]) {
+            PLASMID_CIRCULAR( ch_topology_input )
+            ch_versions = ch_versions.mix(PLASMID_CIRCULAR.out.versions.first())
+
+            // nf-core mobsuite/typer: database directory, then seven optional database files and
+            // the two optional reports (not used)
+            MOBSUITE_TYPER(
+                PLASMID_CIRCULAR.out.fasta,
+                params.mobsuite_db ? file(params.mobsuite_db, checkIfExists: true) : [],
+                [], [], [], [], [], [], [],
+                false,
+                false
+            )
+            ch_versions = ch_versions.mix(
+                MOBSUITE_TYPER.out.versions_mobsuite
+                    .first()
+                    .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
+                    .collectFile(name: 'mobsuite_typer_versions.yml')
+            )
+            // the report glob (*.txt) also matches the biomarker and MGE reports, which are not asked for
+            ch_plasmid_files = ch_plasmid_files.mix(
+                MOBSUITE_TYPER.out.report.flatMap { meta, outputs ->
+                    [ outputs ].flatten()
+                        .findAll { output -> !(output.name ==~ /.*_(biomarker|mge)_report\.txt/) }
+                        .collect { output -> [ meta, 'mob_typer', output ] }
+                }
+            )
+        }
+    }
+
+    //
+    // PLASMID_CONSENSUS: one row per contig with every plasmid tool's evidence and a call (D-22,
+    // rules in docs/output.md), when at least one of PlasmidFinder, geNomad and MOB-suite ran.
+    // Sources are collected per sample; a tool that did not run is passed as []
+    //
+    def plasmid_tools_run = params.run_plasmidfinder.toString().toBoolean() || params.genomad_db || params.run_mobsuite.toString().toBoolean()
+    if (plasmid_tools_run) {
+        def plasmid_sources = [ 'flye_info', 'genomad', 'mob_contigs', 'mob_plasmids', 'mob_typer', 'plasmidfinder' ]
+        ch_consensus_input = ch_topology_input
+            .flatMap { meta, fasta, info -> [ [ meta.id, 'fasta', fasta ] ] + (info ? [ [ meta.id, 'flye_info', info ] ] : []) }
+            .mix(ch_plasmid_files.map { meta, source, output -> [ meta.id, source, output ] })
+            .groupTuple()
+            .join(ch_annotation_fasta.map { meta, _fasta -> [ meta.id, meta ] })
+            .map { _id, sources, outputs, meta ->
+                def by_source = [ sources, outputs ].transpose().collectEntries()
+                [ meta, by_source['fasta'] ] + plasmid_sources.collect { source -> by_source[source] ?: [] }
+            }
+        PLASMID_CONSENSUS( ch_consensus_input )
+        ch_versions = ch_versions.mix(PLASMID_CONSENSUS.out.versions.first())
+        ch_report_files = ch_report_files.mix(PLASMID_CONSENSUS.out.tsv.map { meta, tsv -> [ meta, 'plasmid_consensus', tsv ] })
     }
 
     // RUN RGI for antimicrobial resistance gene prediction
@@ -552,18 +649,19 @@ def reportRunInfo(mlst_organisms) {
         parameters.medaka_model = params.medaka_model
     }
     def used = [
-        kraken2db     : params.run_kraken2.toString().toBoolean() && seq_type != 'contig',
+        kraken2db       : params.run_kraken2.toString().toBoolean() && seq_type != 'contig',
         // Bracken runs only after Kraken2, which needs kraken2db
-        brackendb     : params.run_kraken2.toString().toBoolean() && seq_type == 'illumina' && params.kraken2db as boolean,
-        checkm2_db    : true,
-        bakta_db      : true,
-        amrfinder_db  : params.bakta_db as boolean,
-        genomad_db    : true,
-        gtdbtk_db     : params.run_gtdbtk.toString().toBoolean(),
-        rgi_db        : params.run_rgi.toString().toBoolean(),
-        mobsuite_db   : params.run_mobsuite.toString().toBoolean(),
-        plassembler_db: seq_type == 'ont' && params.ont_assembler == 'autocycler',
-        mlst_datadir  : true
+        brackendb       : params.run_kraken2.toString().toBoolean() && seq_type == 'illumina' && params.kraken2db as boolean,
+        checkm2_db      : true,
+        bakta_db        : true,
+        amrfinder_db    : params.bakta_db as boolean,
+        genomad_db      : true,
+        gtdbtk_db       : params.run_gtdbtk.toString().toBoolean(),
+        rgi_db          : params.run_rgi.toString().toBoolean(),
+        mobsuite_db     : params.run_mobsuite.toString().toBoolean(),
+        plasmidfinder_db: params.run_plasmidfinder.toString().toBoolean(),
+        plassembler_db  : seq_type == 'ont' && params.ont_assembler == 'autocycler',
+        mlst_datadir    : true
     ]
     def databases = used.findAll { name, is_used -> is_used && params[name] }.collectEntries { name, _is_used -> [ name, params[name].toString() ] }
     return [

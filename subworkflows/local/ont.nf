@@ -92,6 +92,8 @@ workflow ONT {
     // ch_failed collects the samples whose assembly failed, for sample_status.tsv
     //
     ch_failed = channel.empty()
+    // Flye's assembly_info.txt (which contigs are circular); Autocycler writes circular=true in the headers
+    ch_assembly_info = channel.empty()
     if (params.ont_assembler == 'autocycler') {
 
         //
@@ -257,6 +259,8 @@ workflow ONT {
         //
         ch_flye_fasta = FLYE.out.fasta
             .map { meta, fasta -> [ meta.findAll { key, _value -> key != 'genome_size' }, fasta ] }
+        ch_assembly_info = FLYE.out.txt
+            .map { meta, info -> [ meta.findAll { key, _value -> key != 'genome_size' }, info ] }
         ch_medaka_input = ch_qc_reads.join(ch_flye_fasta)
         MEDAKA ( ch_medaka_input )
         ch_versions = ch_versions.mix(MEDAKA.out.versions.first())
@@ -298,10 +302,11 @@ workflow ONT {
     }
 
     emit:
-    assembly     = ch_assembly              // channel: [ val(meta), path(fasta) ]
-    reports      = ch_reports               // channel: [ path(report) ] for MultiQC
-    report_files = ch_report_files          // channel: [ val(meta), val(tool), path(file) ] for the run report
-    read_stats   = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
-    status       = READ_QC_GATE.out.status.mix(ch_failed)  // channel: [ val(meta), map ] skipped and failed samples
-    versions     = ch_versions              // channel: [ path(versions.yml) ]
+    assembly      = ch_assembly              // channel: [ val(meta), path(fasta) ]
+    assembly_info = ch_assembly_info         // channel: [ val(meta), path(assembly_info.txt) ] Flye only
+    reports       = ch_reports               // channel: [ path(report) ] for MultiQC
+    report_files  = ch_report_files          // channel: [ val(meta), val(tool), path(file) ] for the run report
+    read_stats    = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
+    status        = READ_QC_GATE.out.status.mix(ch_failed)  // channel: [ val(meta), map ] skipped and failed samples
+    versions      = ch_versions              // channel: [ path(versions.yml) ]
 }

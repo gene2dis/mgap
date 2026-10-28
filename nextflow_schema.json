@@ -210,7 +210,15 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Run MOB-suite for plasmid detection and reconstruction.",
-                    "fa_icon": "fas fa-circle-nodes"
+                    "fa_icon": "fas fa-circle-nodes",
+                    "help_text": "mob_recon runs on every assembly. On ONT and contig-mode assemblies MOB-typer also types each circular contig on its own (contig mode: every contig when no FASTA header marks circular ones), since mob_recon reconstructs no plasmids from complete assemblies."
+                },
+                "run_plasmidfinder": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run PlasmidFinder to find plasmid replicons in each assembly.",
+                    "fa_icon": "fas fa-circle-nodes",
+                    "help_text": "Uses the database bundled in the PlasmidFinder 2.1.6 container (2019) unless --plasmidfinder_db is set. Its replicon calls feed the per-contig plasmid consensus with geNomad and MOB-suite."
                 },
                 "skip_report": {
                     "type": "boolean",
@@ -339,6 +347,13 @@
                 "mobsuite_db": {
                     "type": "string",
                     "description": "Path to a pre-built MOB-suite database directory. Optional: if unset, MOB-suite uses the database bundled with its container.",
+                    "format": "directory-path",
+                    "exists": true,
+                    "fa_icon": "fas fa-database"
+                },
+                "plasmidfinder_db": {
+                    "type": "string",
+                    "description": "Path to a PlasmidFinder database directory (the plasmidfinder_db repository, with its config file and .fsa files). Optional: if unset, PlasmidFinder uses the database bundled with its container (2019).",
                     "format": "directory-path",
                     "exists": true,
                     "fa_icon": "fas fa-database"

@@ -1,0 +1,70 @@
+name: plasmid_consensus
+description: |
+  Per-contig plasmid table for one sample (bin/plasmid_consensus.py consensus): the evidence from geNomad,
+  MOB-suite (mob_recon and MOB-typer) and PlasmidFinder, circularity and mobility, and a consensus call
+  (plasmid, candidate, check, chromosome or no call). The rules are in docs/output.md.
+keywords:
+  - plasmid
+  - consensus
+  - mobile elements
+tools:
+  - plasmid_consensus:
+      description: Plasmid script of the MGAP pipeline (bin/plasmid_consensus.py, Python standard library only).
+      homepage: https://github.com/gene2dis/mgap
+      documentation: https://github.com/gene2dis/mgap/blob/main/docs/output.md
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test' ]
+    - fasta:
+        type: file
+        description: Annotation FASTA; every contig gets a row
+        pattern: "*.{fasta,fa,fna}"
+    - flye_info:
+        type: file
+        description: Flye assembly_info.txt, or []
+        pattern: "*.txt"
+    - genomad:
+        type: file
+        description: geNomad <sample>_plasmid_summary.tsv, or [] when geNomad did not run
+        pattern: "*_plasmid_summary.tsv"
+    - mob_contigs:
+        type: file
+        description: mob_recon contig_report.txt, or [] when MOB-suite did not run
+        pattern: "contig_report.txt"
+    - mob_plasmids:
+        type: file
+        description: mob_recon mobtyper_results.txt (only written when it found plasmids), or []
+        pattern: "mobtyper_results.txt"
+    - mob_typer:
+        type: file
+        description: MOB-typer --multi report on the circular contigs, or []
+        pattern: "*.txt"
+    - plasmidfinder:
+        type: file
+        description: PlasmidFinder results table (results_tab.tsv renamed <sample>.tsv), or []
+        pattern: "*.tsv"
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - ${prefix}.plasmid_consensus.tsv:
+          type: file
+          description: One row per contig with each tool's evidence and the consensus call
+          pattern: "*.plasmid_consensus.tsv"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

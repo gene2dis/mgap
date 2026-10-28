@@ -1,0 +1,102 @@
+nextflow_process {
+
+    name "Test PLASMID_CONSENSUS module"
+    script "../../../modules/local/plasmid/consensus/main.nf"
+    process "PLASMID_CONSENSUS"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plasmid_consensus"
+
+    // tests/bin/data/plasmid: excerpts of SCL2535's geNomad and mob_recon outputs (Phase 8a run) and its
+    // PlasmidFinder table, with short sequences under the real contig headers
+
+    test("PLASMID_CONSENSUS - geNomad, MOB-suite and PlasmidFinder") {
+
+        when {
+            process {
+                """
+                def data = "${projectDir}/tests/bin/data/plasmid"
+                input[0] = [
+                    [ id:'SCL2535' ],
+                    file("\${data}/SCL2535.fasta", checkIfExists: true),
+                    [],
+                    file("\${data}/SCL2535.genomad_plasmid.tsv", checkIfExists: true),
+                    file("\${data}/SCL2535.contig_report.txt", checkIfExists: true),
+                    file("\${data}/SCL2535.mobtyper_results.txt", checkIfExists: true),
+                    [],
+                    file("\${data}/SCL2535.plasmidfinder.tsv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def rows = path(process.out.tsv[0][1]).readLines()*.split('\t', -1)
+            def header = rows[0] as List
+            def calls = rows.drop(1).collectEntries { row -> [ row[header.indexOf('contig')], row[header.indexOf('consensus')] ] }
+            assertAll(
+                { assert process.success },
+                { assert calls == [ contig_1: 'chromosome', contig_11: 'plasmid', contig_16: 'plasmid', contig_22: 'candidate', contig_24: 'plasmid', contig_27: 'candidate' ] },
+                { assert rows.drop(1).every { row -> row[0] == 'SCL2535' } }
+            )
+        }
+
+    }
+
+    test("PLASMID_CONSENSUS - PlasmidFinder only") {
+
+        when {
+            process {
+                """
+                def data = "${projectDir}/tests/bin/data/plasmid"
+                input[0] = [
+                    [ id:'SCL2535' ],
+                    file("\${data}/SCL2535.fasta", checkIfExists: true),
+                    [], [], [], [], [],
+                    file("\${data}/SCL2535.plasmidfinder.tsv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def rows = path(process.out.tsv[0][1]).readLines()*.split('\t', -1)
+            def header = rows[0] as List
+            def calls = rows.drop(1).collectEntries { row -> [ row[header.indexOf('contig')], row[header.indexOf('consensus')] ] }
+            assertAll(
+                { assert process.success },
+                { assert calls.contig_11 == 'candidate' },
+                { assert calls.contig_1 == 'no call' },
+                { assert rows[1][header.indexOf('mobsuite_molecule_type')] == 'not run' }
+            )
+        }
+
+    }
+
+    test("PLASMID_CONSENSUS - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'SCL2535' ],
+                    file("${projectDir}/tests/bin/data/plasmid/SCL2535.fasta", checkIfExists: true),
+                    [], [], [], [], [], []
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.tsv[0][1]).exists() }
+            )
+        }
+
+    }
+
+}

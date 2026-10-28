@@ -492,6 +492,25 @@ def test_build_manifest_database_versions(tmp_path):
     }
 
 
+def test_build_manifest_covers_every_sample_tool():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "accessory_scripts"))
+    import build_report_manifest
+
+    # rebuilding the report from a results folder finds every per-sample input the report reads
+    assert set(report.SAMPLE_TOOLS) - set(build_report_manifest.SAMPLE_PATTERNS) == set()
+
+
+def test_build_manifest_finds_plasmid_consensus(tmp_path):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "accessory_scripts"))
+    import build_report_manifest
+
+    folder = tmp_path / "SCL2535" / "annotation" / "plasmid_consensus"
+    folder.mkdir(parents=True)
+    (folder / "SCL2535.plasmid_consensus.tsv").write_text("sample\tcontig\n")
+    rows = build_report_manifest.manifest_rows(tmp_path, None)
+    assert [(row["sample"], row["tool"]) for row in rows] == [("SCL2535", "plasmid_consensus")]
+
+
 # --------------------------------------------------------------------------------------------------
 # Large runs, sample cards and the workbook
 # --------------------------------------------------------------------------------------------------
@@ -585,3 +604,41 @@ def test_xlsx_text_columns_cleaned(tmp_path):
     sheet = openpyxl.load_workbook(xlsx)["Summary"]
     assert sheet["B2"].value == "okbad"
     assert len(sheet["B3"].value) == report.XLSX_CELL
+
+
+def test_plasmid_consensus_section_and_summary(tmp_path, data):
+    manifest = write_manifest(
+        tmp_path / "manifest.tsv",
+        [("SCL2535", "plasmid_consensus", data / "plasmid" / "SCL2535.plasmid_consensus.tsv")],
+    )
+    html, tsv, xlsx = tmp_path / "report.html", tmp_path / "summary.tsv", tmp_path / "summary.xlsx"
+    report.main(["--manifest", str(manifest), "--html", str(html), "--tsv", str(tsv), "--xlsx", str(xlsx)])
+    page = html.read_text()
+    assert '<section id="plasmids"' in page
+    assert "Contigs with plasmid evidence" in page
+    assert "10 plasmid, 8 candidate" in page  # sample card
+    header, row = tsv.read_text().splitlines()
+    summary = dict(zip(header.split("\t"), row.split("\t")))
+    assert summary["plasmid_consensus_plasmid"] == "10"
+    assert summary["plasmid_consensus_candidate"] == "8"
+    assert summary["plasmid_consensus_check"] == "0"
+    assert summary["plasmid_replicons"].split(", ")[:3] == ["IncFIB(pKPHS1)", "IncFIB(K)", "IncFII(K)"]
+    import openpyxl
+
+    sheet = openpyxl.load_workbook(xlsx)["Plasmid consensus"]
+    assert sheet.max_row == 41  # header + 40 contigs
+    assert [cell.value for cell in sheet[1]][:3] == ["sample", "contig", "description"]
+
+
+def test_plasmid_contig_table_names_each_replicon_once(tmp_path, data):
+    # PlasmidFinder can hit one replicon several times on a contig (ONT SCL10571: Col440I twice)
+    text = (data / "plasmid" / "SCL2535.plasmid_consensus.tsv").read_text()
+    edited = tmp_path / "consensus.tsv"
+    edited.write_text(text.replace("\tIncFIB(pKPHS1)\t97.32", "\tIncFIB(pKPHS1),IncFIB(pKPHS1)\t97.32,96.10"))
+    assert edited.read_text() != text
+    manifest = write_manifest(tmp_path / "manifest.tsv", [("SCL2535", "plasmid_consensus", edited)])
+    html = tmp_path / "report.html"
+    report.main(["--manifest", str(manifest), "--html", str(html), "--tsv", str(tmp_path / "summary.tsv")])
+    page = html.read_text()
+    assert "IncFIB(pKPHS1)" in page
+    assert "IncFIB(pKPHS1), IncFIB(pKPHS1)" not in page
