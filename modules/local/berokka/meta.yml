@@ -1,0 +1,51 @@
+name: "berokka"
+description: Trim the end overlap of circular contigs (a start repeated at the end, including tandem multimers of small plasmids) with Berokka, on the contigs Flye marks circular
+keywords:
+  - circular
+  - overhang
+  - plasmid
+  - long reads
+  - assembly
+tools:
+  - berokka:
+      description: "Trim, circularise and orient long read bacterial genome assemblies"
+      homepage: "https://github.com/tseemann/berokka"
+      documentation: "https://github.com/tseemann/berokka"
+      tool_dev_url: "https://github.com/tseemann/berokka"
+      licence: ["GPL-3.0-only"]
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1', single_end:true ]
+  - assembly:
+      type: file
+      description: Flye assembly (FASTA, optionally gzipped)
+      pattern: "*.{fasta,fa,fasta.gz,fa.gz}"
+  - assembly_info:
+      type: file
+      description: Flye assembly_info.txt; contigs with circ. = Y (column 4) go to Berokka, the others pass through unchanged
+      pattern: "*.txt"
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'sample1', single_end:true ]
+  - fasta:
+      type: file
+      description: Assembly in Flye's contig order, circular contigs trimmed by Berokka (trimmed ones tagged circular=true overhang=<bp>), linear contigs unchanged
+      pattern: "*.berokka.fasta"
+  - results:
+      type: file
+      description: Berokka's table for the circular contigs (sequence, status kept/trimmed, or removed when its control filter is on, old_len, new_len, trimmed)
+      pattern: "*.berokka.tsv"
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

@@ -298,9 +298,11 @@ nextflow_pipeline {
                 { assert workflow.success },
                 { assert succeeded.any { it.contains('FASTPLONG') } },
                 { assert succeeded.any { it.contains('FLYE') } },
+                { assert succeeded.any { it.contains('BEROKKA') } },
                 { assert succeeded.any { it.contains('MEDAKA') } },
                 { assert succeeded.any { it.contains('DNAAPLER') } },
                 { assert succeeded.any { it.contains('MLST') } },
+                { assert path("$outputDir/TEST_BFRAGILIS_ONT/assemblies/berokka/TEST_BFRAGILIS_ONT.berokka.tsv").exists() },
                 // nf-core flye gzips the assembly and graph; both are published
                 { assert path("$outputDir/TEST_BFRAGILIS_ONT/assemblies/flye/TEST_BFRAGILIS_ONT.assembly.fasta.gz").exists() },
                 { assert path("$outputDir/TEST_BFRAGILIS_ONT/assemblies/flye/TEST_BFRAGILIS_ONT.assembly_graph.gfa.gz").exists() }
@@ -435,7 +437,9 @@ nextflow_pipeline {
                 { assert succeeded.any { it.contains('AUTOCYCLER_ASSEMBLY') } },
                 { assert succeeded.any { it.contains('AUTOCYCLER_CONSENSUS') } },
                 { assert succeeded.any { it.contains('AUTOCYCLER_GFA2FASTA') } },
-                { assert succeeded.any { it.contains('MLST') } }
+                { assert succeeded.any { it.contains('MLST') } },
+                // Autocycler's trim step removes end overlaps itself
+                { assert !succeeded.any { it.contains('BEROKKA') } }
             )
         }
 
@@ -1012,7 +1016,7 @@ nextflow_pipeline {
         // On the command line, not in params {}: nf-test writes params {} to a
         // params file, which keeps them typed; the command line passes the
         // string "false", which is truthy unless read as a boolean
-        options "-stub --adjust_coverage false --run_kraken2 false --run_dnaapler false"
+        options "-stub --adjust_coverage false --run_kraken2 false --run_dnaapler false --run_berokka false"
 
         when {
             params {
@@ -1030,6 +1034,9 @@ nextflow_pipeline {
                 { assert succeeded.any { it.contains('FLYE') } },
                 { assert !succeeded.any { it.contains('KRAKEN2') } },
                 { assert !succeeded.any { it.contains('DNAAPLER') } },
+                { assert !succeeded.any { it.contains('BEROKKA') } },
+                // Medaka polishes Flye's assembly directly
+                { assert succeeded.any { it.contains('MEDAKA') } },
                 { assert !succeeded.any { it.contains('MASH_SKETCH') } }
             )
         }

@@ -227,6 +227,13 @@
                     "fa_icon": "fas fa-file-medical",
                     "help_text": "The report collects every tool's results into one offline HTML page, a per-sample TSV and an XLSX workbook. See docs/output.md."
                 },
+                "run_berokka": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Trim the end overlap of Flye's circular contigs with Berokka before Medaka (ONT mode with Flye only).",
+                    "fa_icon": "fas fa-scissors",
+                    "help_text": "Flye can assemble a small plasmid as two or three tandem copies on one circular contig. Berokka keeps one copy; only contigs Flye marks circular in assembly_info.txt are checked. Autocycler removes these overlaps itself."
+                },
                 "run_dnaapler": {
                     "type": "boolean",
                     "default": true,

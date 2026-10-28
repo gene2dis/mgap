@@ -30,6 +30,8 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   │                                #   (ONT, --ont_assembler flye)
 │   │   ├── lrge/                        # Genome size estimate for Flye: *.genome_size.txt
 │   │   │                                #   (ONT, --flye_asm_coverage without --genome_size)
+│   │   ├── berokka/                     # End overlaps trimmed from Flye's circular contigs: *.berokka.tsv
+│   │   │                                #   (ONT, --ont_assembler flye, --run_berokka true [default])
 │   │   ├── medaka/                      # Medaka-polished assembly: *.fasta
 │   │   │                                #   (ONT, --ont_assembler flye)
 │   │   ├── autocycler/                  # Autocycler consensus assembly
@@ -104,6 +106,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 
 - [SPAdes](#spades) - Illumina _de novo_ assembly
 - [Flye](#flye) - ONT _de novo_ assembly (default ONT assembler)
+- [Berokka](#berokka) - End-overlap trimming of Flye's circular contigs _(optional, Flye mode)_
 - [Medaka](#medaka) - ONT assembly polishing (Flye mode)
 - [Autocycler](#autocycler) - ONT consensus multi-assembler assembly _(optional)_
 - [Dnaapler](#dnaapler) - Contig reorientation _(optional, ONT only)_
@@ -249,6 +252,20 @@ This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
 - `<sample_id>/assemblies/lrge/`
   - `*.genome_size.txt`: Genome size in bases estimated by [lrge](https://github.com/mbhall88/lrge) from the fastplong reads, passed to Flye as `--genome-size`. Only with `--flye_asm_coverage` and no `--genome_size`.
 
+### Berokka
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/assemblies/berokka/`
+  - `<sample_id>.berokka.tsv`: Berokka's table for the contigs Flye marks circular: `#sequence` (Flye's contig name), `status` (`kept` or `trimmed`), `old_len`, `new_len`, `trimmed` (bp removed). The trimmed assembly itself is not published; Medaka's polished assembly (below) is built from it.
+
+</details>
+
+[Berokka](https://github.com/tseemann/berokka) looks for a circular contig whose start is repeated at its end and keeps one copy. Flye writes circular contigs without the overhang that other assemblers leave, but it can assemble a small plasmid as two or three tandem copies on one circular contig: on the SCL10571 fixture a 5,216 bp plasmid came out as a 10,432 bp contig and a 4,163 bp plasmid as 12,428 bp, while the reads (each at most one plasmid long) showed single-copy molecules. Without this step those plasmids' genes are annotated two or three times. Only contigs that Flye marks circular (`circ.` = Y in `assembly_info.txt`) are checked: on a linear contig, a short end match (an unresolved repeat) would be trimmed and tagged circular. Berokka's removal of contigs matching its control sequence is turned off (`--filter ''`), so no contig is dropped. Medaka then polishes the trimmed assembly; if Berokka fails for a sample, Medaka polishes the untrimmed Flye assembly and the log says so.
+
+This step runs for `--seq_type ont` with `--ont_assembler flye` (default) and `--run_berokka true` (default). Autocycler does not need it: its `trim` step removes these overlaps (see `autocycler_out/clustering/qc_pass/cluster_*/2_trimmed.yaml`).
+
 ### Medaka
 
 <details markdown="1">
@@ -259,7 +276,7 @@ This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
 
 </details>
 
-[Medaka](https://github.com/nanoporetech/medaka) polishes the Flye assembly using the original long reads to improve consensus accuracy.
+[Medaka](https://github.com/nanoporetech/medaka) polishes the Flye assembly (after Berokka, when it runs) using the original long reads to improve consensus accuracy.
 
 This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
 

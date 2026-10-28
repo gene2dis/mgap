@@ -14,6 +14,10 @@
 
   > Wick RR, Howden BP, Stinear TP. Autocycler: long-read consensus assembly for bacterial genomes. Bioinformatics. 2025. doi: 10.1093/bioinformatics/btaf474.
 
+- [Berokka](https://github.com/tseemann/berokka)
+
+  > Seemann T. Berokka: trim, circularise and orient long read bacterial genome assemblies. GitHub. https://github.com/tseemann/berokka
+
 - [GTDB-Tk](https://pubmed.ncbi.nlm.nih.gov/31730192/)
 
   > Chaumeil PA, Mussig AJ, Hugenholtz P, Parks DH. GTDB-Tk: a toolkit to classify genomes with the Genome Taxonomy Database. Bioinformatics. 2020 Mar 15;36(6):1925-1927. doi: 10.1093/bioinformatics/btz848. PubMed PMID: 31730192; PubMed Central PMCID: PMC7703759.

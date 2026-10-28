@@ -1,0 +1,104 @@
+nextflow_process {
+
+    name "Test BEROKKA module"
+    script "../../../modules/local/berokka/main.nf"
+    process "BEROKKA"
+
+    tag "modules"
+    tag "modules_local"
+    tag "berokka"
+
+    // tests/data/berokka/flye.fasta.gz: contig_1 is a 3,000 bp unit twice (circular), contig_2 a
+    // linear contig whose first 40 bp repeat at its end (Berokka alone would trim it), contig_3 a
+    // circular contig without an end repeat
+
+    test("BEROKKA - trims circular contigs only") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file("${projectDir}/tests/data/berokka/flye.fasta.gz", checkIfExists: true),
+                    file("${projectDir}/tests/data/berokka/flye.assembly_info.txt", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def lengths = [:]
+            def id = null
+            path(process.out.fasta[0][1]).readLines().each { line ->
+                if (line.startsWith('>')) { id = line.substring(1).tokenize(' ')[0]; lengths[id] = 0 }
+                else { lengths[id] += line.trim().length() }
+            }
+            def headers = path(process.out.fasta[0][1]).readLines().findAll { it.startsWith('>') }
+            def table = path(process.out.results[0][1]).readLines().drop(1).collect { it.tokenize('\t') }
+            assertAll(
+                { assert process.success },
+                // Flye's order kept; the linear contig passes through with its 40 bp end repeat
+                { assert lengths == [ contig_1: 3000, contig_2: 5000, contig_3: 4000 ] },
+                // Berokka appends its tags to an empty description, hence the tokens
+                { assert headers[0].tokenize(' ') == [ '>contig_1', 'circular=true', 'overhang=3000' ] },
+                { assert headers[1] == '>contig_2' },
+                { assert table == [ [ 'contig_1', 'trimmed', '6000', '3000', '3000' ], [ 'contig_3', 'kept', '4000', '4000', '0' ] ] },
+                { assert path(process.out.versions[0]).text.contains('berokka: 0.2.3') }
+            )
+        }
+
+    }
+
+    test("BEROKKA - no circular contig leaves the assembly unchanged") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file("${projectDir}/tests/data/berokka/flye.fasta.gz", checkIfExists: true),
+                    file("${projectDir}/tests/data/berokka/linear.assembly_info.txt", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def input = new java.util.zip.GZIPInputStream(new FileInputStream("${projectDir}/tests/data/berokka/flye.fasta.gz")).text
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.fasta[0][1]).text == input },
+                { assert path(process.out.results[0][1]).readLines() == [ '#sequence\tstatus\told_len\tnew_len\ttrimmed' ] }
+            )
+        }
+
+    }
+
+    test("BEROKKA - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file("${projectDir}/tests/data/berokka/flye.fasta.gz", checkIfExists: true),
+                    file("${projectDir}/tests/data/berokka/flye.assembly_info.txt", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.fasta[0][1]).exists() },
+                { assert path(process.out.results[0][1]).exists() },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

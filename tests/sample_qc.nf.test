@@ -54,7 +54,7 @@ nextflow_pipeline {
         }
     }
 
-    test("ONT Flye: low-read, Flye and Medaka failures and retries - stub") {
+    test("ONT Flye: low-read, Flye, Berokka and Medaka failures and retries - stub") {
 
         tag "stub"
 
@@ -65,7 +65,7 @@ nextflow_pipeline {
             params {
                 def reads = "${projectDir}/tests/data/stub_inputs/reads.fastq.gz"
                 input    = SampleStatus.samplesheet(outputDir, 'samplesheet.csv', 'sample,fastq_1,fastq_2',
-                    [ 'TEST_PASS', 'TEST_LOW', 'TEST_FLYE_FAIL', 'TEST_FLYE_OOM', 'TEST_MEDAKA_FAIL', 'TEST_MEDAKA_OOM' ].collect { sample -> "${sample},${reads}," })
+                    [ 'TEST_PASS', 'TEST_LOW', 'TEST_FLYE_FAIL', 'TEST_FLYE_OOM', 'TEST_BEROKKA_FAIL', 'TEST_MEDAKA_FAIL', 'TEST_MEDAKA_OOM' ].collect { sample -> "${sample},${reads}," })
                 seq_type = "ont"
                 outdir   = "$outputDir"
             }
@@ -84,6 +84,11 @@ nextflow_pipeline {
                 { assert workflow.trace.tasks().count { it.name.contains('FLYE (TEST_FLYE_OOM)') } == 2 },
                 { assert workflow.trace.tasks().count { it.name.contains('FLYE (TEST_FLYE_FAIL)') } == 1 },
                 { assert status.TEST_FLYE_OOM.status == 'pass' },
+                // a failed Berokka task is ignored: Medaka polishes the untrimmed Flye assembly
+                { assert workflow.trace.tasks().count { it.name.contains('BEROKKA (TEST_BEROKKA_FAIL)') } == 1 },
+                { assert succeeded.any { it.contains('MEDAKA (TEST_BEROKKA_FAIL)') } },
+                { assert status.TEST_BEROKKA_FAIL.status == 'pass' },
+                { assert path("$metaDir/nextflow.log").text.contains("Sample 'TEST_BEROKKA_FAIL': Berokka failed - Medaka polishes the untrimmed Flye assembly.") },
                 { assert status.TEST_MEDAKA_FAIL.subMap('status', 'stage', 'reason') == [ status: 'failed', stage: 'polishing', reason: 'Medaka failed (task error; exit status in the run log)' ] },
                 { assert !succeeded.any { it.contains('MLST (TEST_MEDAKA_FAIL)') } },
                 { assert workflow.trace.tasks().count { it.name.contains('MEDAKA (TEST_MEDAKA_OOM)') } == 2 },

@@ -40,7 +40,10 @@ flowchart TD
     ASMCOV_ONT -- "yes, no genome_size" --> LRGE["lrge<br>(genome size)"]
     LRGE --> FLYE
     ASMCOV_ONT -- "no, or genome_size given" --> FLYE["Flye<br>(assembly, all reads)"]
-    FLYE --> MEDAKA["Medaka<br>(polishing)"]
+    FLYE --> BEROKKA_CHK{"run_berokka?"}
+    BEROKKA_CHK -- yes --> BEROKKA["Berokka<br>(end overlaps of<br>circular contigs)"]
+    BEROKKA_CHK -- no --> MEDAKA
+    BEROKKA --> MEDAKA["Medaka<br>(polishing)"]
     MEDAKA --> DNAAPLER_FLYE{"run_dnaapler?"}
     DNAAPLER_FLYE -- yes --> DNAAPLER_F["Dnaapler<br>(reorientation, FASTA)"]
     DNAAPLER_FLYE -- no --> ASSEMBLY
@@ -116,8 +119,8 @@ flowchart TD
     classDef input fill:#f8cecc,stroke:#b85450,color:#000
     classDef merge fill:#e1d5e7,stroke:#9673a6,color:#000
 
-    class SEQ_TYPE,GATE_ILL,GATE_ONT,KR2_ILL,KR2_ONT,COV_ILL,ASMCOV_ONT,ASM_ONT,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,TAXA_BRANCH decision
-    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,LRGE,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI_LOAD,RGI,MOBSUITE optional
+    class SEQ_TYPE,GATE_ILL,GATE_ONT,KR2_ILL,KR2_ONT,COV_ILL,ASMCOV_ONT,ASM_ONT,BEROKKA_CHK,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,TAXA_BRANCH decision
+    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,LRGE,BEROKKA,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI_LOAD,RGI,MOBSUITE optional
     class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,ANNOT_IN,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,TOOL_VERSIONS,VERSIONS,STATUS,SPECIES,AMR_JOIN process
     class INPUT input
     class ASSEMBLY merge
@@ -138,14 +141,15 @@ flowchart TD
 
 ### ONT Subworkflow (Flye mode, default)
 
-| Step | Tool          | Description                                                                               |
-| ---- | ------------- | ----------------------------------------------------------------------------------------- |
-| 1    | **fastplong** | Quality filtering and adapter trimming of long reads                                      |
-| 2    | **Kraken2**   | Contamination detection _(optional, requires `--kraken2db`; Bracken not run for ONT)_     |
-| 3    | **lrge**      | Genome size for Flye _(only with `--flye_asm_coverage` and no `--genome_size`)_           |
-| 4    | **Flye**      | _De novo_ long-read assembly from all reads (`--asm-coverage` with `--flye_asm_coverage`) |
-| 5    | **Medaka**    | Assembly polishing                                                                        |
-| 6    | **Dnaapler**  | Contig reorientation using FASTA input _(optional, `--run_dnaapler`)_                     |
+| Step | Tool          | Description                                                                                   |
+| ---- | ------------- | --------------------------------------------------------------------------------------------- |
+| 1    | **fastplong** | Quality filtering and adapter trimming of long reads                                          |
+| 2    | **Kraken2**   | Contamination detection _(optional, requires `--kraken2db`; Bracken not run for ONT)_         |
+| 3    | **lrge**      | Genome size for Flye _(only with `--flye_asm_coverage` and no `--genome_size`)_               |
+| 4    | **Flye**      | _De novo_ long-read assembly from all reads (`--asm-coverage` with `--flye_asm_coverage`)     |
+| 5    | **Berokka**   | Trim the end overlap (tandem copies) of Flye's circular contigs _(optional, `--run_berokka`)_ |
+| 6    | **Medaka**    | Assembly polishing                                                                            |
+| 7    | **Dnaapler**  | Contig reorientation using FASTA input _(optional, `--run_dnaapler`)_                         |
 
 ### ONT Subworkflow (Autocycler mode)
 

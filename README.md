@@ -19,7 +19,7 @@ The gene2dis/mgap documentation is available in the [docs](docs/) folder:
 This pipeline supports three input modes:
 
 - **Illumina short-read assembly** (FastP → SPAdes)
-- **Oxford Nanopore long-read assembly** (fastplong → Flye → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
+- **Oxford Nanopore long-read assembly** (fastplong → Flye → Berokka → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
 - **Pre-assembled contigs** (direct annotation)
 
 ### Genome Assembly
@@ -37,8 +37,9 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 
 1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
 2. Genome assembly from all reads ([`Flye`](https://github.com/fenderglass/Flye)); optionally from the longest reads up to `--flye_asm_coverage`, with the genome size from `--genome_size` or [`lrge`](https://github.com/mbhall88/lrge)
-3. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
-4. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
+3. Optional end-overlap trimming of circular contigs ([`Berokka`](https://github.com/tseemann/berokka)): one copy of a small plasmid that Flye assembled as tandem copies
+4. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
+5. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
 
 #### ONT Assembly (Autocycler mode)
 
@@ -185,6 +186,7 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 | `--run_mobsuite`      | `false`    | Enable MOB-suite plasmid detection and reconstruction (MOB-typer on circular contigs)  |
 | `--run_plasmidfinder` | `true`     | Enable PlasmidFinder plasmid replicon detection                                        |
 | `--skip_report`       | `false`    | Skip the run report (`report/`: offline HTML, summary TSV and XLSX)                    |
+| `--run_berokka`       | `true`     | Trim the end overlap of Flye's circular contigs with Berokka (ONT, Flye only)          |
 | `--run_dnaapler`      | `true`     | Enable contig reorientation with Dnaapler (ONT only)                                   |
 
 #### Databases
