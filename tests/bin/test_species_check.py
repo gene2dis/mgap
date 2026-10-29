@@ -88,6 +88,27 @@ KPN, KVA, ECO, SAU, SAR = "GCF_006364295.1", "GCF_020525545.1", "GCF_000005845.2
 BPE, BBR, BMA, BPS = "GCF_004008975.1", "GCF_900636925.1", "GCF_033956065.1", "GCF_030297255.1"
 
 
+def test_reference_list_is_consistent():
+    """Organisms are AMRFinderPlus ones; every MLST-only mapping matches a reference species the scheme types."""
+    refs = sc.read_refs(REFS)
+    assert len(refs) == 53
+    organisms = {ref["organism"] for ref in refs.values()} - {None}
+    assert organisms == AMRFINDER_ORGANISMS
+    for scheme, organism in taxa_names().items():
+        if scheme in ("salmonella", "ecoli_2"):  # pre-2.23 mlst names, listed as the second scheme
+            assert any(scheme in ref["schemes"] and ref["organism"] == organism for ref in refs.values())
+            continue
+        typed = [ref for ref in refs.values() if scheme in ref["schemes"]]
+        assert any(ref["organism"] == organism for ref in typed), scheme
+
+
+def test_d14_schemes_broader_than_their_organism_are_unmapped():
+    names = taxa_names()
+    assert "bordetella_3" not in names
+    assert not [scheme for scheme in names if scheme.startswith("campylobacter_nonjejuni")]
+    assert names["campylobacter"] == "Campylobacter"
+
+
 def test_scl2461_override(run, data):
     row = run(data / "species" / "SCL2461.mlst.tsv", data / "species" / "SCL2461.skani.tsv")
     assert row["mlst_scheme"] == "ecoli_achtman_4" and row["mlst_st"] == "14464"
@@ -125,6 +146,19 @@ def test_refine_to_no_organism_is_flagged(run):
     """S. argenteus is typed by the saureus scheme but is not an AMRFinderPlus S. aureus."""
     row = run(mlst("saureus", "2250"), skani((SAR, 99.5, 90.0), (SAU, 89.4, 60.0)))
     assert (row["decision"], row["organism"], row["flagged"]) == ("refine", "", "yes")
+
+
+def test_d14_bordetella_species_chooses_the_organism(run):
+    pertussis = run(mlst("bordetella_3"), skani((BPE, 99.95, 95.0), (BBR, 98.9, 80.0)))
+    assert (pertussis["decision"], pertussis["organism"], pertussis["flagged"]) == (
+        "refine",
+        "Bordetella_pertussis",
+        "no",
+    )
+    bronchiseptica = run(mlst("bordetella_3"), skani((BBR, 99.9, 95.0), (BPE, 98.9, 80.0)))
+    assert (bronchiseptica["decision"], bronchiseptica["organism"]) == ("agree", "")
+    mlst_only = run(mlst("bordetella_3"))
+    assert (mlst_only["decision"], mlst_only["organism"]) == ("mlst", "")
 
 
 def test_ambiguous_keeps_the_mlst_organism_when_it_is_a_candidate(run):

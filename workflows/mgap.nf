@@ -9,14 +9,18 @@
     that list makes amrfinder exit with an error, so only listed ones are used.
     'salmonella' and 'ecoli_2' are pre-2.23 mlst scheme names, kept for
     --mlst_datadir databases built with older mlst.
+    This map routes a sample by MLST alone (no --species_refs, or no reference
+    hit); with a reference call, SPECIES_CHECK takes the organism from the
+    reference species (assets/species_refs.tsv). tests/bin/test_species_check.py
+    checks that every entry matches a species its scheme types in that list.
     Left unmapped on purpose: 'neisseria' (one scheme for N. gonorrhoeae and
     N. meningitidis, AMRFinderPlus needs the species), 'serratia' (genus-level
     scheme; AMRFinderPlus has only Serratia_marcescens), 'sepidermidis'
-    (no Staphylococcus_epidermidis organism in AMRFinderPlus).
-    Still mapped though they cover more than the organism's species, pending
-    a decision: 'bordetella_3' (B. pertussis, parapertussis, bronchiseptica)
-    and 'campylobacter_nonjejuni*' (non-jejuni/coli species; the
-    AMRFinderPlus Campylobacter organism is curated for C. jejuni/coli).
+    (no Staphylococcus_epidermidis organism in AMRFinderPlus), and (D-14)
+    'bordetella_3' (B. pertussis, parapertussis, bronchiseptica; the organism
+    is B. pertussis only) and 'campylobacter_nonjejuni*' (C. lari, C. upsaliensis
+    and other species; the Campylobacter organism is curated for C. jejuni/coli):
+    only a reference call of B. pertussis or C. jejuni/coli gives them an organism.
 ----------------------------------------------------------------------------------------
 */
 
@@ -25,18 +29,8 @@ def getTaxaNames() {
         "abaumannii": "Acinetobacter_baumannii",
         "abaumannii_2": "Acinetobacter_baumannii",
         "bcc": "Burkholderia_cepacia",
-        "bordetella_3": "Bordetella_pertussis",
         "bpseudomallei": "Burkholderia_pseudomallei",
         "campylobacter": "Campylobacter",
-        "campylobacter_nonjejuni": "Campylobacter",
-        "campylobacter_nonjejuni_2": "Campylobacter",
-        "campylobacter_nonjejuni_3": "Campylobacter",
-        "campylobacter_nonjejuni_4": "Campylobacter",
-        "campylobacter_nonjejuni_5": "Campylobacter",
-        "campylobacter_nonjejuni_6": "Campylobacter",
-        "campylobacter_nonjejuni_7": "Campylobacter",
-        "campylobacter_nonjejuni_8": "Campylobacter",
-        "campylobacter_nonjejuni_9": "Campylobacter",
         "cdifficile": "Clostridioides_difficile",
         "cdiphtheriae": "Corynebacterium_diphtheriae",
         "diphtheria_3": "Corynebacterium_diphtheriae",
