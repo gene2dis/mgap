@@ -9,7 +9,8 @@ Kraken2 for ONT) and the species given in the samplesheet. Rules (D-13, D-14, D-
     When the next hit of another organism is within --ani-margin ANI, the call is ambiguous.
 - agree: the reference species is typed by the MLST scheme (its mlst_schemes) and maps to the same
     organism as the scheme. refine: typed by the scheme, but the species maps to another organism (or
-    none), e.g. Bordetella bronchiseptica under bordetella_3. The organism follows the reference species.
+    none), e.g. Bordetella pertussis under bordetella_3 (no organism of its own, D-14) or Staphylococcus
+    argenteus under saureus. The organism follows the reference species.
 - override: the scheme does not type the reference species (a K. pneumoniae typed as
     ecoli_achtman_4); routing follows the reference species and mlst is run again with its first scheme.
 - reference: mlst found no scheme; routing follows the reference species (mlst again with its scheme).

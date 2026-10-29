@@ -394,7 +394,7 @@ The species check decides, per sample, which AMRFinderPlus organism (`--organism
 
 - **Reference call**: the best reference with ANI ≥ 95 % (the usual species boundary) over ≥ 50 % of the sample's assembly. When the next reference of another organism is within 0.5 ANI points (the _Bordetella_ references, and _B. mallei_ and _B. pseudomallei_, are 98.7–99.5 % ANI apart), the call is `ambiguous`.
 - `agree`: the reference species is typed by the MLST scheme and maps to the same organism. Routing is unchanged.
-- `refine`: the reference species is typed by the MLST scheme but maps to another organism or to none (an _S. argenteus_ typed by `saureus`; _B. bronchiseptica_ by `bordetella_3`, whose organism is only _B. pertussis_). The organism follows the reference species.
+- `refine`: the reference species is typed by the MLST scheme but maps to another organism or to none (an _S. argenteus_ typed by `saureus`; a _B. pertussis_ typed by `bordetella_3`, which gives no organism on its own because it also types _B. parapertussis_ and _B. bronchiseptica_). The organism follows the reference species.
 - `override`: the MLST scheme does not type the reference species. Routing follows the reference species, and mlst runs again with its scheme.
 - `reference`: mlst found no scheme; routing follows the reference species (mlst again with its scheme).
 - `ambiguous`: the MLST organism is kept when it is one of the two candidates, else there is none.
@@ -654,7 +654,7 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 - Antimicrobial resistance determinants: acquired genes, SNPs, gene truncations and intrinsic β-lactamases
 - K (capsule) and O antigen (LPS) serotype prediction
 
-**Automatic detection:** Kleborate analysis is automatically triggered when _Klebsiella_ species are detected based on MLST results.
+**Automatic detection:** Kleborate runs when the [species check](#species-check) gives the AMRFinderPlus organism `Klebsiella_pneumoniae` (the _K. pneumoniae_ species complex), but not for a reference call of _K. aerogenes_: AMRFinderPlus's organism covers it, Kleborate's KpSC preset does not.
 
 ### sccmec
 
@@ -668,7 +668,7 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 
 [sccmec](https://github.com/rpetit3/sccmec) classifies the SCCmec cassette type in _Staphylococcus aureus_ genome assemblies. SCCmec (Staphylococcal Cassette Chromosome _mec_) is a mobile genetic element that carries the _mecA_ gene responsible for methicillin resistance (MRSA).
 
-**Automatic detection:** This analysis is automatically triggered when _S. aureus_ is detected based on MLST results.
+**Automatic detection:** This analysis runs when the [species check](#species-check) gives the AMRFinderPlus organism `Staphylococcus_aureus`.
 
 ### SISTR
 
@@ -685,7 +685,7 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 
 [SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serovars and subtypes from _Salmonella enterica_ assemblies using antigen gene detection and cgMLST. The pipeline pins SISTR to **v1.1.3**.
 
-**Automatic detection:** SISTR analysis is automatically triggered when MLST assigns the `senterica_achtman_2` scheme to a sample (`salmonella` with mlst databases older than 2.23).
+**Automatic detection:** SISTR runs when the [species check](#species-check) gives the AMRFinderPlus organism `Salmonella` (without `--species_refs`: the MLST scheme `senterica_achtman_2`, `salmonella` with mlst databases older than 2.23).
 
 ---
 
