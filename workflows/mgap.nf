@@ -106,6 +106,7 @@ include { MGAP_REPORT } from '../modules/local/mgap_report/main'
 //
 include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
+include { SKANI_SEARCH } from '../modules/nf-core/skani/search/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
 include { MULTIQC } from '../modules/nf-core/multiqc/main'
@@ -272,6 +273,22 @@ workflow MGAP {
     )
     ch_versions = ch_versions.mix(MLST.out.versions.first())
     ch_report_files = ch_report_files.mix(MLST.out.tsv.map { meta, tsv -> [ meta, 'mlst', tsv ] })
+
+    // RUN the species check search (only when --species_refs is provided): each annotation FASTA
+    // against the curated reference set (skani database built by accessory_scripts/build_species_refs.py)
+    if (params.species_refs) {
+        SKANI_SEARCH(
+            ch_annotation_fasta,
+            channel.value([ [ id: 'species_refs' ], file("${params.species_refs}/sketch", checkIfExists: true) ])
+        )
+        // nf-core skani/search reports its version as a topic tuple, not a versions.yml
+        ch_versions = ch_versions.mix(
+            SKANI_SEARCH.out.versions_skani
+                .first()
+                .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
+                .collectFile(name: 'skani_versions.yml')
+        )
+    }
 
     //
     // Process MLST to get species name for AMRFinderPlus and species-specific tools
