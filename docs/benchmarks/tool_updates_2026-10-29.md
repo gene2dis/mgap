@@ -154,8 +154,8 @@ the same data; within one run every tool still reports the same IDs (D-4).
 
 - **A. Medaka 2.2.2 in a small custom image with the models (recommended).** `docker/medaka/Dockerfile`: `FROM` the
   biocontainer by digest, then `medaka tools download_models` for the 25 consensus models automatic selection can
-  choose plus the bacterial model, published like the Autocycler image (you push it to Docker Hub; config pins the
-  digest; Singularity pulls it with `docker://`). Tested here as a local scratch image (`HOME=/`, non-root, no network:
+  choose plus the bacterial model, published like the Autocycler image: you push it to Docker Hub (e.g. `microds/medaka`), and
+  `conf/modules.config` references it by digest alone, which Docker and Singularity/Apptainer both accept. Tested here as a local scratch image (`HOME=/`, non-root, no network:
   the bacterial model loads from the image). `--medaka_model` keeps its role (now with 2.x names); the default
   becomes "the model the reads name". A new `--medaka_bacteria` (default off) adds `--bacteria`; on by default would
   fail SCL25346 and SCL4611 at polishing (their headers name no compatible model) unless `--medaka_model` is set, and on
@@ -194,6 +194,10 @@ variant` once: CARD 4.0.1 has mutation types 6.0.3 cannot parse, so its point-mu
 - **6.0.5–6.0.8 lose real genes.** In the four samples that lose CTX-M-65 or AAC(6')-Ib-cr5 (each on a contig of 1.2–2.4 kb) RGI logs `Requested rname contig does not exist! Please check your
 FASTA file` from `nudge_strict_to_perfect`, whose exception handler only logs the error, so the ORF's hits are
   dropped. The new `Contig` column is the contig name (`contig_28`) instead of the ORF ID (`contig_28_37`).
+- Table layout: 6.0.4's header and `Contig` values (the ORF ID) equal 6.0.3's, so the report's RGI parser
+  (`bin/mgap_report.py`: `Contig`, `Best_Hit_ARO`, `Cut_Off`, `Model_type`, `SNPs_in_Best_Hit_ARO`, ...) needs no change;
+  the 25 new rows are `protein variant model` hits with the mutation in `SNPs_in_Best_Hit_ARO`. 6.0.5 onward add
+  `AST_Source` and put the contig name in `Contig`.
 - Module: 6.0.4 needs only the container and version strings; 6.0.8 would also need `--num_threads` → `-n`
   (`rgi main` exits 2 on `--num_threads`). `RGI_LOAD`'s `app.Database.build_databases()` works in both.
 - Images: `quay.io/biocontainers/rgi:6.0.4--pyh05cac1d_1` (sha256:a1e6ca20…, `rgi main --version` 6.0.4, depot 200).
