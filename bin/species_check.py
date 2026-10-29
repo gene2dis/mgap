@@ -6,7 +6,8 @@ Combines the MLST scheme (mlst's automatic choice), the skani call against the c
 Kraken2 for ONT) and the species given in the samplesheet. Rules (D-13, D-14, D-15; docs/output.md):
 
 - skani call: the best reference hit with ANI >= --min-ani and query aligned fraction >= --min-af.
-    When the next hit of another organism is within --ani-margin ANI, the call is ambiguous.
+    When the next hit of another organism (or another species, both without one) is within --ani-margin
+    ANI, the call is ambiguous.
 - agree: the reference species is typed by the MLST scheme (its mlst_schemes) and maps to the same
     organism as the scheme. refine: typed by the scheme, but the species maps to another organism (or
     none), e.g. Bordetella pertussis under bordetella_3 (no organism of its own, D-14) or Staphylococcus
@@ -14,7 +15,7 @@ Kraken2 for ONT) and the species given in the samplesheet. Rules (D-13, D-14, D-
 - override: the scheme does not type the reference species (a K. pneumoniae typed as
     ecoli_achtman_4); routing follows the reference species and mlst is run again with its first scheme.
 - reference: mlst found no scheme; routing follows the reference species (mlst again with its scheme).
-- ambiguous: two references of different organisms within the margin; the MLST organism is kept when
+- ambiguous: two references of different organisms (or two species without one) within the margin; the MLST organism is kept when
     it is one of them, else none.
 - mlst: no reference call (no --species_refs, or no hit); routing follows the MLST scheme. With a
     read classification, its genus is compared with the MLST genus (a difference is flagged).
@@ -170,8 +171,10 @@ def species_call(hits, refs, min_ani, min_af, margin):
     if not passing:
         return None, None
     top = passing[0]
+    organism = refs[top["accession"]]["organism"]
     for other in passing[1:]:
-        if refs[other["accession"]]["organism"] == refs[top["accession"]]["organism"]:
+        # a relative of the same organism routes the same; species without one are told apart
+        if organism and refs[other["accession"]]["organism"] == organism:
             continue
         if top["ani"] - other["ani"] < margin:
             return top, other

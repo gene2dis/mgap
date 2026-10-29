@@ -86,6 +86,7 @@ def mlst(scheme, st="1"):
 
 KPN, KVA, ECO, SAU, SAR = "GCF_006364295.1", "GCF_020525545.1", "GCF_000005845.2", "GCF_026167765.1", "GCF_000236925.1"
 BPE, BBR, BMA, BPS = "GCF_004008975.1", "GCF_900636925.1", "GCF_033956065.1", "GCF_030297255.1"
+BPA = "GCF_020735925.1"
 
 
 def test_reference_list_is_consistent():
@@ -100,6 +101,16 @@ def test_reference_list_is_consistent():
             continue
         typed = [ref for ref in refs.values() if scheme in ref["schemes"]]
         assert any(ref["organism"] == organism for ref in typed), scheme
+
+
+def test_rerun_schemes_are_in_the_bundled_mlst(data):
+    """The first scheme is the one mlst re-runs with; it must be in the container's database.
+
+    data/mlst_schemes.txt: ls /usr/local/db/pubmlst in quay.io/biocontainers/mlst:2.25.0--hdfd78af_0
+    """
+    bundled = set((data / "mlst_schemes.txt").read_text().split())
+    first = {ref["species"]: ref["schemes"][0] for ref in sc.read_refs(REFS).values() if ref["schemes"]}
+    assert not {species: scheme for species, scheme in first.items() if scheme not in bundled}
 
 
 def test_d14_schemes_broader_than_their_organism_are_unmapped():
@@ -157,6 +168,10 @@ def test_d14_bordetella_species_chooses_the_organism(run):
     )
     bronchiseptica = run(mlst("bordetella_3"), skani((BBR, 99.9, 95.0), (BPE, 98.9, 80.0)))
     assert (bronchiseptica["decision"], bronchiseptica["organism"]) == ("agree", "")
+    # two species without an organism are still told apart by the margin
+    close = run(mlst("bordetella_3"), skani((BBR, 99.3, 95.0), (BPA, 99.1, 90.0)))
+    assert (close["decision"], close["organism"], close["flagged"]) == ("ambiguous", "", "yes")
+    assert close["species"] == "Bordetella bronchiseptica / Bordetella parapertussis"
     mlst_only = run(mlst("bordetella_3"))
     assert (mlst_only["decision"], mlst_only["organism"]) == ("mlst", "")
 

@@ -616,7 +616,7 @@ MLST's automatic scheme detection can pick the wrong species when two schemes sh
 
 #### Building the reference set
 
-The pipeline never downloads the reference genomes. `accessory_scripts/build_species_refs.py` builds the database once from the accession list in `assets/species_refs.tsv` (columns `accession`, `species`, `strain`, `amrfinder_organism`, `mlst_schemes`; `-` means none: no AMRFinderPlus organism, or no MLST scheme; the first scheme is the one `mlst --scheme` uses when the species check overrides MLST). It needs the [NCBI datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/download-and-install/) command-line tool and skani **0.4.0**, the version the pipeline runs (skani 0.4 sketches cannot be read by older versions; the script stops on any other version). skani can be the pipeline's own container:
+The pipeline never downloads the reference genomes. `accessory_scripts/build_species_refs.py` builds the database once from the accession list in `assets/species_refs.tsv` (columns `accession`, `species`, `strain`, `amrfinder_organism`, `mlst_schemes`; `-` means none: no AMRFinderPlus organism, or no MLST scheme; the first scheme is the one `mlst --scheme` uses when the species check overrides MLST, so it must be a scheme of the pipeline's mlst 2.25.0, or of `--mlst_datadir` when given). It needs the [NCBI datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/download-and-install/) command-line tool and skani **0.4.0**, the version the pipeline runs (skani 0.4 sketches cannot be read by older versions; the script stops on any other version). skani can be the pipeline's own container:
 
 ```bash
 DB=/path/to/dbs/skani/species_refs/$(date +%F)
@@ -635,7 +635,7 @@ nextflow run gene2dis/mgap --input samplesheet.csv --outdir results --seq_type i
 
 #### How the species is decided
 
-Each annotated sample gets one decision, written to `pipeline_info/species_check.tsv` ([output docs](output.md#species-check)): the closest reference counts as a species call at 95 % ANI or more over at least 50 % of the sample's assembly, unless a reference of another AMRFinderPlus organism is within 0.5 ANI points (`ambiguous`). When the call is a species the MLST scheme does not type (a _K. pneumoniae_ typed as `ecoli_achtman_4`), the sample is routed by the reference call and mlst runs again with that species' scheme; a warning names the sample. Without a call, MLST decides, and the read classification (Bracken, Kraken2 on ONT) and the samplesheet `species` are compared with it. The thresholds are `SPECIES_CHECK` arguments; to change them, give a config with `-c`:
+Each annotated sample gets one decision, written to `pipeline_info/species_check.tsv` ([output docs](output.md#species-check)): the closest reference counts as a species call at 95 % ANI or more over at least 50 % of the sample's assembly, unless a reference of another AMRFinderPlus organism (or, between species without one, another species) is within 0.5 ANI points (`ambiguous`). When the call is a species the MLST scheme does not type (a _K. pneumoniae_ typed as `ecoli_achtman_4`), the sample is routed by the reference call and mlst runs again with that species' scheme; a warning names the sample. Without a call, MLST decides, and the read classification (Bracken, Kraken2 on ONT) and the samplesheet `species` are compared with it. The thresholds are `SPECIES_CHECK` arguments; to change them, give a config with `-c`:
 
 ```groovy
 process {
