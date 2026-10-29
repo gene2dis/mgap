@@ -203,6 +203,21 @@ def parse_genomad(genomad_result, sample):
     return genomad_parsed
 
 
+def mlst_file(input_folder, sample):
+    """
+    The sample's mlst table: the re-run with the reference species' scheme when the species check
+    overrode MLST (rerun_scheme in pipeline_info/species_check.tsv), else the automatic <sample>.tsv.
+    """
+    mlst_dir = input_folder + "/" + sample + "/annotation/mlst/"
+    species_check = input_folder + "/pipeline_info/species_check.tsv"
+    if os.path.isfile(species_check):
+        rows = pd.read_csv(species_check, sep="\t", dtype=str).fillna("")
+        schemes = rows.loc[rows["sample"] == sample, "rerun_scheme"]
+        if len(schemes) and schemes.iloc[0] and os.path.isfile(mlst_dir + sample + "." + schemes.iloc[0] + ".tsv"):
+            return mlst_dir + sample + "." + schemes.iloc[0] + ".tsv"
+    return mlst_dir + sample + ".tsv"
+
+
 def parse_annotation(input_folder, sample):
     """
     Function to parse the annotation results of MGAP. Steps that did not
@@ -221,7 +236,7 @@ def parse_annotation(input_folder, sample):
     annotation_dir = input_folder + "/" + sample + "/annotation/"
 
     checkm2_out = parse_if_present(parse_checkm2, annotation_dir + "checkm2/" + sample + "_checkm2_report.tsv")
-    mlst_out = parse_if_present(parse_mlst, annotation_dir + "mlst/" + sample + ".tsv")
+    mlst_out = parse_if_present(parse_mlst, mlst_file(input_folder, sample))
     bakta_out = parse_if_present(parse_bakta, annotation_dir + "bakta/" + sample + ".tsv")
     amrfinder_out = parse_if_present(parse_amrfinder, annotation_dir + "amrfinder/" + sample + ".tsv")
     # geNomad publishes its whole output folder; the summaries are in <sample>_summary/

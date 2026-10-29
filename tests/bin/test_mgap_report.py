@@ -459,6 +459,22 @@ def test_typing_disagreement_first_and_no_second_call(tmp_path, data):
     assert "Genus check" not in page
 
 
+def test_shigella_reads_agree_with_escherichia(tmp_path):
+    """Kraken2/Bracken name E. coli reads Shigella at times; as in species_check.py, that is not a disagreement."""
+    mlst = tmp_path / "EC1.mlst.tsv"
+    mlst.write_text("EC1.fasta\tecoli_achtman_4\t131\tadk(53)\n")
+    bracken = tmp_path / "EC1.bracken.tsv"
+    bracken.write_text(
+        "name\ttaxonomy_id\ttaxonomy_lvl\tkraken_assigned_reads\tadded_reads\tnew_est_reads\tfraction_total_reads\n"
+        "Shigella flexneri\t623\tS\t1000\t0\t1000\t0.6\n"
+        "Escherichia coli\t562\tS\t600\t0\t600\t0.4\n"
+    )
+    rows = [("EC1", "mlst", mlst), ("EC1", "bracken", bracken)]
+    run_info = {"mlst_organisms": {"ecoli_achtman_4": "Escherichia"}}
+    run = report.RunData(report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows)), run_info)
+    assert run.species_disagreement("EC1") is None
+
+
 def test_species_check_sets_the_organism_and_typing_columns(tmp_path, data):
     """species_check.tsv: SCL2461 overridden to K. pneumoniae (mlst re-run: no ST, two phoE hits), 100.1 agrees."""
     mlst = tmp_path / "SCL2461.mlst.tsv"
@@ -505,8 +521,12 @@ def test_build_manifest_finds_species_check(tmp_path):
     (tmp_path / "pipeline_info" / "species_check.tsv").write_text("sample\n")
     rows = build_report_manifest.manifest_rows(tmp_path, None)
     assert [row["tool"] for row in rows] == ["species_check"]
-    # an mlst re-run replaces the automatic result, whatever the scheme's name sorts as
-    for sample, rerun in (("S1", "vcholerae_2"), ("S2", None)):
+    # the mlst re-run named in species_check.tsv replaces the automatic result; S2's re-run table is left over
+    # from an earlier run into the same outdir and is ignored
+    (tmp_path / "pipeline_info" / "species_check.tsv").write_text(
+        "sample\trerun_scheme\nS1\tvcholerae_2\nS2\t\nS3\tklebsiella\n"
+    )
+    for sample, rerun in (("S1", "vcholerae_2"), ("S2", "klebsiella"), ("S3", None)):
         (tmp_path / sample / "annotation" / "mlst").mkdir(parents=True)
         (tmp_path / sample / "annotation" / "mlst" / f"{sample}.tsv").write_text("x\tecoli_achtman_4\t1\n")
         if rerun:
@@ -514,7 +534,8 @@ def test_build_manifest_finds_species_check(tmp_path):
     mlst = [
         Path(row["file"]).name for row in build_report_manifest.manifest_rows(tmp_path, None) if row["tool"] == "mlst"
     ]
-    assert mlst == ["S1.vcholerae_2.tsv", "S2.tsv"]
+    # S3: no re-run table (its scheme was missing from --mlst_datadir), so the automatic result
+    assert mlst == ["S1.vcholerae_2.tsv", "S2.tsv", "S3.tsv"]
 
 
 def test_database_versions_in_overview(tmp_path, data):

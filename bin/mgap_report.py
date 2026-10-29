@@ -104,6 +104,8 @@ CHECKM2_MIN_COMPLETENESS = 90.0
 CHECKM2_MAX_CONTAMINATION = 5.0
 # A second species above this share of the reads is flagged on the sample card
 SECOND_SPECIES_WARN = 5.0
+# read-classifier genus names compared as another genus with the MLST genus (as in bin/species_check.py)
+GENUS_ALIASES = {"Shigella": "Escherichia"}
 # Taxa shown by name in the Kraken2/Bracken chart; the rest are summed as "Other"
 TOP_TAXA = 7
 HEATMAP_COLUMN = 34  # px per sample in the resistance heatmaps
@@ -757,7 +759,8 @@ class RunData:
         return organism.split("_")[0] if organism else None
 
     def species_disagreement(self, sample):
-        """A note when the MLST genus differs from the GTDB-Tk or read-based genus."""
+        """A note when the MLST genus differs from the GTDB-Tk or read-based genus (Shigella counts as Escherichia,
+        as in bin/species_check.py)."""
         mlst_genus = self.mlst_genus(sample)
         if not mlst_genus:
             return None
@@ -767,7 +770,8 @@ class RunData:
             others.append(("GTDB-Tk", gtdb.split("_")[0]))
         taxa = self.taxa.get(sample)
         if taxa is not None and len(taxa):
-            others.append((self.taxa_source[sample], taxa.iloc[0]["name"].split()[0]))
+            read_genus = taxa.iloc[0]["name"].split()[0]
+            others.append((self.taxa_source[sample], GENUS_ALIASES.get(read_genus, read_genus)))
         differing = [f"{source} {genus}" for source, genus in others if genus != mlst_genus]
         if differing:
             if sample in self.species_check:
