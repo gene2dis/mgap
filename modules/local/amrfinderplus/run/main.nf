@@ -4,8 +4,8 @@ process AMRFINDERPLUS_RUN {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/ncbi-amrfinderplus:4.2.5--hf69ffd2_0':
-        'biocontainers/ncbi-amrfinderplus:4.2.5--hf69ffd2_0' }"
+        'https://depot.galaxyproject.org/singularity/ncbi-amrfinderplus:4.2.7--hf69ffd2_0':
+        'biocontainers/ncbi-amrfinderplus:4.2.7--hf69ffd2_0' }"
 
     input:
     tuple val(meta), path(fasta_nuc), path(fasta_prot), path(gff3), val(species)
@@ -67,7 +67,7 @@ process AMRFINDERPLUS_RUN {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        amrfinderplus: 4.2.5
+        amrfinderplus: 4.2.7
         amrfinderplus-database: stub-db
     END_VERSIONS
     """

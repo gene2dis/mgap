@@ -138,6 +138,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - nf-schema: `2.2.0` (replacing nf-validation)
 - Autocycler suite image: `microds/autocycler:0.8.0` (digest-pinned; see `docs/usage.md` for the full version list)
 - fastplong: `0.3.0` → `0.7.1` (`biocontainers/fastplong:0.7.1`, bioconda build `h43da1c4_0`; biocontainers publishes 0.7.1 only under this tag). nf-core module updated (0.4.1 upstream, now reporting its version through a topic tuple) and patched to 0.7.1 (`modules/nf-core/fastplong/fastplong.diff`). Filter thresholds unchanged; in the benchmark 0.7.1 kept the same bases within 0.1 point on current R10.4.1 sup data and 0.3 points fewer on an older R10.4 sample
+- AMRFinderPlus: `4.2.5` → `4.2.7` (`biocontainers/ncbi-amrfinderplus:4.2.7--hf69ffd2_0`), a bug-fix release (a crash when an HMM hit has no BLAST alignment, ncbi/amr#180). Outputs unchanged: all result and mutation tables of the 10-sample Illumina benchmark set were byte-identical to 4.2.5 with database 2025-12-03.1 (`docs/benchmarks/tool_updates_2026-10-29.md`)
 
 ## v1.0dev - [date]
 
