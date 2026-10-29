@@ -100,6 +100,11 @@ workflow PIPELINE_INITIALISATION {
         log.warn("--max_coverage applies only to --seq_type illumina: ONT reads are not subsampled (for Flye, see --flye_asm_coverage). Ignored.")
     }
 
+    // medaka_consensus ignores --bacteria when a model is given with -m
+    if (params.medaka_model && params.medaka_bacteria.toString().toBoolean()) {
+        log.warn("--medaka_bacteria is ignored when --medaka_model is set: Medaka polishes with ${params.medaka_model}.")
+    }
+
     //
     // Warn about annotation steps skipped because their database is not provided
     //

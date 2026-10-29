@@ -2,10 +2,9 @@ process MEDAKA {
     tag "$meta.id"
     label 'process_high'
 
+    // container: medaka 2.2.2 with its model files (docker/medaka/Dockerfile), pinned by
+    // digest in conf/modules.config
     conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/medaka:1.11.3--py310h87e71ce_0' :
-        'biocontainers/medaka:1.11.3--py310h87e71ce_0' }"
 
     input:
     tuple val(meta), path(reads), path(assembly)
@@ -67,7 +66,7 @@ process MEDAKA {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        medaka: 1.11.3
+        medaka: 2.2.2
     END_VERSIONS
     """
 }
