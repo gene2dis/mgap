@@ -199,6 +199,7 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 | `--checkm2_db`             | `null`  | Path to CheckM2 database file (CheckM2 is skipped if unset)                                                    |
 | `--amrfinder_db`           | `null`  | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset; also needs `--bakta_db`)                    |
 | `--genomad_db`             | `null`  | Path to geNomad database (geNomad is skipped if unset)                                                         |
+| `--species_refs`           | `null`  | Path to the species reference database (skani; species check is skipped and routing follows MLST if unset)     |
 | `--kraken2db`              | `null`  | Path to Kraken2 database (required to run contamination detection)                                             |
 | `--brackendb`              | `null`  | Path to Bracken database (Illumina only; falls back to `--kraken2db`)                                          |
 | `--bracken_read_length`    | `null`  | Bracken `-r` for every sample; if unset, per sample from the read length and the database's kmer distributions |

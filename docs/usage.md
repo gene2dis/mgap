@@ -601,6 +601,29 @@ nextflow run gene2dis/mgap \
 
 See the [mlst documentation](https://github.com/tseemann/mlst#updating-the-database) for instructions on building or updating these databases.
 
+### Species check (skani)
+
+MLST's automatic scheme detection can pick the wrong species when two schemes share alleles (a _K. pneumoniae_ ST11 typed as `ecoli_achtman_4` ST14464). With `--species_refs`, every sample's annotation FASTA is also compared with [skani](https://github.com/bluenote-1577/skani) against a curated reference set: one NCBI type or reference genome for each AMRFinderPlus organism, plus close relatives that MLST or Kraken2 confuse with them. Without `--species_refs` the check is skipped (a launch warning says so) and routing follows the MLST scheme alone.
+
+#### Building the reference set
+
+The pipeline never downloads the reference genomes. `accessory_scripts/build_species_refs.py` builds the database once from the accession list in `assets/species_refs.tsv` (columns `accession`, `species`, `strain`, `amrfinder_organism`, `mlst_schemes`; `-` means none: no AMRFinderPlus organism, or no MLST scheme; the first scheme is the one `mlst --scheme` uses when the species check overrides MLST). It needs the [NCBI datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/download-and-install/) command-line tool and skani **0.4.0**, the version the pipeline runs (skani 0.4 sketches cannot be read by older versions; the script stops on any other version). skani can be the pipeline's own container:
+
+```bash
+DB=/path/to/dbs/skani/species_refs/$(date +%F)
+accessory_scripts/build_species_refs.py \
+    --refs assets/species_refs.tsv \
+    --outdir $DB \
+    --skani "docker run --rm -u $(id -u):$(id -g) -v $DB:/db -w /db quay.io/biocontainers/skani:0.4.0--hec9b1f2_0 skani"
+```
+
+The 53 genomes download in under a minute (about 62 MB) and are sketched in a second. The output folder holds `genomes/` (one FASTA per accession), `sketch/` (the skani database), a copy of `species_refs.tsv` (the pipeline reads species, organisms and schemes from this copy, so a database always matches the list it was built from) and `version.txt` (build date, skani and datasets versions, genome count, MD5 of the list), which the run report shows as the database version. To add a species, add a row to `assets/species_refs.tsv` (an NCBI RefSeq accession; the AMRFinderPlus organism only when `amrfinder --list_organisms` has one and the [AMRFinderPlus documentation](https://github.com/ncbi/amr/wiki/Running-AMRFinderPlus#--organism-option) says it covers the species) and build a new folder.
+
+```bash
+nextflow run gene2dis/mgap --input samplesheet.csv --outdir results --seq_type illumina \
+    --species_refs /path/to/dbs/skani/species_refs/2026-10-29 -profile docker
+```
+
 ### SISTR Salmonella Serotyping
 
 [SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serotypes and cgMLST subtypes directly from assemblies. The pipeline runs SISTR **v1.1.3** automatically whenever MLST detects a _Salmonella enterica_ assembly (MLST scheme `senterica_achtman_2`). No additional flags or databases are required — SISTR bundles its own reference data in the container.

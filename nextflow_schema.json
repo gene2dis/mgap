@@ -351,6 +351,14 @@
                     "help_text": "The Bracken database must contain database<N>mers.kmer_distrib for this N. Unset, the pipeline reads each sample's sequenced read length from fastp (read1_before_filtering.total_cycles, e.g. 151) and lists the database's kmer_distrib files (e.g. 100, 150, 300 -> 150); when none is that short it uses the shortest, with a warning.",
                     "fa_icon": "fas fa-ruler"
                 },
+                "species_refs": {
+                    "type": "string",
+                    "description": "Path to the species reference database (skani) built by accessory_scripts/build_species_refs.py. Unset: the species check is skipped and species tools and the AMRFinderPlus organism follow the MLST scheme only.",
+                    "help_text": "The folder holds sketch/ (skani 0.4.0 database), species_refs.tsv (species, AMRFinderPlus organism and MLST schemes of each reference) and version.txt. Each sample's annotation FASTA is searched against it; the species call is combined with the MLST scheme (and Kraken2/Bracken when run) to choose the species tools and the AMRFinderPlus organism. See docs/usage.md.",
+                    "format": "directory-path",
+                    "exists": true,
+                    "fa_icon": "fas fa-database"
+                },
                 "genomad_db": {
                     "type": "string",
                     "description": "Path to geNomad database directory.",

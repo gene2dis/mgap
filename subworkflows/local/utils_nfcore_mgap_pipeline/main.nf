@@ -127,6 +127,16 @@ workflow PIPELINE_INITIALISATION {
     if (!params.genomad_db) {
         log.warn("--genomad_db not provided: skipping geNomad mobile-element detection.")
     }
+    if (!params.species_refs) {
+        log.warn("--species_refs not provided: skipping the species check - species tools and the AMRFinderPlus organism follow the MLST scheme only.")
+    }
+    else {
+        ['sketch', 'species_refs.tsv'].each { name ->
+            if (!file("${params.species_refs}/${name}").exists()) {
+                error("--species_refs ${params.species_refs}: no ${name} in the folder. Build it with accessory_scripts/build_species_refs.py (docs/usage.md).")
+            }
+        }
+    }
 
 }
 
@@ -218,6 +228,7 @@ def helpMessage() {
         --bakta_db          Path to Bakta database (also required for AMRFinderPlus)
         --amrfinder_db      Path to AMRFinderPlus database
         --genomad_db        Path to geNomad database
+        --species_refs      Path to the species reference database (skani; species check)
         --gtdbtk_db         Path to GTDB-Tk database (required with --run_gtdbtk)
         --rgi_db            Path to RGI/CARD database (required with --run_rgi)
         --mobsuite_db       Path to MOB-suite database (optional with --run_mobsuite)

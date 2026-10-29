@@ -59,7 +59,7 @@ RUN_PATTERNS = {
 EXCLUDE = re.compile(r"hAMRonization")
 NON_SAMPLE_DIRS = {"pipeline_info", "gtdbtk", "multiqc", "report"}
 # database paths, as the pipeline lists them in run_info.json (mlst_datadir included)
-DATABASE_PARAMS = re.compile(r"(db|_datadir)$")
+DATABASE_PARAMS = re.compile(r"(db|_datadir|^species_refs)$")
 
 
 def bakta_version(base):
@@ -82,11 +82,20 @@ def card_version(base):
     return f"CARD {versions[-1]}" if versions else None
 
 
+def species_refs_version(base):
+    """version.txt of accessory_scripts/build_species_refs.py: built date, genome count, skani version."""
+    fields = dict(line.split(": ", 1) for line in (base / "version.txt").read_text().splitlines() if ": " in line)
+    if not fields.get("built"):
+        return None
+    return f"{fields['built']} ({fields.get('genomes')} genomes, skani {fields.get('skani_version')})"
+
+
 # database parameter -> reader of the version file in its folder
 DATABASE_VERSIONS = {
     "bakta_db": bakta_version,
     "amrfinder_db": lambda base: (base / "version.txt").read_text().strip(),
     "genomad_db": lambda base: (base / "version.txt").read_text().strip(),
+    "species_refs": species_refs_version,
     "gtdbtk_db": gtdbtk_version,
     "rgi_db": card_version,
 }

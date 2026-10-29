@@ -678,6 +678,7 @@ def reportRunInfo(mlst_organisms) {
         mobsuite_db     : params.run_mobsuite.toString().toBoolean(),
         plasmidfinder_db: params.run_plasmidfinder.toString().toBoolean(),
         plassembler_db  : seq_type == 'ont' && params.ont_assembler == 'autocycler',
+        species_refs    : true,
         mlst_datadir    : true
     ]
     def databases = used.findAll { name, is_used -> is_used && params[name] }.collectEntries { name, _is_used -> [ name, params[name].toString() ] }
@@ -712,6 +713,13 @@ def databaseVersion(name, path) {
         }
         if (name in [ 'amrfinder_db', 'genomad_db' ]) {
             return base.resolve('version.txt').text.trim() ?: null
+        }
+        if (name == 'species_refs') {
+            // version.txt written by accessory_scripts/build_species_refs.py ("key: value" lines)
+            def fields = base.resolve('version.txt').readLines()
+                .findAll { line -> line.contains(': ') }
+                .collectEntries { line -> line.split(': ', 2) as List }
+            return fields.built ? "${fields.built} (${fields.genomes} genomes, skani ${fields.skani_version})" : null
         }
         if (name == 'gtdbtk_db') {
             def match = base.resolve('metadata/metadata.txt').text =~ /VERSION_DATA=(\S+)/
