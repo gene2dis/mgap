@@ -687,6 +687,149 @@ nextflow_pipeline {
 
     }
 
+    test("Species check agrees, overrides MLST and flags a sample without a reference hit - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "species_check"
+
+        options "-stub"
+        config "./config/species_check.config"
+
+        when {
+            params {
+                input        = "${projectDir}/tests/data/samplesheet_species_check.csv"
+                seq_type     = "contig"
+                species_refs = "${projectDir}/tests/data/skani"
+                bakta_db     = "${projectDir}/tests/data/stub_db/bakta"
+                amrfinder_db = "${projectDir}/tests/data/stub_db/amrfinderplus"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            def ran = { process, sample -> succeeded.any { it.contains(":${process} (${sample})") } }
+            def nextflow_log = path("${metaDir}/nextflow.log").text
+            def table = path("$outputDir/pipeline_info/species_check.tsv").readLines()*.split('\t', -1)
+            def rows = table.drop(1).collectEntries { row -> [ row[0], [ table[0] as List, row as List ].transpose().collectEntries() ] }
+            def amrfinder = { sample -> path("$outputDir/${sample}/annotation/amrfinder/${sample}-mutations.tsv") }
+            assertAll(
+                { assert workflow.success },
+                { assert ['TEST_AGREE', 'TEST_OVERRIDE', 'TEST_NOHIT'].every { ran('SKANI_SEARCH', it) && ran('SPECIES_CHECK', it) } },
+                // agreement: MLST routing unchanged
+                { assert rows.TEST_AGREE.decision == 'agree' },
+                { assert rows.TEST_AGREE.organism == 'Klebsiella_pneumoniae' },
+                { assert rows.TEST_AGREE.flagged == 'no' },
+                { assert ran('KLEBORATE', 'TEST_AGREE') },
+                // disagreement (the SCL2461 case): routed by the reference call, mlst again with its scheme
+                { assert rows.TEST_OVERRIDE.mlst_scheme == 'ecoli_achtman_4' },
+                { assert rows.TEST_OVERRIDE.mlst_organism == 'Escherichia' },
+                { assert rows.TEST_OVERRIDE.skani_species == 'Klebsiella pneumoniae' },
+                { assert rows.TEST_OVERRIDE.decision == 'override' },
+                { assert rows.TEST_OVERRIDE.organism == 'Klebsiella_pneumoniae' },
+                { assert rows.TEST_OVERRIDE.rerun_scheme == 'klebsiella' },
+                { assert rows.TEST_OVERRIDE.flagged == 'yes' },
+                { assert ran('KLEBORATE', 'TEST_OVERRIDE') },
+                { assert ran('MLST_SCHEME', 'TEST_OVERRIDE') },
+                { assert succeeded.count { it.contains(':MLST_SCHEME ') } == 1 },
+                { assert path("$outputDir/TEST_OVERRIDE/annotation/mlst/TEST_OVERRIDE.klebsiella.tsv").exists() },
+                { assert path("$outputDir/TEST_OVERRIDE/annotation/mlst/TEST_OVERRIDE.tsv").exists() },
+                { assert nextflow_log.contains("Sample 'TEST_OVERRIDE': species check override - MLST scheme ecoli_achtman_4 does not type skani Klebsiella pneumoniae") },
+                // no reference hit: MLST routing, flagged
+                { assert rows.TEST_NOHIT.decision == 'mlst' },
+                { assert rows.TEST_NOHIT.organism == 'Staphylococcus_aureus' },
+                { assert rows.TEST_NOHIT.flagged == 'yes' },
+                { assert rows.TEST_NOHIT.reason.startsWith('no reference hit') },
+                { assert ran('SCCMEC', 'TEST_NOHIT') },
+                { assert !ran('KLEBORATE', 'TEST_NOHIT') },
+                // every sample gets an organism, so a point-mutation report
+                { assert ['TEST_AGREE', 'TEST_OVERRIDE', 'TEST_NOHIT'].every { amrfinder(it).exists() } },
+                { assert rows.keySet() == [ 'TEST_AGREE', 'TEST_NOHIT', 'TEST_OVERRIDE' ] as Set },
+                { assert rows.values().every { it.seq_type == 'contig' } },
+                { assert path("$outputDir/report/mgap_report.html").exists() }
+            )
+        }
+
+    }
+
+    test("Species check without --species_refs: routing follows MLST - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "species_check"
+
+        options "-stub"
+        config "./config/species_check.config"
+
+        when {
+            params {
+                input        = "${projectDir}/tests/data/samplesheet_species_check.csv"
+                seq_type     = "contig"
+                bakta_db     = "${projectDir}/tests/data/stub_db/bakta"
+                amrfinder_db = "${projectDir}/tests/data/stub_db/amrfinderplus"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            def ran = { process, sample -> succeeded.any { it.contains(":${process} (${sample})") } }
+            def nextflow_log = path("${metaDir}/nextflow.log").text
+            def table = path("$outputDir/pipeline_info/species_check.tsv").readLines()*.split('\t', -1)
+            def rows = table.drop(1).collectEntries { row -> [ row[0], [ table[0] as List, row as List ].transpose().collectEntries() ] }
+            assertAll(
+                { assert workflow.success },
+                { assert nextflow_log.contains("--species_refs not provided: skipping the species check") },
+                { assert !succeeded.any { it.contains('SKANI_SEARCH') } },
+                { assert !succeeded.any { it.contains('MLST_SCHEME') } },
+                { assert rows.values().every { it.decision == 'mlst' && it.reason == 'no reference set (--species_refs)' } },
+                // MLST alone routes the ecoli_achtman_4 sample as Escherichia, without Kleborate
+                { assert rows.TEST_OVERRIDE.organism == 'Escherichia' },
+                { assert !ran('KLEBORATE', 'TEST_OVERRIDE') },
+                { assert ran('KLEBORATE', 'TEST_AGREE') },
+                { assert ran('SCCMEC', 'TEST_NOHIT') }
+            )
+        }
+
+    }
+
+    test("Species check in Illumina mode reads the Bracken table - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "species_check"
+
+        options "-stub"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test.csv"
+                seq_type        = "illumina"
+                run_kraken2     = true
+                kraken2db       = "${projectDir}/tests/data/stub_db/kraken2"
+                adjust_coverage = false
+                species_refs    = "${projectDir}/tests/data/skani"
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def table = path("$outputDir/pipeline_info/species_check.tsv").readLines()*.split('\t', -1)
+            def row = [ table[0] as List, table[1] as List ].transpose().collectEntries()
+            assertAll(
+                { assert workflow.success },
+                // the MLST, skani and Bracken outputs of the sample reach the decision
+                { assert TaskArgs.inputFolders(metaDir, 'SPECIES_CHECK') == [ TEST_BFRAGILIS: [ 'mlst', 'skani', 'taxa' ] ] },
+                { assert table.size() == 2 },
+                { assert row.sample == 'TEST_BFRAGILIS' },
+                { assert row.seq_type == 'illumina' },
+                { assert row.decision == 'mlst' }
+            )
+        }
+
+    }
+
     test("RGI loads CARD once per run - stub") {
 
         tag "pipeline"

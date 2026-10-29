@@ -1,0 +1,7 @@
+Ref_file	Query_file	ANI	Align_fraction_ref	Align_fraction_query	Ref_name	Query_name
+genomes/GCF_006364295.1.fna	/work/SCL2461.fasta	99.11	86.35	86.55	NZ_CP040993.1 Klebsiella pneumoniae strain FDAARGOS_775 chromosome, complete genome	contig_1 NODE_1_length_290752_cov_39.151582
+genomes/GCF_020525545.1.fna	/work/SCL2461.fasta	94.56	81.39	80.81	NZ_CP084765.1 Klebsiella variicola subsp. variicola strain F2R9T chromosome, complete genome	contig_1 NODE_1_length_290752_cov_39.151582
+genomes/GCF_020099175.1.fna	/work/SCL2461.fasta	93.81	78.88	78.00	NZ_CP083633.1 Klebsiella quasipneumoniae strain FDAARGOS_1503 chromosome, complete genome	contig_1 NODE_1_length_290752_cov_39.151582
+genomes/GCF_019048125.1.fna	/work/SCL2461.fasta	86.68	36.27	34.45	NZ_CP077293.1 Klebsiella aerogenes strain FDAARGOS 1442 chromosome, complete genome	contig_1 NODE_1_length_290752_cov_39.151582
+genomes/GCF_015139575.1.fna	/work/SCL2461.fasta	84.80	27.14	29.48	NZ_AP022547.1 Klebsiella michiganensis strain THO-011 chromosome, complete genome	contig_1 NODE_1_length_290752_cov_39.151582
+genomes/GCF_900636985.1.fna	/work/SCL2461.fasta	84.56	25.73	27.11	NZ_LR134333.1 Klebsiella oxytoca strain NCTC13727 chromosome 1, complete sequence	contig_1 NODE_1_length_290752_cov_39.151582

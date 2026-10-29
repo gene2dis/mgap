@@ -1,6 +1,7 @@
 //
-// Run species-specific typing tools, chosen by the AMRFinderPlus organism
-// derived from the sample's MLST scheme (getTaxaNames() in workflows/mgap.nf).
+// Run species-specific typing tools, chosen by the AMRFinderPlus organism of the
+// sample's species decision (SPECIES_CHECK in workflows/mgap.nf: the MLST scheme,
+// checked against the skani reference call when --species_refs is set).
 // A new species tool needs a branch here and its module call below.
 //
 

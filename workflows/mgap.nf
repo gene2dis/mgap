@@ -80,6 +80,7 @@ include { ILLUMINA } from '../subworkflows/local/illumina'
 include { ONT } from '../subworkflows/local/ont'
 include { SPECIES_TYPING } from '../subworkflows/local/species_typing'
 include { SAMPLE_STATUS } from '../subworkflows/local/sample_status'
+include { SPECIES_CHECK } from '../modules/local/species/check/main'
 include { missingOutputs } from '../subworkflows/local/sample_status'
 include { SEQKIT_FILTER } from '../modules/local/seqkit/filter/main'
 include { CHECKM2_PREDICT as CHECKM2 } from '../modules/nf-core/checkm2/predict/main'
@@ -106,6 +107,7 @@ include { MGAP_REPORT } from '../modules/local/mgap_report/main'
 //
 include { QUAST } from '../modules/nf-core/quast/main'
 include { MLST } from '../modules/nf-core/mlst/main'
+include { MLST as MLST_SCHEME } from '../modules/nf-core/mlst/main'
 include { SKANI_SEARCH } from '../modules/nf-core/skani/search/main'
 include { BAKTA_BAKTA as BAKTA } from '../modules/nf-core/bakta/bakta/main'
 include { GTDBTK_CLASSIFYWF as GTDBTK} from '../modules/nf-core/gtdbtk/classifywf/main'
@@ -141,6 +143,8 @@ workflow MGAP {
     ch_report_files = channel.empty()
     // Flye's assembly_info.txt per sample (ONT with Flye only): which contigs are circular
     ch_assembly_info = channel.empty()
+    // [ meta, format, report ] top species in the reads (Bracken on Illumina, Kraken2 on ONT), for the species check
+    ch_taxa = channel.empty()
 
     if (params.seq_type == "illumina") {
         //
@@ -162,6 +166,7 @@ workflow MGAP {
         ch_versions = ch_versions.mix(ILLUMINA.out.versions)
         ch_multiqc_files = ch_multiqc_files.mix(ILLUMINA.out.reports)
         ch_report_files = ch_report_files.mix(ILLUMINA.out.report_files)
+        ch_taxa = ILLUMINA.out.taxa
 
     } else if (params.seq_type == "ont") {
         //
@@ -183,6 +188,7 @@ workflow MGAP {
         ch_multiqc_files = ch_multiqc_files.mix(ONT.out.reports)
         ch_report_files = ch_report_files.mix(ONT.out.report_files)
         ch_assembly_info = ONT.out.assembly_info
+        ch_taxa = ONT.out.taxa
 
     } else if (params.seq_type == "contig") {
         //
@@ -272,10 +278,10 @@ workflow MGAP {
         ch_mlst_datadir
     )
     ch_versions = ch_versions.mix(MLST.out.versions.first())
-    ch_report_files = ch_report_files.mix(MLST.out.tsv.map { meta, tsv -> [ meta, 'mlst', tsv ] })
 
     // RUN the species check search (only when --species_refs is provided): each annotation FASTA
     // against the curated reference set (skani database built by accessory_scripts/build_species_refs.py)
+    ch_skani = channel.empty()
     if (params.species_refs) {
         SKANI_SEARCH(
             ch_annotation_fasta,
@@ -288,32 +294,93 @@ workflow MGAP {
                 .map { process, tool, version -> "\"${process}\":\n    ${tool}: ${version}\n" }
                 .collectFile(name: 'skani_versions.yml')
         )
+        ch_skani = SKANI_SEARCH.out.search
     }
 
     //
-    // Process MLST to get species name for AMRFinderPlus and species-specific tools
+    // SPECIES CHECK: one decision per sample (bin/species_check.py; D-13 to D-15, rules in
+    // docs/output.md) from the MLST scheme, the skani call (--species_refs), the top species in the
+    // reads and the samplesheet species. Its organism chooses the species tools and the
+    // AMRFinderPlus organism. Sources are collected per sample; one that did not run is passed as []
     //
-    def taxa_map = getTaxaNames()
-    MLST.out.tsv
-        .map { meta, tsv ->
-            // mlst output is a headerless TSV: FILE, SCHEME, ST, alleles...
-            // Guard against empty/malformed output, and treat the '-'
-            // no-scheme marker as no scheme.
-            def rows = tsv.splitCsv(header: false, sep: "\t")
-            def mlst_scheme = (rows && rows[0].size() > 1) ? rows[0][1] : null
-            if (mlst_scheme == '-') {
-                mlst_scheme = null
-            }
-            [ meta, mlst_scheme ]
+    ch_refs_tsv = file(params.species_refs ? "${params.species_refs}/species_refs.tsv" : "${projectDir}/assets/species_refs.tsv", checkIfExists: true)
+    // one file for every task: first() makes it a value channel
+    ch_mlst_organisms = channel.of(groovy.json.JsonOutput.toJson(getTaxaNames()))
+        .collectFile(name: 'mlst_organisms.json')
+        .first()
+    ch_species_input = MLST.out.tsv
+        .map { meta, tsv -> [ meta.id, 'mlst', [ meta, tsv ] ] }
+        .mix(
+            ch_skani.map { meta, tsv -> [ meta.id, 'skani', tsv ] },
+            ch_taxa.map { meta, format, report -> [ meta.id, 'taxa', [ format, report ] ] }
+        )
+        .groupTuple()
+        // read classifications of samples that did not reach annotation stop here
+        .filter { _id, sources, _outputs -> 'mlst' in sources }
+        .map { _id, sources, outputs ->
+            def by_source = [ sources, outputs ].transpose().collectEntries()
+            def (meta, mlst) = by_source['mlst']
+            def (taxa_format, taxa) = by_source['taxa'] ?: [ '', [] ]
+            [ meta, mlst, by_source['skani'] ?: [], taxa_format, taxa ]
         }
-        .map { meta, taxa ->
-            def organism = taxa ? taxa_map[taxa] : null
-            if (!organism) {
-                log.warn("Sample '${meta.id}': MLST scheme '${taxa ?: 'none'}' has no AMRFinderPlus organism mapping - organism-specific AMR/point-mutation analysis will be skipped.")
+    SPECIES_CHECK( ch_species_input, ch_refs_tsv, ch_mlst_organisms )
+    ch_versions = ch_versions.mix(SPECIES_CHECK.out.versions.first())
+    ch_species_rows = SPECIES_CHECK.out.tsv
+        .map { meta, tsv -> [ meta, tsv.splitCsv(header: true, sep: '\t')[0] ] }
+
+    // [ meta, organism ] for AMRFinderPlus and SPECIES_TYPING; organism is null when there is none
+    species_code_ch = ch_species_rows
+        .map { meta, row ->
+            if (row.flagged == 'yes') {
+                log.warn("Sample '${meta.id}': species check ${row.decision} - ${row.reason}.")
             }
-            [ meta, organism ]
+            if (!row.organism) {
+                def cause = row.decision == 'mlst'
+                    ? "MLST scheme '${row.mlst_scheme == '-' ? 'none' : row.mlst_scheme}' has no AMRFinderPlus organism mapping"
+                    : "the species check (${row.decision}, ${row.species ?: 'no species'}) gives no AMRFinderPlus organism"
+                log.warn("Sample '${meta.id}': ${cause} - organism-specific AMR/point-mutation analysis will be skipped.")
+            }
+            [ meta, row.organism ?: null ]
         }
-        .set { species_code_ch }
+
+    // mlst again with the reference species' scheme where the species check overrides MLST, so the
+    // ST matches the species the sample is routed as; the automatic result stays in species_check.tsv
+    MLST_SCHEME(
+        ch_annotation_fasta
+            .map { meta, fasta -> [ meta.id, meta, fasta ] }
+            .join(ch_species_rows.filter { _meta, row -> row.rerun_scheme }.map { meta, row -> [ meta.id, row.rerun_scheme ] })
+            .map { _id, meta, fasta, scheme -> [ meta + [ mlst_scheme: scheme ], fasta ] },
+        ch_mlst_blastdb,
+        ch_mlst_datadir
+    )
+    ch_versions = ch_versions.mix(MLST_SCHEME.out.versions.first())
+    // the report shows the re-run where there is one, else the automatic result
+    ch_report_files = ch_report_files.mix(
+        MLST.out.tsv
+            .map { meta, tsv -> [ meta.id, meta, tsv ] }
+            .join(ch_species_rows.map { meta, row -> [ meta.id, row.rerun_scheme ] })
+            .filter { _id, _meta, _tsv, rerun_scheme -> !rerun_scheme }
+            .map { _id, meta, tsv, _rerun_scheme -> [ meta, 'mlst', tsv ] },
+        MLST_SCHEME.out.tsv.map { meta, tsv -> [ meta, 'mlst', tsv ] }
+    )
+
+    // pipeline_info/species_check.tsv: every row, with the re-run's ST filled in
+    ch_species_check_tsv = ch_species_rows
+        .map { meta, row -> [ meta.id, 'row', row ] }
+        .mix(MLST_SCHEME.out.tsv.map { meta, tsv ->
+            def fields = tsv.splitCsv(header: false, sep: '\t')
+            [ meta.id, 'rerun_st', fields && fields[0].size() > 2 ? fields[0][2] : '-' ]
+        })
+        .groupTuple()
+        .map { id, sources, values ->
+            def by_source = [ sources, values ].transpose().collectEntries()
+            [ id, by_source['row'] + (by_source['rerun_st'] ? [ rerun_st: by_source['rerun_st'] ] : [:]) ]
+        }
+        .toSortedList { a, b -> a[0] <=> b[0] }
+        .filter { rows -> rows }
+        .map { rows -> ([ rows[0][1].keySet().join('\t') ] + rows.collect { row -> row[1].values().join('\t') }).join('\n') + '\n' }
+        .collectFile(name: 'species_check.tsv', storeDir: "${params.outdir}/pipeline_info")
+    ch_report_run_files = ch_report_run_files.mix(ch_species_check_tsv.map { tsv -> [ '-', 'species_check', tsv ] })
 
     // RUN ANNOTATION (only when --bakta_db is provided)
     // AMRFinderPlus requires Bakta outputs; the other tools read the annotation FASTA.
@@ -527,7 +594,7 @@ workflow MGAP {
 
     //
     // SUBWORKFLOW: species-specific typing (Kleborate, SCCmec, SISTR), routed by
-    // the organism mapped from each sample's MLST scheme
+    // the organism of each sample's species decision (SPECIES_CHECK above)
     //
     SPECIES_TYPING(
         species_code_ch,

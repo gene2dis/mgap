@@ -56,6 +56,8 @@ workflow ILLUMINA {
     READ_QC_GATE ( FASTP.out.reads, FASTP.out.json, 'fastp' )
     ch_qc_reads = READ_QC_GATE.out.reads
     ch_qc_json  = READ_QC_GATE.out.json
+    // [ meta, format, report ] top species in the reads, for the species check (Bracken's species table)
+    ch_taxa = channel.empty()
 
     //
     // MODULE: Run Kraken2/Bracken for contamination detection (optional)
@@ -101,6 +103,7 @@ workflow ILLUMINA {
         )
         ch_versions = ch_versions.mix(BRACKEN.out.versions.first())
         ch_report_files = ch_report_files.mix(BRACKEN.out.reports.map { meta, report -> [ meta, 'bracken', report ] })
+        ch_taxa = BRACKEN.out.reports.map { meta, report -> [ meta, 'bracken', report ] }
     }
 
     //
@@ -147,6 +150,7 @@ workflow ILLUMINA {
     report_files = ch_report_files          // channel: [ val(meta), val(tool), path(file) ] for the run report
     read_stats   = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
     status       = READ_QC_GATE.out.status.mix(ch_spades_failed)  // channel: [ val(meta), map ] skipped and failed samples
+    taxa         = ch_taxa                  // channel: [ val(meta), val('bracken'), path(report) ] species check
     versions     = ch_versions              // channel: [ path(versions.yml) ]
 }
 

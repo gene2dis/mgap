@@ -48,7 +48,10 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   └── quast/                       # Assembly quality metrics: *.tsv
 │   └── annotation/
 │       ├── checkm2/                     # Genome completeness/contamination: *.tsv
-│       ├── mlst/                        # Multi-locus sequence typing: *.tsv
+│       ├── mlst/                        # Multi-locus sequence typing: <sample>.tsv (automatic scheme);
+│       │                                #   <sample>.<scheme>.tsv when the species check overrides MLST
+│       ├── skani/                       # Species check: skani hits against --species_refs: *.tsv
+│       │                                #   (requires --species_refs)
 │       ├── bakta/                       # Genome annotation: *.gff3, *.gbff, *.fna, *.faa, *.tsv, ...
 │       ├── amrfinder/                   # AMR detection: *.tsv
 │       ├── genomad/                     # Mobile genetic elements: *_summary/, *_annotate/, *_find_proviruses/
@@ -62,11 +65,11 @@ All results are written to the directory specified with `--outdir`. The layout b
 │       ├── rgi/                         # Resistance gene prediction: *.txt, *.json
 │       │                                #   (requires --run_rgi true)
 │       ├── kleborate/                   # Klebsiella virulence/resistance: *.txt
-│       │                                #   (auto-triggered when Klebsiella is detected by MLST)
+│       │                                #   (when the species check routes the sample to K. pneumoniae)
 │       ├── sccmec/                      # S. aureus SCCmec typing: *.tsv
-│       │                                #   (auto-triggered when S. aureus is detected by MLST)
+│       │                                #   (when the species check routes the sample to S. aureus)
 │       └── sistr/                       # Salmonella serotype prediction: *.tab, *-allele.{json,fasta}, *-cgmlst.csv
-│                                        #   (auto-triggered when Salmonella is detected by MLST)
+│                                        #   (when the species check routes the sample to Salmonella)
 ├── gtdbtk/                              # GTDB-Tk taxonomic classification (batch, all samples)
 │   ├── gtdbtk.batch.*.summary.tsv       #   (requires --run_gtdbtk true and --gtdbtk_db)
 │   └── gtdbtk.batch.log
@@ -80,6 +83,7 @@ All results are written to the directory specified with `--outdir`. The layout b
     ├── execution_trace_*.txt
     ├── pipeline_dag_*.html
     ├── sample_status.tsv                 # pass, skipped or failed per sample, with reason and key numbers
+    ├── species_check.tsv                 # species decision per annotated sample: MLST, skani, reads, organism used
     └── software_versions.yml
 ```
 
@@ -119,6 +123,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - [QUAST](#quast) - Assembly quality metrics
 - [CheckM2](#checkm2) - Genome completeness and contamination assessment
 - [MLST](#mlst) - Multi-locus sequence typing
+- [Species check](#species-check) - skani against curated references; chooses the AMRFinderPlus organism and species tools
 - [Bakta](#bakta) - Genome annotation
 - [GTDB-Tk](#gtdb-tk) - Taxonomic classification _(optional)_
 - [AMRFinderPlus](#amrfinderplus) - Antimicrobial resistance detection
@@ -372,7 +377,58 @@ This step runs for every `--seq_type`.
 
 </details>
 
-[MLST](https://github.com/tseemann/mlst) scans genome assemblies against PubMLST schemes to determine sequence types. The MLST result is also used internally to identify species for AMRFinderPlus organism-specific analysis and to trigger species-specific tools (Kleborate, sccmec, SISTR).
+[MLST](https://github.com/tseemann/mlst) scans genome assemblies against PubMLST schemes to determine sequence types. The scheme it chooses is one input of the [species check](#species-check), which sets the AMRFinderPlus organism and the species-specific tools (Kleborate, sccmec, SISTR). When the species check overrides the automatic scheme, mlst runs again with the reference species' scheme (`--scheme`) and writes `<sample>.<scheme>.tsv` next to the automatic `<sample>.tsv`; the run report shows the re-run.
+
+### Species check
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/skani/`
+  - `*.tsv`: the five best skani hits of the annotation FASTA against `--species_refs` (reference file, ANI, aligned fraction of the reference and of the sample). Only with `--species_refs`.
+- `pipeline_info/species_check.tsv`: one row per annotated sample (columns below).
+
+</details>
+
+The species check decides, per sample, which AMRFinderPlus organism (`--organism`, which turns on point mutations) and which species tools (Kleborate for _K. pneumoniae_, sccmec for _S. aureus_, SISTR for _Salmonella_) the sample gets. MLST alone can choose the wrong scheme when two schemes share alleles (a _K. pneumoniae_ ST11 was typed `ecoli_achtman_4` ST14464 and got the _Escherichia_ organism and no Kleborate), so with `--species_refs` every annotation FASTA is also compared with [skani](https://github.com/bluenote-1577/skani) against a curated set of NCBI reference genomes ([building it](usage.md#species-check-skani)). The decision (`bin/species_check.py`):
+
+- **Reference call**: the best reference with ANI ≥ 95 % (the usual species boundary) over ≥ 50 % of the sample's assembly. When the next reference of another organism is within 0.5 ANI points (the _Bordetella_ references, and _B. mallei_ and _B. pseudomallei_, are 98.7–99.5 % ANI apart), the call is `ambiguous`.
+- `agree`: the reference species is typed by the MLST scheme and maps to the same organism. Routing is unchanged.
+- `refine`: the reference species is typed by the MLST scheme but maps to another organism or to none (an _S. argenteus_ typed by `saureus`; _B. bronchiseptica_ by `bordetella_3`, whose organism is only _B. pertussis_). The organism follows the reference species.
+- `override`: the MLST scheme does not type the reference species. Routing follows the reference species, and mlst runs again with its scheme.
+- `reference`: mlst found no scheme; routing follows the reference species (mlst again with its scheme).
+- `ambiguous`: the MLST organism is kept when it is one of the two candidates, else there is none.
+- `mlst`: no reference call (no `--species_refs`, or no reference passes the thresholds); routing follows the MLST scheme. With a read classification (Bracken on Illumina, Kraken2 on ONT), its top species' genus is compared with the MLST genus; a difference is flagged but does not change the routing.
+- `samplesheet`: no reference call and no organism from MLST; the samplesheet `species` gives the organism.
+
+`campylobacter_nonjejuni*` and `bordetella_3` give no organism from MLST alone (D-14): the schemes type species the AMRFinderPlus organism is not curated for (_C. lari_, _C. upsaliensis_ …; _B. parapertussis_, _B. bronchiseptica_), so only a reference call of _C. jejuni_/_C. coli_ or _B. pertussis_ gives them `Campylobacter` or `Bordetella_pertussis`. Flagged samples get a warning in the run log. The thresholds are `SPECIES_CHECK`'s `ext.args` (`--min-ani`, `--min-af`, `--ani-margin`; see [usage](usage.md#species-check-skani)).
+
+`species_check.tsv` columns:
+
+| Column             | Description                                                                                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `sample`           | Sample ID                                                                                                  |
+| `seq_type`         | `illumina`, `ont` or `contig`                                                                              |
+| `mlst_scheme`      | Scheme mlst chose automatically (`-`: none)                                                                |
+| `mlst_st`          | Its sequence type (`-`: none or novel)                                                                     |
+| `mlst_organism`    | AMRFinderPlus organism of that scheme alone (empty: none)                                                  |
+| `skani_species`    | Best reference species (also when below the thresholds; empty without `--species_refs` or without any hit) |
+| `skani_accession`  | Its NCBI accession                                                                                         |
+| `skani_ani`        | ANI to it (%)                                                                                              |
+| `skani_af_ref`     | Aligned fraction of the reference (%)                                                                      |
+| `skani_af_query`   | Aligned fraction of the sample's assembly (%), the one compared with the threshold                         |
+| `skani_next`       | For `ambiguous`: the other candidate and its ANI                                                           |
+| `reads_species`    | Top species in the reads (Illumina: Bracken; ONT: Kraken2; empty in contig mode or without `--kraken2db`)  |
+| `reads_percent`    | Its share: % of the classified reads (Bracken) or of all reads (Kraken2 report)                            |
+| `reads_source`     | `Bracken` or `Kraken2`                                                                                     |
+| `expected_species` | Samplesheet `species` column                                                                               |
+| `species`          | The species call (`a / b` for `ambiguous`; empty when only MLST decided)                                   |
+| `organism`         | AMRFinderPlus organism used (empty: none; no point mutations)                                              |
+| `rerun_scheme`     | Scheme mlst was run again with (`override`, `reference`)                                                   |
+| `rerun_st`         | Sequence type from that re-run                                                                             |
+| `decision`         | `agree`, `refine`, `override`, `reference`, `ambiguous`, `mlst` or `samplesheet`                           |
+| `flagged`          | `yes` when sources disagree or the reference set has no hit for the sample                                 |
+| `reason`           | What the decision rests on, separated by `;`                                                               |
 
 ### Bakta
 
@@ -689,6 +745,7 @@ With more than 100 samples the one-bar-per-sample charts (read QC, species, asse
   - Reports generated by Nextflow: `execution_report_<timestamp>.html`, `execution_timeline_<timestamp>.html`, `execution_trace_<timestamp>.txt` and `pipeline_dag_<timestamp>.html`.
   - `software_versions.yml`: Software versions used in the pipeline run (one entry per process, MultiQC included, plus the pipeline and Nextflow versions).
   - `sample_status.tsv`: one row per samplesheet sample, sorted by sample: whether it passed, was skipped or failed, and why (see below).
+  - `species_check.tsv`: one row per annotated sample, sorted by sample: the species decision that chose its AMRFinderPlus organism and species tools ([Species check](#species-check)).
 
 </details>
 
