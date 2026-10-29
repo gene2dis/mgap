@@ -642,3 +642,87 @@ def test_plasmid_contig_table_names_each_replicon_once(tmp_path, data):
     page = html.read_text()
     assert "IncFIB(pKPHS1)" in page
     assert "IncFIB(pKPHS1), IncFIB(pKPHS1)" not in page
+
+
+# --------------------------------------------------------------------------------------------------
+# ISEScan
+# --------------------------------------------------------------------------------------------------
+
+
+def test_parse_isescan(data):
+    table = report.parse_isescan(data / "SCL2535.isescan.tsv")
+    assert len(table) == 31
+    assert table["isLen"].sum() == 38560
+    assert report.is_complete(table) == 13
+    families = report.is_families(table)
+    # most elements first, ties in natural name order
+    assert list(families.items())[:4] == [("IS3", 10), ("ISNCY", 6), ("IS1", 3), ("IS6", 2)]
+    assert report.is_family_text(families, 2) == "IS3 10, ISNCY 6, ..."
+    assert report.parse_isescan(data / "empty.isescan.tsv").empty
+
+
+def test_isescan_section_summary_and_sheet(tmp_path, data):
+    manifest = write_manifest(
+        tmp_path / "manifest.tsv",
+        [
+            ("SCL2535", "isescan", data / "SCL2535.isescan.tsv"),
+            ("SCL2535", "plasmid_consensus", data / "plasmid" / "SCL2535.plasmid_consensus.tsv"),
+            ("SCL2333", "isescan", data / "empty.isescan.tsv"),
+        ],
+    )
+    html, tsv, xlsx = tmp_path / "report.html", tmp_path / "summary.tsv", tmp_path / "summary.xlsx"
+    report.main(["--manifest", str(manifest), "--html", str(html), "--tsv", str(tsv), "--xlsx", str(xlsx)])
+    page = html.read_text()
+    assert '<section id="isescan"' in page
+    assert "31 (13 complete): IS3 10, ISNCY 6, IS1 3, ..." in page  # sample card
+    assert "none found" in page  # the sample whose table has no element
+    assert "Other families" in page  # 11 families: 7 named in the chart
+    assert "On plasmid contigs" in page
+    assert "On candidate plasmid contigs" in page
+    lines = tsv.read_text().splitlines()
+    rows = {line.split("\t")[0]: dict(zip(lines[0].split("\t"), line.split("\t"))) for line in lines[1:]}
+    assert rows["SCL2535"]["isescan_elements"] == "31"
+    assert rows["SCL2535"]["isescan_complete"] == "13"
+    assert rows["SCL2535"]["isescan_families"].startswith("IS3:10,ISNCY:6,IS1:3,")
+    assert rows["SCL2333"]["isescan_elements"] == "0"
+    assert rows["SCL2333"]["isescan_families"] == ""
+    import openpyxl
+
+    sheet = openpyxl.load_workbook(xlsx)["ISEScan"]
+    assert sheet.max_row == 32  # header + 31 elements of SCL2535
+    assert [cell.value for cell in sheet[1]][:3] == ["sample", "seqID", "family"]
+
+
+def test_isescan_elements_on_plasmid_contigs(tmp_path, data):
+    run = report.RunData(
+        {
+            "isescan": {"SCL2535": [data / "SCL2535.isescan.tsv"]},
+            "plasmid_consensus": {"SCL2535": [data / "plasmid" / "SCL2535.plasmid_consensus.tsv"]},
+        },
+        {},
+    )
+    # contigs 15, 20, 21, 25 and 31 are called plasmid and carry 13 of the 31 elements
+    assert report.is_on_plasmids(run, "SCL2535") == 13
+    # candidates (one tool only): contig_22 with 3 elements, contig_29 and contig_38 with 1 each
+    assert report.is_on_plasmids(run, "SCL2535", "candidate") == 5
+    without = report.RunData({"isescan": {"SCL2535": [data / "SCL2535.isescan.tsv"]}}, {})
+    assert report.is_on_plasmids(without, "SCL2535") is None
+    # a consensus table without a contig column (hand-built or older) is skipped, not an error
+    broken = tmp_path / "consensus.tsv"
+    broken.write_text("consensus\nplasmid\n")
+    no_contig = report.RunData(
+        {"isescan": {"SCL2535": [data / "SCL2535.isescan.tsv"]}, "plasmid_consensus": {"SCL2535": [broken]}}, {}
+    )
+    assert report.is_on_plasmids(no_contig, "SCL2535") is None
+
+
+def test_isescan_large_run_uses_distributions(tmp_path, data):
+    rows = [(f"S{i}", "isescan", data / "SCL2535.isescan.tsv") for i in range(report.LARGE_RUN + 1)]
+    manifest = write_manifest(tmp_path / "manifest.tsv", rows)
+    html = tmp_path / "report.html"
+    report.main(["--manifest", str(manifest), "--html", str(html), "--tsv", str(tmp_path / "summary.tsv")])
+    page = html.read_text()
+    section = page[page.index('<section id="isescan"') :]
+    section = section[: section.index("</section>")]
+    assert "Complete IS elements" in section
+    assert "Other families" not in section

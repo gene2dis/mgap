@@ -59,6 +59,24 @@ class TaskArgs {
         return folders
     }
 
+    /** Returns the sorted names of the files staged (as symlinks, in any folder) into the tasks of the process */
+    static List<String> stagedNames(metaDir, String process) {
+        def workDir = Paths.get(metaDir.toString()).resolveSibling('work')
+        def rows = Paths.get(metaDir.toString(), "trace.csv").readLines()
+        def header = rows[0].split('\t') as List
+        def names = [] as SortedSet
+        rows.drop(1).each { line ->
+            def cols = line.split('\t')
+            def matcher = cols[header.indexOf('name')] =~ /:([A-Z0-9_]+)(?: \((.+)\))?$/
+            if (matcher && matcher[0][1] == process) {
+                Files.walk(taskDir(workDir, cols[header.indexOf('hash')])).withCloseable { stream ->
+                    stream.filter { Files.isSymbolicLink(it) }.forEach { names << it.fileName.toString() }
+                }
+            }
+        }
+        return names as List
+    }
+
     private static Path taskDir(Path workDir, String hash) {
         def (prefix, rest) = hash.tokenize('/')
         def dir = Files.list(workDir.resolve(prefix)).withCloseable { stream ->

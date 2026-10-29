@@ -29,6 +29,8 @@ nextflow_pipeline {
                 { assert succeeded.any { it.contains('QUAST') } },
                 { assert succeeded.any { it.contains('MLST') } },
                 { assert succeeded.any { it.contains('MGAP_REPORT') } },
+                // ISEScan is off by default (D-9)
+                { assert !succeeded.any { it.contains('ISESCAN') } },
                 { assert path("$outputDir/report/mgap_report.html").exists() },
                 { assert path("$outputDir/report/mgap_summary.tsv").exists() },
                 { assert path("$outputDir/report/mgap_summary.xlsx").exists() },
@@ -510,6 +512,39 @@ nextflow_pipeline {
 
     }
 
+    test("ISEScan with --run_isescan, published and read by the report - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "isescan"
+
+        options "-stub"
+
+        when {
+            params {
+                input       = "${projectDir}/assets/samplesheet_test_contig.csv"
+                seq_type    = "contig"
+                run_isescan = true
+                outdir      = "$outputDir"
+            }
+        }
+
+        then {
+            def sample = 'TEST_BFRAGILIS_CONTIG'
+            def table = path("$outputDir/${sample}/annotation/isescan/${sample}.isescan.tsv")
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.trace.succeeded().any { it.name.contains("ISESCAN (${sample})") } },
+                // the stub writes the header-only table of a sample without IS elements
+                { assert table.readLines() == [ table.readLines()[0] ] },
+                { assert table.readLines()[0].tokenize('\t')[0..2] == [ 'seqID', 'family', 'cluster' ] },
+                { assert "${sample}.isescan.tsv".toString() in TaskArgs.stagedNames(metaDir, 'MGAP_REPORT') },
+                { assert path("$outputDir/pipeline_info/software_versions.yml").yaml.keySet().any { it.endsWith('ISESCAN') } }
+            )
+        }
+
+    }
+
     test("MLST scheme routes samples to species tools - stub") {
 
         tag "pipeline"
@@ -614,6 +649,7 @@ nextflow_pipeline {
                 run_gtdbtk   = true
                 gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
                 run_mobsuite = true
+                run_isescan  = true
                 run_rgi      = true
                 rgi_db       = "${projectDir}/tests/data/stub_db/card"
                 outdir       = "$outputDir"
@@ -625,7 +661,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'PLASMIDFINDER', 'PLASMID_CONSENSUS'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'PLASMIDFINDER', 'PLASMID_CONSENSUS', 'ISESCAN'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -650,6 +686,7 @@ nextflow_pipeline {
                 run_gtdbtk   = true
                 gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
                 run_mobsuite = true
+                run_isescan  = true
                 run_rgi      = true
                 rgi_db       = "${projectDir}/tests/data/stub_db/card"
                 outdir       = "$outputDir"
@@ -661,7 +698,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'PLASMIDFINDER', 'PLASMID_CONSENSUS'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'PLASMIDFINDER', 'PLASMID_CONSENSUS', 'ISESCAN'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -688,6 +725,7 @@ nextflow_pipeline {
                 run_gtdbtk   = true
                 gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
                 run_mobsuite = true
+                run_isescan  = true
                 run_rgi      = true
                 rgi_db       = "${projectDir}/tests/data/stub_db/card"
                 outdir       = "$outputDir"
@@ -699,7 +737,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS', 'ISESCAN'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -724,6 +762,7 @@ nextflow_pipeline {
                 run_gtdbtk   = true
                 gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
                 run_mobsuite = true
+                run_isescan  = true
                 run_rgi      = true
                 rgi_db       = "${projectDir}/tests/data/stub_db/card"
                 outdir       = "$outputDir"
@@ -735,7 +774,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS', 'ISESCAN'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -762,6 +801,7 @@ nextflow_pipeline {
                 run_gtdbtk   = true
                 gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
                 run_mobsuite = true
+                run_isescan  = true
                 run_rgi      = true
                 rgi_db       = "${projectDir}/tests/data/stub_db/card"
                 outdir       = "$outputDir"
@@ -773,7 +813,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'KLEBORATE', 'SCCMEC', 'SISTR', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'BAKTA', 'KLEBORATE', 'SCCMEC', 'SISTR', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS', 'ISESCAN'] as Set },
                 { assert annotation.errors == [] }
             )
         }
@@ -798,6 +838,7 @@ nextflow_pipeline {
                 run_gtdbtk   = true
                 gtdbtk_db    = "${projectDir}/tests/data/stub_db/gtdbtk"
                 run_mobsuite = true
+                run_isescan  = true
                 run_rgi      = true
                 rgi_db       = "${projectDir}/tests/data/stub_db/card"
                 outdir       = "$outputDir"
@@ -809,7 +850,7 @@ nextflow_pipeline {
             def annotation = AnnotationInput.check(metaDir)
             assertAll(
                 { assert workflow.success },
-                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'KLEBORATE', 'SCCMEC', 'SISTR', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS'] as Set },
+                { assert annotation.tools == ['CHECKM2', 'MLST', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON', 'RGI_MAIN', 'KLEBORATE', 'SCCMEC', 'SISTR', 'PLASMIDFINDER', 'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS', 'ISESCAN'] as Set },
                 { assert annotation.errors == [] }
             )
         }

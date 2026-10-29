@@ -15,7 +15,7 @@ class AnnotationInput {
     static final List<String> TOOLS = [
         'CHECKM2', 'MLST', 'BAKTA', 'GTDBTK', 'GENOMAD', 'MOBSUITE_RECON',
         'RGI_MAIN', 'KLEBORATE', 'SCCMEC', 'SISTR', 'PLASMIDFINDER',
-        'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS'
+        'PLASMID_CIRCULAR', 'PLASMID_CONSENSUS', 'ISESCAN'
     ]
 
     /** Returns [ tools: processes that ran, errors: what was wrong ] */

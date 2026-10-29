@@ -72,10 +72,11 @@ assembly. The annotation steps include:
 6. Antibiotic resistance gene prediction ([`RGI`](https://github.com/arpcard/rgi)) - optional, uses CARD database for resistome analysis
 7. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
 8. Plasmid detection, typing, and reconstruction ([`MOB-suite`](https://github.com/phac-nml/mob-suite)) - optional
-9. Species-specific analyses:
-   - _Klebsiella_: [`Kleborate`](https://github.com/klebgenomics/Kleborate)
-   - _S. aureus_: SCCmec classification using [`sccmec`](https://github.com/rpetit3/sccmec)
-   - _Salmonella_: Serotype prediction using [`SISTR`](https://github.com/phac-nml/sistr_cmd)
+9. Insertion sequence (IS element) detection ([`ISEScan`](https://github.com/xiezhq/ISEScan)) - optional
+10. Species-specific analyses:
+    - _Klebsiella_: [`Kleborate`](https://github.com/klebgenomics/Kleborate)
+    - _S. aureus_: SCCmec classification using [`sccmec`](https://github.com/rpetit3/sccmec)
+    - _Salmonella_: Serotype prediction using [`SISTR`](https://github.com/phac-nml/sistr_cmd)
 
 ## Quick Start
 
@@ -185,6 +186,7 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 | `--run_rgi`           | `false`    | Enable RGI antimicrobial resistance gene prediction                                    |
 | `--run_mobsuite`      | `false`    | Enable MOB-suite plasmid detection and reconstruction (MOB-typer on circular contigs)  |
 | `--run_plasmidfinder` | `true`     | Enable PlasmidFinder plasmid replicon detection                                        |
+| `--run_isescan`       | `false`    | Enable ISEScan insertion sequence (IS element) detection                               |
 | `--skip_report`       | `false`    | Skip the run report (`report/`: offline HTML, summary TSV and XLSX)                    |
 | `--run_berokka`       | `true`     | Trim the end overlap of Flye's circular contigs with Berokka (ONT, Flye only)          |
 | `--run_dnaapler`      | `true`     | Enable contig reorientation with Dnaapler (ONT only)                                   |

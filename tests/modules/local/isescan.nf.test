@@ -1,0 +1,100 @@
+nextflow_process {
+
+    name "Test ISESCAN module"
+    script "../../../modules/local/isescan/main.nf"
+    process "ISESCAN"
+
+    tag "modules"
+    tag "modules_local"
+    tag "isescan"
+
+    // tests/data/isescan/is5.fasta: contig_1 is 5,057 bp of SCL2535 (contig_15:23,477-28,533) with a
+    // complete IS5-family element at 2,001-3,057, contig_2 4,000 bp of its chromosome without one;
+    // no_is.fasta is that contig_2 alone
+
+    test("ISESCAN - finds the IS5 element") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file("${projectDir}/tests/data/isescan/is5.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def rows = path(process.out.tsv[0][1]).readLines().collect { it.split('\t', -1) as List }
+            def header = rows[0]
+            def element = [ header, rows[1] ].transpose().collectEntries()
+            assertAll(
+                { assert process.success },
+                { assert rows.size() == 2 },
+                { assert element.subMap([ 'seqID', 'family', 'isBegin', 'isEnd', 'isLen', 'type' ]) ==
+                    [ seqID: 'contig_1', family: 'IS5', isBegin: '2001', isEnd: '3057', isLen: '1057', type: 'c' ] },
+                { assert path(process.out.summary[0][1]).text.contains('IS5') },
+                { assert path(process.out.gff[0][1]).readLines()[0] == '##gff-version 3' },
+                { assert path(process.out.is_fna[0][1]).readLines()[0].startsWith('>contig_1_2001_3057_') },
+                { assert process.out.orf_fna.size() == 1 && process.out.orf_faa.size() == 1 },
+                { assert path(process.out.versions[0]).text.contains('isescan: 1.7.3') }
+            )
+        }
+
+    }
+
+    test("ISESCAN - no IS element gives a header-only table") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file("${projectDir}/tests/data/isescan/no_is.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def lines = path(process.out.tsv[0][1]).readLines()
+            assertAll(
+                { assert process.success },
+                // ISEScan writes no table without a hit; the module writes ISEScan's header
+                { assert lines.size() == 1 },
+                { assert lines[0].split('\t')[0..2] == [ 'seqID', 'family', 'cluster' ] },
+                { assert lines[0].split('\t').size() == 24 },
+                { assert process.out.summary == [] },
+                { assert process.out.is_fna == [] }
+            )
+        }
+
+    }
+
+    test("ISESCAN - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file("${projectDir}/tests/data/isescan/is5.fasta", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.tsv[0][1]).readLines().size() == 1 },
+                { assert process.out.versions }
+            )
+        }
+
+    }
+
+}

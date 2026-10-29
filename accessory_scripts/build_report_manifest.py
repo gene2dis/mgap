@@ -45,6 +45,7 @@ SAMPLE_PATTERNS = {
     "mobsuite_contigs": ["annotation/mobsuite/contig_report.txt"],
     "mobsuite_mobtyper": ["annotation/mobsuite/mobtyper_results.txt"],
     "plasmid_consensus": ["annotation/plasmid_consensus/*.plasmid_consensus.tsv"],
+    "isescan": ["annotation/isescan/*.isescan.tsv"],
     "kleborate": ["annotation/kleborate/*_output.txt"],
     "sistr": ["annotation/sistr/*.tab"],
     "sccmec": ["annotation/sccmec/{sample}.tsv"],
