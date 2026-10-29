@@ -1,3 +1,4 @@
+import functools
 import os
 import pandas as pd
 import argparse
@@ -203,18 +204,27 @@ def parse_genomad(genomad_result, sample):
     return genomad_parsed
 
 
+@functools.lru_cache(maxsize=None)
+def rerun_schemes(input_folder):
+    """
+    {sample: scheme} of the mlst re-runs in pipeline_info/species_check.tsv (read once per run folder).
+    """
+    species_check = input_folder + "/pipeline_info/species_check.tsv"
+    if not os.path.isfile(species_check):
+        return {}
+    rows = pd.read_csv(species_check, sep="\t", dtype=str).fillna("")
+    return {row["sample"]: row["rerun_scheme"] for _, row in rows.iterrows() if row["rerun_scheme"]}
+
+
 def mlst_file(input_folder, sample):
     """
     The sample's mlst table: the re-run with the reference species' scheme when the species check
     overrode MLST (rerun_scheme in pipeline_info/species_check.tsv), else the automatic <sample>.tsv.
     """
     mlst_dir = input_folder + "/" + sample + "/annotation/mlst/"
-    species_check = input_folder + "/pipeline_info/species_check.tsv"
-    if os.path.isfile(species_check):
-        rows = pd.read_csv(species_check, sep="\t", dtype=str).fillna("")
-        schemes = rows.loc[rows["sample"] == sample, "rerun_scheme"]
-        if len(schemes) and schemes.iloc[0] and os.path.isfile(mlst_dir + sample + "." + schemes.iloc[0] + ".tsv"):
-            return mlst_dir + sample + "." + schemes.iloc[0] + ".tsv"
+    scheme = rerun_schemes(input_folder).get(sample)
+    if scheme and os.path.isfile(mlst_dir + sample + "." + scheme + ".tsv"):
+        return mlst_dir + sample + "." + scheme + ".tsv"
     return mlst_dir + sample + ".tsv"
 
 

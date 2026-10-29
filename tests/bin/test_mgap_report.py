@@ -501,7 +501,7 @@ def test_species_check_sets_the_organism_and_typing_columns(tmp_path, data):
         note.startswith("Species check (override): MLST scheme ecoli_achtman_4") for note in run.warnings("SCL2461")
     )
     page = report.section_typing(run).html()
-    assert "Species check" in page and "Closest reference (skani)" in page and "Species used" in page
+    assert "Species check" in page and "Closest reference (skani)" in page and "Organism used" in page
     assert '<span class="flag">override</span>' in page
     # flagged first
     assert page.index("#sample-SCL2461") < page.index("#sample-100_2e_1")

@@ -69,6 +69,9 @@ import plotly.graph_objects as go
 from plotly.offline import get_plotlyjs
 from plotly.subplots import make_subplots
 
+# read-classifier genus names that are another genus's (Shigella is Escherichia), as in the species check
+from species_check import GENUS_ALIASES
+
 try:
     import yaml
 except ImportError:  # software_versions.yml is then skipped with a warning
@@ -104,8 +107,6 @@ CHECKM2_MIN_COMPLETENESS = 90.0
 CHECKM2_MAX_CONTAMINATION = 5.0
 # A second species above this share of the reads is flagged on the sample card
 SECOND_SPECIES_WARN = 5.0
-# read-classifier genus names compared as another genus with the MLST genus (as in bin/species_check.py)
-GENUS_ALIASES = {"Shigella": "Escherichia"}
 # Taxa shown by name in the Kraken2/Bracken chart; the rest are summed as "Other"
 TOP_TAXA = 7
 HEATMAP_COLUMN = 34  # px per sample in the resistance heatmaps
@@ -775,7 +776,7 @@ class RunData:
         differing = [f"{source} {genus}" for source, genus in others if genus != mlst_genus]
         if differing:
             if sample in self.species_check:
-                return f"Species used ({mlst_genus}) disagrees with " + ", ".join(differing)
+                return f"Organism used ({mlst_genus}) disagrees with " + ", ".join(differing)
             return f"MLST scheme {self.mlst[sample]['scheme']} ({mlst_genus}) disagrees with " + ", ".join(differing)
         return None
 
@@ -1648,7 +1649,7 @@ def section_typing(run):
             ("sample", "Sample"),
             ("scheme", "MLST scheme"),
             ("st", "ST"),
-            ("mlst_species", "Species used" if run.species_check else "Species from MLST"),
+            ("mlst_species", "Organism used" if run.species_check else "Species from MLST"),
             ("skani", "Closest reference (skani)"),
             ("skani_ani", "skani ANI (%)"),
             ("decision", "Species check"),
