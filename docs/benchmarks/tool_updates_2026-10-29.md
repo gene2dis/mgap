@@ -34,17 +34,14 @@ consensus instead (the Autocycler 0.8.0 consensus of the same reads from Phase 9
 | GTDB-Tk (`GTDBTK`, nf-core)              | 2.5.2            | 2.8.0                              | 2.5.2 cannot read the only database on the server (GTDB r232 needs ≥ 2.7.0). 2.8.0 classified the routing set in Phase 8a (1 h 20 min, peak RSS 176.7 GB of 200 GB).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Update to 2.8.0 (a fix, not an option): patch the nf-core module's container.                                                                                                                           |
 | PlasmidFinder (`PLASMIDFINDER`, nf-core) | 2.1.6 `py310_1`  | 2.1.6 `py314_2` rebuild; 3.0.3     | Rebuild: same 2019 database (identical checksum), identical tables on all 11 Phase 9a fixtures. 3.0.3 is a rewrite (`plasmidfinder` command, BeOne JSON output) and bundles **no** database.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Stay on 2.1.6. Whether a newer database changes the calls cannot be tested without one: supply a PlasmidFinder database if you want that checked.                                                       |
 
-### Decisions needed
+### Decisions (2026-10-29)
 
-1. Medaka: option A (custom image with the models, pushed by you to Docker Hub), B (stay on 1.11.3) or C (2.2.2
-   biocontainer as is, `--medaka_model` required for anything but `sup_v5.2.0` data); and, with A, whether
-   `--bacteria` is on by default (it fails samples whose reads do not name a compatible basecaller model, see below).
-2. RGI 6.0.4 (recommended), 6.0.8 (not recommended) or stay on 6.0.3.
-3. Dnaapler 1.4.0, AMRFinderPlus 4.2.7: update or not.
-4. Kleborate 3.2.4 `_1`: update or not.
-5. GTDB-Tk 2.8.0 by patching the container (recommended), or `nf-core modules update` (2.7.2 Seqera image, version
-   topics) plus a patch to 2.8.0.
-6. PlasmidFinder: stay on 2.1.6 (recommended); whether you have a newer database to test.
+1. Medaka: option A, `--medaka_bacteria` off by default. Medaka 2.2.2 runs from `docker.io/microds/medaka` (built
+   from `docker/medaka/Dockerfile`, pinned by digest); `--medaka_model` unset means the model named in the reads.
+2. RGI 6.0.4.
+3. GTDB-Tk 2.8.0 through a container patch of the nf-core module.
+4. Dnaapler 1.4.0, AMRFinderPlus 4.2.7 and the Kleborate 3.2.4 `_1` rebuild applied; Mash left as it is.
+5. PlasmidFinder stays on 2.1.6; a newer database was not available to test.
 
 ## U1 · Medaka
 
