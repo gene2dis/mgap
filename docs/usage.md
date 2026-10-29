@@ -14,7 +14,7 @@ The pipeline performs quality control, assembly, annotation (Bakta), taxonomic c
 
 ## Samplesheet input
 
-You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row as shown in the examples below.
+You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with a header row as shown in the examples below.
 
 ```bash
 --input '[path to samplesheet file]'
@@ -40,6 +40,15 @@ TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
 | `fastq_1` | Full path to FastQ file for Illumina short reads 1 or ONT reads. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                |
 | `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz". Leave empty for single-end Illumina or ONT reads.           |
 | `fasta`   | Full path to FASTA file for pre-assembled contigs. Supports `.fasta`, `.fa`, `.fna` extensions (with optional `.gz` compression). Used only for `--seq_type contig` mode.              |
+| `species` | Optional. The species expected for the sample (for example `Klebsiella pneumoniae`, or a genus alone), from MALDI-TOF or the request form. See below.                                  |
+
+The `species` column is recorded in `pipeline_info/species_check.tsv` and compared with the [species check](#species-check-skani): a sample whose reference call (or, without one, MLST genus) differs from it is flagged in the log and the report. It decides the species tools and the AMRFinderPlus organism only when neither the reference set nor MLST gives an organism (decision `samplesheet`), for example a sample whose MLST scheme is not found and which has no close reference. Names are matched to the `species` of `assets/species_refs.tsv`; a species not in that list is recorded but cannot give an organism.
+
+```console
+sample,species,fastq_1,fastq_2
+SCL2461,Klebsiella pneumoniae,SCL2461_R1.fastq.gz,SCL2461_R2.fastq.gz
+SCL2273,,SCL2273_R1.fastq.gz,SCL2273_R2.fastq.gz
+```
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
@@ -623,6 +632,20 @@ The 53 genomes download in under a minute (about 62 MB) and are sketched in a se
 nextflow run gene2dis/mgap --input samplesheet.csv --outdir results --seq_type illumina \
     --species_refs /path/to/dbs/skani/species_refs/2026-10-29 -profile docker
 ```
+
+#### How the species is decided
+
+Each annotated sample gets one decision, written to `pipeline_info/species_check.tsv` ([output docs](output.md#species-check)): the closest reference counts as a species call at 95 % ANI or more over at least 50 % of the sample's assembly, unless a reference of another AMRFinderPlus organism is within 0.5 ANI points (`ambiguous`). When the call is a species the MLST scheme does not type (a _K. pneumoniae_ typed as `ecoli_achtman_4`), the sample is routed by the reference call and mlst runs again with that species' scheme; a warning names the sample. Without a call, MLST decides, and the read classification (Bracken, Kraken2 on ONT) and the samplesheet `species` are compared with it. The thresholds are `SPECIES_CHECK` arguments; to change them, give a config with `-c`:
+
+```groovy
+process {
+    withName: SPECIES_CHECK {
+        ext.args = { "--seq-type ${params.seq_type} --min-ani 96 --min-af 60 --ani-margin 0.5" + (meta.species ? " --expected '${meta.species}'" : '') }
+    }
+}
+```
+
+On the Illumina routing set (Phase 12 validation) the 8 _K. pneumoniae_, _S. aureus_ and _S. enterica_ samples matched their reference at 98.6–99.95 % ANI over 85–94 % of the assembly, with the next species at 89–94.6 %; one search took about 2 s and 35 MB.
 
 ### SISTR Salmonella Serotyping
 

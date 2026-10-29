@@ -716,7 +716,7 @@ nextflow_pipeline {
             def amrfinder = { sample -> path("$outputDir/${sample}/annotation/amrfinder/${sample}-mutations.tsv") }
             assertAll(
                 { assert workflow.success },
-                { assert ['TEST_AGREE', 'TEST_OVERRIDE', 'TEST_NOHIT'].every { ran('SKANI_SEARCH', it) && ran('SPECIES_CHECK', it) } },
+                { assert ['TEST_AGREE', 'TEST_OVERRIDE', 'TEST_NOHIT', 'TEST_SAMPLESHEET'].every { ran('SKANI_SEARCH', it) && ran('SPECIES_CHECK', it) } },
                 // agreement: MLST routing unchanged
                 { assert rows.TEST_AGREE.decision == 'agree' },
                 { assert rows.TEST_AGREE.organism == 'Klebsiella_pneumoniae' },
@@ -743,9 +743,17 @@ nextflow_pipeline {
                 { assert rows.TEST_NOHIT.reason.startsWith('no reference hit') },
                 { assert ran('SCCMEC', 'TEST_NOHIT') },
                 { assert !ran('KLEBORATE', 'TEST_NOHIT') },
+                // samplesheet species: recorded, and used when neither skani nor MLST gives an organism
+                { assert rows.TEST_AGREE.expected_species == 'Klebsiella pneumoniae' },
+                { assert rows.TEST_NOHIT.expected_species == 'Staphylococcus aureus' },
+                { assert rows.TEST_OVERRIDE.expected_species == '' },
+                { assert rows.TEST_SAMPLESHEET.decision == 'samplesheet' },
+                { assert rows.TEST_SAMPLESHEET.organism == 'Salmonella' },
+                { assert ran('SISTR', 'TEST_SAMPLESHEET') },
+                { assert succeeded.count { it.contains(':SISTR ') } == 1 },
                 // every sample gets an organism, so a point-mutation report
-                { assert ['TEST_AGREE', 'TEST_OVERRIDE', 'TEST_NOHIT'].every { amrfinder(it).exists() } },
-                { assert rows.keySet() == [ 'TEST_AGREE', 'TEST_NOHIT', 'TEST_OVERRIDE' ] as Set },
+                { assert ['TEST_AGREE', 'TEST_OVERRIDE', 'TEST_NOHIT', 'TEST_SAMPLESHEET'].every { amrfinder(it).exists() } },
+                { assert rows.keySet() == [ 'TEST_AGREE', 'TEST_NOHIT', 'TEST_OVERRIDE', 'TEST_SAMPLESHEET' ] as Set },
                 { assert rows.values().every { it.seq_type == 'contig' } },
                 { assert path("$outputDir/report/mgap_report.html").exists() }
             )
@@ -783,7 +791,9 @@ nextflow_pipeline {
                 { assert nextflow_log.contains("--species_refs not provided: skipping the species check") },
                 { assert !succeeded.any { it.contains('SKANI_SEARCH') } },
                 { assert !succeeded.any { it.contains('MLST_SCHEME') } },
-                { assert rows.values().every { it.decision == 'mlst' && it.reason == 'no reference set (--species_refs)' } },
+                { assert rows.findAll { it.key != 'TEST_SAMPLESHEET' }.values().every { it.decision == 'mlst' && it.reason == 'no reference set (--species_refs)' } },
+                { assert rows.TEST_SAMPLESHEET.decision == 'samplesheet' },
+                { assert rows.TEST_SAMPLESHEET.organism == 'Salmonella' },
                 // MLST alone routes the ecoli_achtman_4 sample as Escherichia, without Kleborate
                 { assert rows.TEST_OVERRIDE.organism == 'Escherichia' },
                 { assert !ran('KLEBORATE', 'TEST_OVERRIDE') },

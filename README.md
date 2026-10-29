@@ -116,6 +116,8 @@ SAMPLE1,/path/to/sample1.fasta
 SAMPLE2,/path/to/sample2.fa.gz
 ```
 
+An optional `species` column (for example `Klebsiella pneumoniae`, from MALDI-TOF or the request form) is recorded in `pipeline_info/species_check.tsv` and compared with the species check; it chooses the species tools and AMRFinderPlus organism only when neither the reference set (`--species_refs`) nor MLST gives one.
+
 An [example samplesheet](assets/samplesheet.csv) is provided with the pipeline.
 
 **Automatic samplesheet generation:**

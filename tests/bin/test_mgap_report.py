@@ -459,6 +459,50 @@ def test_typing_disagreement_first_and_no_second_call(tmp_path, data):
     assert "Genus check" not in page
 
 
+def test_species_check_sets_the_organism_and_typing_columns(tmp_path, data):
+    """species_check.tsv: SCL2461 overridden to K. pneumoniae (mlst re-run ST11), 100.1 agrees."""
+    mlst = tmp_path / "SCL2461.mlst.tsv"
+    mlst.write_text("SCL2461.fasta\tklebsiella\t11\tgapA(3)\n")
+    rows = [
+        ("100.1", "mlst", data / "100.1.mlst.tsv"),
+        ("SCL2461", "mlst", mlst),
+        ("-", "gtdbtk", data / "gtdbtk.bac120.summary.tsv"),
+        ("-", "species_check", data / "species_check.tsv"),
+    ]
+    run_info = {"mlst_organisms": {"senterica_achtman_2": "Salmonella", "ecoli_achtman_4": "Escherichia"}}
+    run = report.RunData(report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows)), run_info)
+    assert run.organism("SCL2461") == "Klebsiella_pneumoniae"
+    assert run.organism("100.1") == "Salmonella"
+    # routed as Klebsiella, as GTDB-Tk calls it: no genus disagreement left
+    assert run.species_disagreement("SCL2461") is None
+    assert any(
+        note.startswith("Species check (override): MLST scheme ecoli_achtman_4") for note in run.warnings("SCL2461")
+    )
+    page = report.section_typing(run).html()
+    assert "Species check" in page and "Closest reference (skani)" in page and "Species used" in page
+    assert '<span class="flag">override</span>' in page
+    # flagged first
+    assert page.index("#sample-SCL2461") < page.index("#sample-100_2e_1")
+    summary = report.summary_rows(run).set_index("sample")
+    row = summary.loc["SCL2461"]
+    assert (row["mlst_organism"], row["amrfinder_organism"], row["species_check_decision"]) == (
+        "Escherichia",
+        "Klebsiella_pneumoniae",
+        "override",
+    )
+    assert (row["skani_species"], row["skani_ani"]) == ("Klebsiella pneumoniae", 99.11)
+
+
+def test_build_manifest_finds_species_check(tmp_path):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "accessory_scripts"))
+    import build_report_manifest
+
+    (tmp_path / "pipeline_info").mkdir()
+    (tmp_path / "pipeline_info" / "species_check.tsv").write_text("sample\n")
+    rows = build_report_manifest.manifest_rows(tmp_path, None)
+    assert [row["tool"] for row in rows] == ["species_check"]
+
+
 def test_database_versions_in_overview(tmp_path, data):
     rows = [("-", "software_versions", data / "software_versions.yml")]
     run_info = {

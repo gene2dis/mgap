@@ -54,6 +54,7 @@ SAMPLE_PATTERNS = {
 RUN_PATTERNS = {
     "gtdbtk": ["gtdbtk/*/*.summary.tsv"],
     "sample_status": ["pipeline_info/sample_status.tsv"],
+    "species_check": ["pipeline_info/species_check.tsv"],
     "software_versions": ["pipeline_info/software_versions.yml"],
 }
 EXCLUDE = re.compile(r"hAMRonization")
