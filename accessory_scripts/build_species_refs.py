@@ -58,7 +58,9 @@ def read_refs(path):
 
 
 def run(command, **kwargs):
-    print("+ " + " ".join(shlex.quote(part) for part in command), file=sys.stderr, flush=True)
+    # the NCBI API key is not echoed
+    shown = ["***" if index and command[index - 1] == "--api-key" else part for index, part in enumerate(command)]
+    print("+ " + " ".join(shlex.quote(part) for part in shown), file=sys.stderr, flush=True)
     return subprocess.run(command, check=True, **kwargs)
 
 
