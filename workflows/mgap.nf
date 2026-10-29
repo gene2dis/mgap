@@ -308,26 +308,25 @@ workflow MGAP {
         ? ch_mlst_skani.join(ch_skani.map { meta, tsv -> [ meta.id, tsv ] })
         : ch_mlst_skani.map { id, meta, tsv -> [ id, meta, tsv, [] ] }
     def reads_classified = params.seq_type in [ 'illumina', 'ont' ] && params.run_kraken2.toString().toBoolean() && params.kraken2db
+    // each side packed in one list: join's remainder pads a missing side with a single null
+    ch_mlst_skani = ch_mlst_skani.map { id, meta, tsv, skani -> [ id, [ meta, tsv, skani ] ] }
     ch_species_input = (reads_classified
         // remainder: a sample without a read classification still goes on (at the end of the run)
-        ? ch_mlst_skani.join(ch_taxa.map { meta, format, report -> [ meta.id, format, report ] }, remainder: true)
-        : ch_mlst_skani.map { id, meta, tsv, skani -> [ id, meta, tsv, skani, null, null ] })
+        ? ch_mlst_skani.join(ch_taxa.map { meta, format, report -> [ meta.id, [ format, report ] ] }, remainder: true)
+        : ch_mlst_skani.map { id, sample -> [ id, sample, null ] })
         // read classifications of samples that did not reach annotation stop here
-        .filter { _id, meta, _mlst, _skani, _format, _taxa -> meta }
-        .map { _id, meta, mlst, skani, taxa_format, taxa -> [ meta, mlst, skani, taxa_format ?: '', taxa ?: [] ] }
+        .filter { _id, sample, _taxa -> sample }
+        .map { _id, sample, taxa -> sample + (taxa ?: [ '', [] ]) }
     SPECIES_CHECK( ch_species_input, ch_refs_tsv, ch_mlst_organisms )
     ch_versions = ch_versions.mix(SPECIES_CHECK.out.versions.first())
     ch_species_rows = SPECIES_CHECK.out.tsv
-        .map { meta, tsv -> [ meta, tsv.splitCsv(header: true, sep: '\t')[0] ] }
+        .map { meta, tsv -> [ meta, checkRerunScheme(tsv.splitCsv(header: true, sep: '\t')[0]) ] }
 
     // [ meta, organism ] for AMRFinderPlus and SPECIES_TYPING; organism is null when there is none
     species_code_ch = ch_species_rows
         .map { meta, row ->
             if (row.flagged == 'yes') {
                 log.warn("Sample '${meta.id}': species check ${row.decision} - ${row.reason}.")
-            }
-            if (row.rerun_scheme && !rerunScheme(row)) {
-                log.warn("Sample '${meta.id}': MLST scheme '${row.rerun_scheme}' is not in --mlst_datadir - mlst is not run again; the report shows the automatic scheme.")
             }
             if (!row.organism) {
                 def cause = row.decision == 'mlst'
@@ -343,7 +342,7 @@ workflow MGAP {
     MLST_SCHEME(
         ch_annotation_fasta
             .map { meta, fasta -> [ meta.id, meta, fasta ] }
-            .join(ch_species_rows.filter { _meta, row -> rerunScheme(row) }.map { meta, row -> [ meta.id, rerunScheme(row) ] })
+            .join(ch_species_rows.filter { _meta, row -> row.rerun_scheme }.map { meta, row -> [ meta.id, row.rerun_scheme ] })
             .map { _id, meta, fasta, scheme -> [ meta + [ mlst_scheme: scheme ], fasta ] },
         ch_mlst_blastdb,
         ch_mlst_datadir
@@ -353,7 +352,7 @@ workflow MGAP {
     ch_report_files = ch_report_files.mix(
         MLST.out.tsv
             .map { meta, tsv -> [ meta.id, meta, tsv ] }
-            .join(ch_species_rows.map { meta, row -> [ meta.id, rerunScheme(row) ] })
+            .join(ch_species_rows.map { meta, row -> [ meta.id, row.rerun_scheme ] })
             .filter { _id, _meta, _tsv, rerun_scheme -> !rerun_scheme }
             .map { _id, meta, tsv, _rerun_scheme -> [ meta, 'mlst', tsv ] },
         MLST_SCHEME.out.tsv.map { meta, tsv -> [ meta, 'mlst', tsv ] }
@@ -594,7 +593,7 @@ workflow MGAP {
     //
     SPECIES_TYPING(
         ch_species_rows.map { meta, row ->
-            [ meta, row.organism && !(row.species ==~ /(?i)klebsiella aerogenes/) ? row.organism : null ]
+            [ meta, row.organism && !row.species.toLowerCase().contains('klebsiella aerogenes') ? row.organism : null ]
         },
         ch_annotation_fasta
     )
@@ -823,11 +822,20 @@ def databaseVersion(name, path) {
 }
 
 //
-// The scheme mlst runs again with after a species-check override, or null: a --mlst_datadir built
-// with older mlst may not have it (the datadir holds one folder per scheme)
+// A species check row whose mlst re-run scheme is not in --mlst_datadir (built with older mlst; one
+// folder per scheme): no re-run, and the reason and the log say so
 //
-def rerunScheme(row) {
-    row.rerun_scheme && (!params.mlst_datadir || file("${params.mlst_datadir}/${row.rerun_scheme}").isDirectory()) ? row.rerun_scheme : null
+def checkRerunScheme(row) {
+    def scheme = row.rerun_scheme
+    if (!scheme || !params.mlst_datadir || file("${params.mlst_datadir}/${scheme}").isDirectory()) {
+        return row
+    }
+    log.warn("Sample '${row.sample}': MLST scheme '${scheme}' is not in --mlst_datadir - mlst is not run again; the report shows the automatic scheme.")
+    def note = "mlst not re-run: ${scheme} is not in --mlst_datadir"
+    def reason = row.reason.contains("mlst re-run with ${scheme}")
+        ? row.reason.replace("mlst re-run with ${scheme}", note)
+        : [ row.reason, note ].findAll { text -> text }.join('; ')
+    return row + [ rerun_scheme: '', reason: reason ]
 }
 
 /*

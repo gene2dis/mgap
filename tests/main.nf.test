@@ -797,6 +797,8 @@ nextflow_pipeline {
                 { assert rows.TEST_OVERRIDE.decision == 'override' },
                 { assert rows.TEST_OVERRIDE.organism == 'Klebsiella_pneumoniae' },
                 { assert rows.TEST_OVERRIDE.rerun_st == '' },
+                { assert rows.TEST_OVERRIDE.rerun_scheme == '' },
+                { assert rows.TEST_OVERRIDE.reason.endsWith('routed by the reference; mlst not re-run: klebsiella is not in --mlst_datadir') },
                 { assert ran('KLEBORATE', 'TEST_OVERRIDE') },
                 { assert !path("$outputDir/TEST_OVERRIDE/annotation/mlst/TEST_OVERRIDE.klebsiella.tsv").exists() }
             )
