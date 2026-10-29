@@ -141,6 +141,7 @@ Major refactoring to align with nf-core best practices and modern Nextflow patte
 - AMRFinderPlus: `4.2.5` → `4.2.7` (`biocontainers/ncbi-amrfinderplus:4.2.7--hf69ffd2_0`), a bug-fix release (a crash when an HMM hit has no BLAST alignment, ncbi/amr#180). Outputs unchanged: all result and mutation tables of the 10-sample Illumina benchmark set were byte-identical to 4.2.5 with database 2025-12-03.1 (`docs/benchmarks/tool_updates_2026-10-29.md`)
 - Dnaapler: `1.3.0` → `1.4.0` (`biocontainers/dnaapler:1.4.0--pyhdfd78af_0`, the version the Autocycler image already has): reads compressed input and fixes the start coordinate when the `largest`/`mystery`/`nearest` fallbacks pick a CDS on the negative strand. The reoriented SCL10571 assembly was byte-identical to 1.3.0's
 - Kleborate container: `3.2.4--pyhdfd78af_0` → `3.2.4--pyhdfd78af_1`, the same Kleborate rebuilt with Kaptive 3.2.2 (was 3.1.0), minimap2 2.31 and Python 3.14. With `-p kpsc` every output field was identical on three K. pneumoniae samples
+- RGI: `6.0.3` → `6.0.4` (`biocontainers/rgi:6.0.4--pyh05cac1d_1`). 6.0.3 cannot read some CARD 4.0.1 mutation models (`invalid literal for int()` in its log) and skips them, so it reports no point mutations; 6.0.4 keeps every 6.0.3 hit and adds them: on the 10-sample benchmark set 25 new `protein variant model` rows, most also called by AMRFinderPlus (gyrA, parC, murA, uhpT). Not the newest 6.0.8: from 6.0.5 on RGI drops Perfect hits such as CTX-M-65 and AAC(6')-Ib-cr5 on short contigs (`docs/benchmarks/tool_updates_2026-10-29.md`)
 
 ## v1.0dev - [date]
 

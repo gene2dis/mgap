@@ -3,8 +3,8 @@ process RGI_LOAD {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/rgi:6.0.3--pyha8f3691_1':
-        'biocontainers/rgi:6.0.3--pyha8f3691_1' }"
+        'https://depot.galaxyproject.org/singularity/rgi:6.0.4--pyh05cac1d_1':
+        'biocontainers/rgi:6.0.4--pyh05cac1d_1' }"
 
     input:
     path db
@@ -25,7 +25,7 @@ process RGI_LOAD {
         ${args}
 
     # Build the protein FASTA, BLAST and DIAMOND databases now; rgi main would
-    # otherwise build them in every sample's localDB copy (RGI 6.0.3 app.Database).
+    # otherwise build them in every sample's localDB copy (RGI 6.0.4 app.Database).
     python -c "from app.Database import Database; Database(local_database=True).build_databases()"
 
     # build_databases() ignores makeblastdb/diamond exit codes: fail here, not in every RGI_MAIN
@@ -46,7 +46,7 @@ process RGI_LOAD {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        rgi: 6.0.3
+        rgi: 6.0.4
     END_VERSIONS
     """
 }
