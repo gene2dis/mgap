@@ -302,21 +302,19 @@ workflow MGAP {
     ch_mlst_organisms = channel.of(groovy.json.JsonOutput.toJson(getTaxaNames()))
         .collectFile(name: 'mlst_organisms.json')
         .first()
-    ch_species_input = MLST.out.tsv
-        .map { meta, tsv -> [ meta.id, 'mlst', [ meta, tsv ] ] }
-        .mix(
-            ch_skani.map { meta, tsv -> [ meta.id, 'skani', tsv ] },
-            ch_taxa.map { meta, format, report -> [ meta.id, 'taxa', [ format, report ] ] }
-        )
-        .groupTuple()
+    // joined per sample, so each sample goes on as soon as its own sources are done
+    ch_mlst_skani = MLST.out.tsv.map { meta, tsv -> [ meta.id, meta, tsv ] }
+    ch_mlst_skani = params.species_refs
+        ? ch_mlst_skani.join(ch_skani.map { meta, tsv -> [ meta.id, tsv ] })
+        : ch_mlst_skani.map { id, meta, tsv -> [ id, meta, tsv, [] ] }
+    def reads_classified = params.seq_type in [ 'illumina', 'ont' ] && params.run_kraken2.toString().toBoolean() && params.kraken2db
+    ch_species_input = (reads_classified
+        // remainder: a sample without a read classification still goes on (at the end of the run)
+        ? ch_mlst_skani.join(ch_taxa.map { meta, format, report -> [ meta.id, format, report ] }, remainder: true)
+        : ch_mlst_skani.map { id, meta, tsv, skani -> [ id, meta, tsv, skani, null, null ] })
         // read classifications of samples that did not reach annotation stop here
-        .filter { _id, sources, _outputs -> 'mlst' in sources }
-        .map { _id, sources, outputs ->
-            def by_source = [ sources, outputs ].transpose().collectEntries()
-            def (meta, mlst) = by_source['mlst']
-            def (taxa_format, taxa) = by_source['taxa'] ?: [ '', [] ]
-            [ meta, mlst, by_source['skani'] ?: [], taxa_format, taxa ]
-        }
+        .filter { _id, meta, _mlst, _skani, _format, _taxa -> meta }
+        .map { _id, meta, mlst, skani, taxa_format, taxa -> [ meta, mlst, skani, taxa_format ?: '', taxa ?: [] ] }
     SPECIES_CHECK( ch_species_input, ch_refs_tsv, ch_mlst_organisms )
     ch_versions = ch_versions.mix(SPECIES_CHECK.out.versions.first())
     ch_species_rows = SPECIES_CHECK.out.tsv
@@ -327,6 +325,9 @@ workflow MGAP {
         .map { meta, row ->
             if (row.flagged == 'yes') {
                 log.warn("Sample '${meta.id}': species check ${row.decision} - ${row.reason}.")
+            }
+            if (row.rerun_scheme && !rerunScheme(row)) {
+                log.warn("Sample '${meta.id}': MLST scheme '${row.rerun_scheme}' is not in --mlst_datadir - mlst is not run again; the report shows the automatic scheme.")
             }
             if (!row.organism) {
                 def cause = row.decision == 'mlst'
@@ -342,7 +343,7 @@ workflow MGAP {
     MLST_SCHEME(
         ch_annotation_fasta
             .map { meta, fasta -> [ meta.id, meta, fasta ] }
-            .join(ch_species_rows.filter { _meta, row -> row.rerun_scheme }.map { meta, row -> [ meta.id, row.rerun_scheme ] })
+            .join(ch_species_rows.filter { _meta, row -> rerunScheme(row) }.map { meta, row -> [ meta.id, rerunScheme(row) ] })
             .map { _id, meta, fasta, scheme -> [ meta + [ mlst_scheme: scheme ], fasta ] },
         ch_mlst_blastdb,
         ch_mlst_datadir
@@ -352,7 +353,7 @@ workflow MGAP {
     ch_report_files = ch_report_files.mix(
         MLST.out.tsv
             .map { meta, tsv -> [ meta.id, meta, tsv ] }
-            .join(ch_species_rows.map { meta, row -> [ meta.id, row.rerun_scheme ] })
+            .join(ch_species_rows.map { meta, row -> [ meta.id, rerunScheme(row) ] })
             .filter { _id, _meta, _tsv, rerun_scheme -> !rerun_scheme }
             .map { _id, meta, tsv, _rerun_scheme -> [ meta, 'mlst', tsv ] },
         MLST_SCHEME.out.tsv.map { meta, tsv -> [ meta, 'mlst', tsv ] }
@@ -588,10 +589,13 @@ workflow MGAP {
 
     //
     // SUBWORKFLOW: species-specific typing (Kleborate, SCCmec, SISTR), routed by
-    // the organism of each sample's species decision (SPECIES_CHECK above)
+    // the organism of each sample's species decision (SPECIES_CHECK above). AMRFinderPlus's
+    // Klebsiella_pneumoniae also covers K. aerogenes, which is outside Kleborate's KpSC preset
     //
     SPECIES_TYPING(
-        species_code_ch,
+        ch_species_rows.map { meta, row ->
+            [ meta, row.organism && !(row.species ==~ /(?i)klebsiella aerogenes/) ? row.organism : null ]
+        },
         ch_annotation_fasta
     )
     ch_versions = ch_versions.mix(SPECIES_TYPING.out.versions)
@@ -816,6 +820,14 @@ def databaseVersion(name, path) {
         return null
     }
     return null
+}
+
+//
+// The scheme mlst runs again with after a species-check override, or null: a --mlst_datadir built
+// with older mlst may not have it (the datadir holds one folder per scheme)
+//
+def rerunScheme(row) {
+    row.rerun_scheme && (!params.mlst_datadir || file("${params.mlst_datadir}/${row.rerun_scheme}").isDirectory()) ? row.rerun_scheme : null
 }
 
 /*

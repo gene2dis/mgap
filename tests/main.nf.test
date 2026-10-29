@@ -761,6 +761,49 @@ nextflow_pipeline {
 
     }
 
+    test("Species check override with a --mlst_datadir that lacks the scheme: no mlst re-run - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "species_check"
+
+        options "-stub"
+        config "./config/species_check.config"
+
+        when {
+            params {
+                input        = "${projectDir}/tests/data/samplesheet_species_check.csv"
+                seq_type     = "contig"
+                species_refs = "${projectDir}/tests/data/skani"
+                // stands in for a datadir built with older mlst: no klebsiella/ folder
+                mlst_datadir = "${projectDir}/tests/data/skani"
+                bakta_db     = "${projectDir}/tests/data/stub_db/bakta"
+                amrfinder_db = "${projectDir}/tests/data/stub_db/amrfinderplus"
+                outdir       = "$outputDir"
+            }
+        }
+
+        then {
+            def succeeded = workflow.trace.succeeded().collect { it.name }
+            def ran = { process, sample -> succeeded.any { it.contains(":${process} (${sample})") } }
+            def nextflow_log = path("${metaDir}/nextflow.log").text
+            def table = path("$outputDir/pipeline_info/species_check.tsv").readLines()*.split('\t', -1)
+            def rows = table.drop(1).collectEntries { row -> [ row[0], [ table[0] as List, row as List ].transpose().collectEntries() ] }
+            assertAll(
+                { assert workflow.success },
+                { assert !succeeded.any { it.contains('MLST_SCHEME') } },
+                { assert nextflow_log.contains("Sample 'TEST_OVERRIDE': MLST scheme 'klebsiella' is not in --mlst_datadir") },
+                // still routed by the reference call, without the re-run's table
+                { assert rows.TEST_OVERRIDE.decision == 'override' },
+                { assert rows.TEST_OVERRIDE.organism == 'Klebsiella_pneumoniae' },
+                { assert rows.TEST_OVERRIDE.rerun_st == '' },
+                { assert ran('KLEBORATE', 'TEST_OVERRIDE') },
+                { assert !path("$outputDir/TEST_OVERRIDE/annotation/mlst/TEST_OVERRIDE.klebsiella.tsv").exists() }
+            )
+        }
+
+    }
+
     test("Species check without --species_refs: routing follows MLST - stub") {
 
         tag "pipeline"
