@@ -4,8 +4,8 @@ process RGI_MAIN {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/rgi:6.0.3--pyha8f3691_1':
-        'biocontainers/rgi:6.0.3--pyha8f3691_1' }"
+        'https://depot.galaxyproject.org/singularity/rgi:6.0.4--pyh05cac1d_1':
+        'biocontainers/rgi:6.0.4--pyh05cac1d_1' }"
 
     input:
     tuple val(meta), path(fasta)
@@ -50,7 +50,7 @@ process RGI_MAIN {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        rgi: 6.0.3
+        rgi: 6.0.4
     END_VERSIONS
     """
 }

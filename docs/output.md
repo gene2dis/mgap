@@ -279,7 +279,7 @@ This step runs for `--seq_type ont` with `--ont_assembler flye` (default) and `-
 
 </details>
 
-[Medaka](https://github.com/nanoporetech/medaka) polishes the Flye assembly (after Berokka, when it runs) using the original long reads to improve consensus accuracy.
+[Medaka](https://github.com/nanoporetech/medaka) polishes the Flye assembly (after Berokka, when it runs) using the original long reads to improve consensus accuracy. The model it used (named in the reads, `--medaka_model`, or `--medaka_bacteria`) is in the task log (`Using model:`); see [usage](usage.md#medaka-polishing-ont-flye).
 
 This step runs for `--seq_type ont` with `--ont_assembler flye` (default).
 

@@ -227,14 +227,14 @@ nextflow run gene2dis/mgap \
 
 **Autocycler parameters:**
 
-| Parameter                  | Default                                        | Description                                                                                                                   |
-| -------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `--ont_assembler`          | `flye`                                         | ONT assembler: `flye` (Flye + Medaka) or `autocycler` (consensus multi-assembler)                                             |
-| `--medaka_model`           | `null`                                         | Medaka polishing model (Flye mode); should match the basecaller model, see `medaka tools list_models`. Unset = medaka default |
-| `--autocycler_assemblers`  | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler                                                                             |
-| `--autocycler_read_type`   | `ont_r10`                                      | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`                                                                   |
-| `--autocycler_max_contigs` | `50`                                           | Maximum number of contigs to retain per sample during compress and cluster steps                                              |
-| `--plassembler_db`         | `null`                                         | Path to Plassembler database (staged into the Plassembler tasks). Plassembler is skipped if not provided                      |
+| Parameter                  | Default                                        | Description                                                                                                               |
+| -------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `--ont_assembler`          | `flye`                                         | ONT assembler: `flye` (Flye + Medaka) or `autocycler` (consensus multi-assembler)                                         |
+| `--medaka_model`           | `null`                                         | Medaka polishing model (Flye mode); unset = the model named in the read headers, see [Medaka](#medaka-polishing-ont-flye) |
+| `--autocycler_assemblers`  | `raven,miniasm,flye,metamdbg,necat,nextdenovo` | Comma-separated list of assemblers for Autocycler                                                                         |
+| `--autocycler_read_type`   | `ont_r10`                                      | Read type: `ont_r9`, `ont_r10`, `pacbio_clr`, `pacbio_hifi`                                                               |
+| `--autocycler_max_contigs` | `50`                                           | Maximum number of contigs to retain per sample during compress and cluster steps                                          |
+| `--plassembler_db`         | `null`                                         | Path to Plassembler database (staged into the Plassembler tasks). Plassembler is skipped if not provided                  |
 
 **Supported assemblers:** `raven`, `miniasm`, `flye`, `metamdbg`, `necat`, `nextdenovo`, `canu`, `myloasm`, `plassembler`
 
@@ -332,9 +332,36 @@ removes these overlaps in its own `trim` step, so Berokka does not run there. Wh
 | --------------- | ------- | -------------------------------------------------------------------------- |
 | `--run_berokka` | `true`  | Trim the end overlap of Flye's circular contigs with Berokka before Medaka |
 
+### Medaka Polishing (ONT, Flye)
+
+[Medaka](https://github.com/nanoporetech/medaka) (v2.2.2) polishes the Flye assembly with the reads. Its model should
+match the basecaller model that made the reads. With `--medaka_model` unset, Medaka reads the model from the read
+headers (dorado's `RG:Z:` tag after `samtools fastq`, or MinKNOW's `basecall_model_version_id=`); when it cannot (for
+example MinKNOW names such as `dna_r10.4.1_e8.2_400bps_sup-v4.1.0`, or older R10.4 models), it uses its default,
+`r1041_e82_400bps_sup_v5.2.0`, and says so in the task log. Set `--medaka_model` for such reads, e.g.
+`r1041_e82_400bps_sup_v4.1.0`. With a container profile the model must be one of those in the Medaka image (listed in
+`docker/medaka/Dockerfile`: the R10.4.1, R10.3 and R9.4.1 MinION consensus models Medaka can choose from read headers);
+any other model would be downloaded inside the task, which fails, and the sample is recorded as failed at `polishing`.
+
+`--medaka_bacteria` polishes with Medaka's bacterial methylation model, trained for native bacterial DNA. It works for
+reads whose headers name an R10.4.1 400 bps hac or sup basecaller model from v4.2.0 on; for any other reads Medaka stops
+and the sample is recorded as failed at `polishing`. A `--medaka_model` overrides it.
+
+| Parameter           | Default | Description                                                                                        |
+| ------------------- | ------- | -------------------------------------------------------------------------------------------------- |
+| `--medaka_model`    | `null`  | Medaka model (one in the image); unset: the model named in the read headers, else `sup_v5.2.0`     |
+| `--medaka_bacteria` | `false` | Use Medaka's bacterial methylation model (`--bacteria`); needs R10.4.1 400 bps hac/sup v4.2+ reads |
+
+The Medaka container is `docker.io/microds/medaka` (tag 2.2.2), built from `docker/medaka/Dockerfile`: the
+`medaka:2.2.2` biocontainer plus the model files Medaka can choose automatically and the bacterial model, because the
+biocontainer downloads other models on first use, which fails inside a pipeline task (no writable model directory,
+possibly no network). It is pinned by digest alone in `conf/modules.config` (`docker.io/microds/medaka@sha256:bd042304384945677b61f5f9a5a60bd9608e63454456f4c51c812decc4ca9614`). With `-profile conda`, Medaka downloads the
+model it needs into `~/.medaka` on first use. `-profile wave` builds images from the modules' conda environments, except
+for Medaka, which keeps this image.
+
 ### Dnaapler Contig Reorientation (ONT)
 
-[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.3.0) reorients assembled microbial sequences so that each contig starts at a consistent location (e.g., at the _dnaA_, _repA_, or _terL_ gene). This is an optional step enabled by default (`--run_dnaapler true`).
+[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.4.0) reorients assembled microbial sequences so that each contig starts at a consistent location (e.g., at the _dnaA_, _repA_, or _terL_ gene). This is an optional step enabled by default (`--run_dnaapler true`).
 
 The behavior differs depending on the assembler:
 
@@ -378,11 +405,11 @@ nextflow run gene2dis/mgap \
 
 **Advanced GTDB-Tk parameters:**
 
-| Parameter                  | Default | Description                                              |
-| -------------------------- | ------- | -------------------------------------------------------- |
-| `--run_gtdbtk`             | `false` | Enable GTDB-Tk taxonomic classification                  |
-| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk reference database (required if enabled) |
-| `--gtdbtk_pplacer_scratch` | `true`  | Use scratch directory for pplacer to reduce memory usage |
+| Parameter                  | Default | Description                                                                |
+| -------------------------- | ------- | -------------------------------------------------------------------------- |
+| `--run_gtdbtk`             | `false` | Enable GTDB-Tk taxonomic classification                                    |
+| `--gtdbtk_db`              | `null`  | Path to GTDB-Tk reference database, GTDB release 232 (required if enabled) |
+| `--gtdbtk_pplacer_scratch` | `true`  | Use scratch directory for pplacer to reduce memory usage                   |
 
 Assembled genomes are passed to GTDB-Tk via a batchfile, so it works for all `--seq_type` modes regardless of the assembly file extension.
 

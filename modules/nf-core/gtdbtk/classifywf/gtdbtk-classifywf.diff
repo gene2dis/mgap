@@ -2,6 +2,17 @@ Changes in component 'nf-core/gtdbtk/classifywf'
 Changes in 'gtdbtk/classifywf/main.nf':
 --- modules/nf-core/gtdbtk/classifywf/main.nf
 +++ modules/nf-core/gtdbtk/classifywf/main.nf
+@@ -4,8 +4,8 @@
+ 
+     conda "${moduleDir}/environment.yml"
+     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+-        'https://depot.galaxyproject.org/singularity/gtdbtk:2.5.2--pyh1f0d9b5_0':
+-        'biocontainers/gtdbtk:2.5.2--pyh1f0d9b5_0' }"
++        'https://depot.galaxyproject.org/singularity/gtdbtk:2.8.0--pyhdfd78af_0':
++        'biocontainers/gtdbtk:2.8.0--pyhdfd78af_0' }"
+ 
+     input:
+     tuple val(meta)   , path("bins/*")
 @@ -39,9 +39,19 @@
          mkdir pplacer_tmp
      fi
@@ -24,7 +35,18 @@ Changes in 'gtdbtk/classifywf/main.nf':
          --out_dir ${prefix} \\
          --cpus ${task.cpus} \\
 
-'modules/nf-core/gtdbtk/classifywf/environment.yml' is unchanged
+Changes in 'gtdbtk/classifywf/environment.yml':
+--- modules/nf-core/gtdbtk/classifywf/environment.yml
++++ modules/nf-core/gtdbtk/classifywf/environment.yml
+@@ -4,5 +4,5 @@
+   - conda-forge
+   - bioconda
+ dependencies:
+-  - bioconda::gtdbtk=2.5.2
+-  - conda-forge::python=3.13.7
++  - bioconda::gtdbtk=2.8.0
++  - conda-forge::python=3.13.16
+
 'modules/nf-core/gtdbtk/classifywf/meta.yml' is unchanged
 'modules/nf-core/gtdbtk/classifywf/tests/main.nf.test' is unchanged
 'modules/nf-core/gtdbtk/classifywf/tests/main.nf.test.snap' is unchanged

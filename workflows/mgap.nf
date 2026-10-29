@@ -5,7 +5,7 @@
     MLST scheme to AMRFinderPlus organism mapping.
     Keys are mlst scheme names (mlst --longlist); values are AMRFinderPlus
     --organism values (amrfinder --list_organisms). Checked against mlst 2.25.0
-    and AMRFinderPlus 4.2.5 (database 2025-12-03.1); an organism missing from
+    and AMRFinderPlus 4.2.7 (database 2025-12-03.1); an organism missing from
     that list makes amrfinder exit with an error, so only listed ones are used.
     'salmonella' and 'ecoli_2' are pre-2.23 mlst scheme names, kept for
     --mlst_datadir databases built with older mlst.
@@ -661,6 +661,7 @@ def reportRunInfo(mlst_organisms) {
         if (params.ont_assembler == 'flye') {
             parameters.flye_mode = params.flye_mode
             parameters.flye_asm_coverage = params.flye_asm_coverage
+            parameters.medaka_bacteria = params.medaka_bacteria.toString().toBoolean()
         }
         parameters.medaka_model = params.medaka_model
     }
