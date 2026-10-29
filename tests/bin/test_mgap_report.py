@@ -505,6 +505,16 @@ def test_build_manifest_finds_species_check(tmp_path):
     (tmp_path / "pipeline_info" / "species_check.tsv").write_text("sample\n")
     rows = build_report_manifest.manifest_rows(tmp_path, None)
     assert [row["tool"] for row in rows] == ["species_check"]
+    # an mlst re-run replaces the automatic result, whatever the scheme's name sorts as
+    for sample, rerun in (("S1", "vcholerae_2"), ("S2", None)):
+        (tmp_path / sample / "annotation" / "mlst").mkdir(parents=True)
+        (tmp_path / sample / "annotation" / "mlst" / f"{sample}.tsv").write_text("x\tecoli_achtman_4\t1\n")
+        if rerun:
+            (tmp_path / sample / "annotation" / "mlst" / f"{sample}.{rerun}.tsv").write_text(f"x\t{rerun}\t-\n")
+    mlst = [
+        Path(row["file"]).name for row in build_report_manifest.manifest_rows(tmp_path, None) if row["tool"] == "mlst"
+    ]
+    assert mlst == ["S1.vcholerae_2.tsv", "S2.tsv"]
 
 
 def test_database_versions_in_overview(tmp_path, data):

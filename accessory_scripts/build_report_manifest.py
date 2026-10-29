@@ -134,7 +134,12 @@ def manifest_rows(results, citations):
         if sample_dir.name in NON_SAMPLE_DIRS:
             continue
         for tool, patterns in SAMPLE_PATTERNS.items():
-            for path in find(sample_dir, patterns, sample_dir.name):
+            files = find(sample_dir, patterns, sample_dir.name)
+            if tool == "mlst":
+                # after a species-check override, <sample>.<scheme>.tsv (the re-run) is what the report shows
+                rerun = [path for path in files if path.name != f"{sample_dir.name}.tsv"]
+                files = rerun or files
+            for path in files:
                 rows.append({"sample": sample_dir.name, "tool": tool, "file": str(path.resolve())})
     for tool, patterns in RUN_PATTERNS.items():
         for path in find(results, patterns):
