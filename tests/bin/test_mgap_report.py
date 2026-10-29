@@ -460,16 +460,22 @@ def test_typing_disagreement_first_and_no_second_call(tmp_path, data):
 
 
 def test_species_check_sets_the_organism_and_typing_columns(tmp_path, data):
-    """species_check.tsv: SCL2461 overridden to K. pneumoniae (mlst re-run ST11), 100.1 agrees."""
+    """species_check.tsv: SCL2461 overridden to K. pneumoniae (mlst re-run: no ST, two phoE hits), 100.1 agrees."""
     mlst = tmp_path / "SCL2461.mlst.tsv"
-    mlst.write_text("SCL2461.fasta\tklebsiella\t11\tgapA(3)\n")
+    mlst.write_text("SCL2461.fasta\tklebsiella\t-\tgapA(3)\tphoE(1,1)\n")
     rows = [
         ("100.1", "mlst", data / "100.1.mlst.tsv"),
         ("SCL2461", "mlst", mlst),
         ("-", "gtdbtk", data / "gtdbtk.bac120.summary.tsv"),
         ("-", "species_check", data / "species_check.tsv"),
     ]
-    run_info = {"mlst_organisms": {"senterica_achtman_2": "Salmonella", "ecoli_achtman_4": "Escherichia"}}
+    run_info = {
+        "mlst_organisms": {
+            "senterica_achtman_2": "Salmonella",
+            "ecoli_achtman_4": "Escherichia",
+            "klebsiella": "Klebsiella_pneumoniae",
+        }
+    }
     run = report.RunData(report.read_manifest(write_manifest(tmp_path / "manifest.tsv", rows)), run_info)
     assert run.organism("SCL2461") == "Klebsiella_pneumoniae"
     assert run.organism("100.1") == "Salmonella"
@@ -485,11 +491,9 @@ def test_species_check_sets_the_organism_and_typing_columns(tmp_path, data):
     assert page.index("#sample-SCL2461") < page.index("#sample-100_2e_1")
     summary = report.summary_rows(run).set_index("sample")
     row = summary.loc["SCL2461"]
-    assert (row["mlst_organism"], row["amrfinder_organism"], row["species_check_decision"]) == (
-        "Escherichia",
-        "Klebsiella_pneumoniae",
-        "override",
-    )
+    # the MLST columns show the re-run, so the scheme's organism is the re-run scheme's
+    assert (row["mlst_scheme"], row["mlst_st"], row["mlst_organism"]) == ("klebsiella", "", "Klebsiella_pneumoniae")
+    assert (row["amrfinder_organism"], row["species_check_decision"]) == ("Klebsiella_pneumoniae", "override")
     assert (row["skani_species"], row["skani_ani"]) == ("Klebsiella pneumoniae", 99.11)
 
 

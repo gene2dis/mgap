@@ -2686,8 +2686,11 @@ def summary_rows(run):
         row["mlst_scheme"] = m.get("scheme") or ""
         row["mlst_st"] = m.get("st") or ""
         check = run.species_check.get(s, {})
-        # mlst_organism: the scheme's organism; amrfinder_organism: the one the sample was routed as
-        row["mlst_organism"] = check.get("mlst_organism", run.organism(s) or "") if check else run.organism(s) or ""
+        # mlst_organism: organism of the scheme shown (the re-run's after an override); amrfinder_organism: the one
+        # the sample was routed as
+        row["mlst_organism"] = (
+            run.run_info.get("mlst_organisms", {}).get(m.get("scheme"), "") if m.get("scheme") else ""
+        )
         row["species_check_decision"] = check.get("decision", "")
         row["skani_species"] = check.get("skani_species", "")
         row["skani_ani"] = to_number(check.get("skani_ani"))
