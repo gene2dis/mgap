@@ -334,7 +334,7 @@ removes these overlaps in its own `trim` step, so Berokka does not run there. Wh
 
 ### Dnaapler Contig Reorientation (ONT)
 
-[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.3.0) reorients assembled microbial sequences so that each contig starts at a consistent location (e.g., at the _dnaA_, _repA_, or _terL_ gene). This is an optional step enabled by default (`--run_dnaapler true`).
+[Dnaapler](https://github.com/gbouras13/dnaapler) (v1.4.0) reorients assembled microbial sequences so that each contig starts at a consistent location (e.g., at the _dnaA_, _repA_, or _terL_ gene). This is an optional step enabled by default (`--run_dnaapler true`).
 
 The behavior differs depending on the assembler:
 

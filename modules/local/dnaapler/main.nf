@@ -4,8 +4,8 @@ process DNAAPLER {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/dnaapler:1.3.0--pyhdfd78af_0' :
-        'biocontainers/dnaapler:1.3.0--pyhdfd78af_0' }"
+        'https://depot.galaxyproject.org/singularity/dnaapler:1.4.0--pyhdfd78af_0' :
+        'biocontainers/dnaapler:1.4.0--pyhdfd78af_0' }"
 
     input:
     tuple val(meta), path(assembly)
@@ -50,7 +50,7 @@ process DNAAPLER {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dnaapler: 1.3.0
+        dnaapler: 1.4.0
     END_VERSIONS
     """
 }
