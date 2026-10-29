@@ -661,6 +661,7 @@ def reportRunInfo(mlst_organisms) {
         if (params.ont_assembler == 'flye') {
             parameters.flye_mode = params.flye_mode
             parameters.flye_asm_coverage = params.flye_asm_coverage
+            parameters.medaka_bacteria = params.medaka_bacteria.toString().toBoolean()
         }
         parameters.medaka_model = params.medaka_model
     }

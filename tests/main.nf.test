@@ -408,6 +408,34 @@ nextflow_pipeline {
 
     }
 
+    test("Medaka options outside ONT Flye mode are reported as ignored - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub"
+
+        when {
+            params {
+                input           = "${projectDir}/assets/samplesheet_test_contig.csv"
+                seq_type        = "contig"
+                medaka_bacteria = true
+                outdir          = "$outputDir"
+            }
+        }
+
+        then {
+            def log = path("$metaDir/nextflow.log").text
+            assertAll(
+                { assert workflow.success },
+                { assert !workflow.trace.tasks().any { it.name.contains('MEDAKA') } },
+                { assert log.contains("--medaka_model and --medaka_bacteria apply only to --seq_type ont with --ont_assembler flye: ignored.") },
+                { assert !log.contains("--medaka_bacteria is ignored when --medaka_model is set") }
+            )
+        }
+
+    }
+
     test("Flye --asm-coverage with --genome_size - stub") {
 
         tag "pipeline"

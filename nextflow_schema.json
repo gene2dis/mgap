@@ -374,7 +374,7 @@
                 },
                 "gtdbtk_db": {
                     "type": "string",
-                    "description": "Path to GTDB-Tk database directory.",
+                    "description": "Path to GTDB-Tk database directory (GTDB release 232; GTDB-Tk 2.8.0 does not read r220/r226).",
                     "format": "directory-path",
                     "exists": true,
                     "fa_icon": "fas fa-database"
@@ -504,11 +504,12 @@
                 },
                 "medaka_model": {
                     "type": "string",
-                    "description": "Medaka polishing model, e.g. r1041_e82_400bps_sup_v4.1.0 (`medaka tools list_models`, medaka 2.2.2), a basecaller model with a variety (dna_r10.4.1_e8.2_400bps_sup@v5.0.0:consensus) or a model file. If unset, Medaka uses the model named in the read headers (dorado or MinKNOW), else r1041_e82_400bps_sup_v5.2.0. Setting it switches off --medaka_bacteria.",
+                    "description": "Medaka polishing model, e.g. r1041_e82_400bps_sup_v4.1.0 (`medaka tools list_models`, medaka 2.2.2) or a basecaller model with a variety (dna_r10.4.1_e8.2_400bps_sup@v5.0.0:consensus). With a container profile it must be a model in the Medaka image (docker/medaka/Dockerfile: the R10.4.1, R10.3 and R9.4.1 MinION models Medaka chooses from read headers); another model is downloaded inside the task, which fails, and the sample fails at polishing. If unset, Medaka uses the model named in the read headers (dorado or MinKNOW), else r1041_e82_400bps_sup_v5.2.0. Setting it switches off --medaka_bacteria.",
                     "fa_icon": "fas fa-brush"
                 },
                 "medaka_bacteria": {
                     "type": "boolean",
+                    "default": false,
                     "description": "Polish with Medaka's bacterial methylation model (medaka --bacteria). Needs reads whose headers name an R10.4.1 400 bps hac/sup v4.2.0 or later basecaller model; for other reads Medaka stops and the sample fails at polishing. Ignored when --medaka_model is set.",
                     "fa_icon": "fas fa-bacterium"
                 },
