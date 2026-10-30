@@ -103,12 +103,12 @@ def test_reference_list_is_consistent():
         assert any(ref["organism"] == organism for ref in typed), scheme
 
 
-def test_rerun_schemes_are_in_the_bundled_mlst(data):
-    """The first scheme is the one mlst re-runs with; it must be in the container's database.
-
-    data/mlst_schemes.txt: ls /usr/local/db/pubmlst in quay.io/biocontainers/mlst:2.25.0--hdfd78af_0
-    """
-    bundled = set((data / "mlst_schemes.txt").read_text().split())
+def test_rerun_schemes_are_in_the_bundled_mlst():
+    """The first scheme is the one mlst re-runs with; without --mlst_datadir the pipeline re-runs only
+    with a scheme of the container's database (assets/mlst_schemes.txt), so the bundled list must use those."""
+    lines = (REPO / "assets" / "mlst_schemes.txt").read_text().splitlines()
+    bundled = {line for line in lines if line and not line.startswith("#")}
+    assert {"klebsiella", "ecoli_achtman_4", "senterica_achtman_2"} <= bundled
     first = {ref["species"]: ref["schemes"][0] for ref in sc.read_refs(REFS).values() if ref["schemes"]}
     assert not {species: scheme for species, scheme in first.items() if scheme not in bundled}
 

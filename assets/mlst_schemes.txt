@@ -1,3 +1,5 @@
+# MLST schemes of the pipeline's mlst (ls /usr/local/db/pubmlst in biocontainers/mlst:2.25.0--hdfd78af_0);
+# the species check re-runs mlst only with one of these when --mlst_datadir is not given. Update with the mlst module.
 aactinomycetemcomitans
 abaumannii
 abaumannii_2

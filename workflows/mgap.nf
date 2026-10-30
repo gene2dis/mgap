@@ -822,16 +822,24 @@ def databaseVersion(name, path) {
 }
 
 //
-// A species check row whose mlst re-run scheme is not in --mlst_datadir (built with older mlst; one
-// folder per scheme): no re-run, and the reason and the log say so
+// A species check row whose mlst re-run scheme mlst does not have: not in --mlst_datadir (built with
+// older mlst; one folder per scheme), or without it not in the container's database
+// (assets/mlst_schemes.txt). No re-run, and the reason and the log say so
 //
 def checkRerunScheme(row) {
     def scheme = row.rerun_scheme
-    if (!scheme || !params.mlst_datadir || file("${params.mlst_datadir}/${scheme}").isDirectory()) {
+    if (!scheme) {
         return row
     }
-    log.warn("Sample '${row.sample}': MLST scheme '${scheme}' is not in --mlst_datadir - mlst is not run again; the report shows the automatic scheme.")
-    def note = "mlst not re-run: ${scheme} is not in --mlst_datadir"
+    def database = params.mlst_datadir ? '--mlst_datadir' : "mlst's database (assets/mlst_schemes.txt)"
+    def available = params.mlst_datadir
+        ? file("${params.mlst_datadir}/${scheme}").isDirectory()
+        : file("${projectDir}/assets/mlst_schemes.txt").readLines().contains(scheme)
+    if (available) {
+        return row
+    }
+    log.warn("Sample '${row.sample}': MLST scheme '${scheme}' is not in ${database} - mlst is not run again; the report shows the automatic scheme.")
+    def note = "mlst not re-run: ${scheme} is not in ${database}"
     def reason = row.reason.contains("mlst re-run with ${scheme}")
         ? row.reason.replace("mlst re-run with ${scheme}", note)
         : [ row.reason, note ].findAll { text -> text }.join('; ')
