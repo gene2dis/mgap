@@ -270,6 +270,15 @@ def test_samplesheet_species(run):
     against_mlst = run(mlst("saureus"), expected="Klebsiella pneumoniae")
     assert against_mlst["flagged"] == "yes"
     assert "differs from the MLST genus" in against_mlst["reason"]
+    # subspecies and "Genus sp." are compared by genus and epithet, or genus alone
+    for name in ("Klebsiella pneumoniae subsp. pneumoniae", "Klebsiella sp.", "Klebsiella spp"):
+        assert run(mlst("klebsiella"), skani((KPN, 99.0, 88.0)), expected=name)["flagged"] == "no", name
+    subspecies = run(mlst("-", "-"), expected="Salmonella enterica subsp. enterica")
+    assert (subspecies["decision"], subspecies["organism"]) == ("samplesheet", "Salmonella")
+    # an unmapped MLST scheme of another genus: the samplesheet species does not route, the clash is flagged
+    clash = run(mlst("serratia"), expected="Klebsiella pneumoniae")
+    assert (clash["decision"], clash["organism"], clash["flagged"]) == ("mlst", "", "yes")
+    assert "samplesheet species Klebsiella pneumoniae differs from the MLST genus" in clash["reason"]
     # Shigella has no reference of its own: a Shigella species matches an E. coli call at genus level
     shigella = run(mlst("ecoli_achtman_4"), skani((ECO, 99.0, 90.0)), expected="Shigella sonnei")
     assert (shigella["decision"], shigella["flagged"]) == ("agree", "no")

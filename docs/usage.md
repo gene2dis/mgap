@@ -42,7 +42,7 @@ TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
 | `fasta`   | Full path to FASTA file for pre-assembled contigs. Supports `.fasta`, `.fa`, `.fna` extensions (with optional `.gz` compression). Used only for `--seq_type contig` mode.              |
 | `species` | Optional. The species expected for the sample (for example `Klebsiella pneumoniae`, or a genus alone), from MALDI-TOF or the request form. See below.                                  |
 
-The `species` column is recorded in `pipeline_info/species_check.tsv` and compared with the [species check](#species-check-skani): a sample whose reference call (or, without one, MLST genus) differs from it is flagged in the log and the report. It decides the species tools and the AMRFinderPlus organism only when neither the reference set nor MLST gives an organism (decision `samplesheet`), for example a sample whose MLST scheme is not found and which has no close reference. Names are matched to the `species` of `assets/species_refs.tsv`; a species not in that list is recorded but cannot give an organism.
+The `species` column is recorded in `pipeline_info/species_check.tsv` and compared with the [species check](#species-check-skani): a sample whose reference call (or, without one, MLST genus) differs from it is flagged in the log and the report. It decides the species tools and the AMRFinderPlus organism only when neither the reference set nor MLST gives an organism (decision `samplesheet`), for example a sample whose MLST scheme is not found and which has no close reference; not when MLST's scheme types another genus (the sample is flagged instead). Names are matched to the `species` of `assets/species_refs.tsv` by genus and species epithet (a subspecies or strain after them is ignored, and `Genus sp.` counts as the genus alone); a species not in that list is recorded but cannot give an organism.
 
 ```console
 sample,species,fastq_1,fastq_2
@@ -640,7 +640,7 @@ Each annotated sample gets one decision, written to `pipeline_info/species_check
 ```groovy
 process {
     withName: SPECIES_CHECK {
-        ext.args = { "--seq-type ${params.seq_type} --min-ani 96 --min-af 60 --ani-margin 0.5" + (meta.species ? " --expected '${meta.species}'" : '') }
+        ext.args = '--min-ani 96 --min-af 60 --ani-margin 0.5'
     }
 }
 ```

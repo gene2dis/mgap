@@ -20,7 +20,8 @@ Kraken2 for ONT) and the species given in the samplesheet. Rules (D-13, D-14, D-
 - mlst: no reference call (no --species_refs, or no hit); routing follows the MLST scheme. No hit in
     the reference set is flagged. With a read classification, its genus is compared with the MLST genus
     (a difference is flagged).
-- samplesheet: no reference call and no MLST organism; the samplesheet species gives the organism.
+- samplesheet: no reference call and no MLST organism; the samplesheet species gives the organism, unless
+    the MLST scheme types another genus (then mlst, flagged).
 
 Writes one TSV row (with header). The pipeline fills rerun_st after the mlst re-run.
 """
@@ -151,9 +152,18 @@ def genus(name):
     return GENUS_ALIASES.get(first, first)
 
 
+def binomial(name):
+    """'Genus epithet' of a samplesheet species, without subspecies or strain; the genus alone for 'Genus sp.'."""
+    words = name.split()
+    if len(words) < 2 or words[1].lower().rstrip(".") in ("sp", "spp"):
+        return words[0] if words else ""
+    return " ".join(words[:2])
+
+
 def same_species(expected, names):
     """Samplesheet species against called species; a genus alone, or a species of an aliased genus (Shigella,
     called as Escherichia coli), is compared at genus level."""
+    expected = binomial(expected)
     if len(expected.split()) == 1 or expected.split()[0] in GENUS_ALIASES:
         return genus(expected) in {genus(name) for name in names}
     return expected.lower() in (name.lower() for name in names)
@@ -212,7 +222,8 @@ def decide(args):
     expected_ref = None
     if expected:
         row["expected_species"] = expected
-        expected_ref = next((ref for ref in refs.values() if ref["species"].lower() == expected.lower()), None)
+        name = binomial(expected).lower()
+        expected_ref = next((ref for ref in refs.values() if ref["species"].lower() == name), None)
 
     call = runner_up = None
     if args.skani:
@@ -281,7 +292,14 @@ def decide(args):
                     else " (no reference within the skani screen)"
                 )
             )
-        if organism is None and expected_ref and expected_ref["organism"]:
+        # not when the MLST scheme points to another genus (a mislabelled isolate): that is flagged below
+        mlst_genera = scheme_genera(scheme, refs, mlst_organism) if scheme else set()
+        if (
+            organism is None
+            and expected_ref
+            and expected_ref["organism"]
+            and (not mlst_genera or genus(expected_ref["species"]) in mlst_genera)
+        ):
             organism = expected_ref["organism"]
             species = expected_ref["species"]
             decision = "samplesheet"
@@ -308,7 +326,7 @@ def decide(args):
         elif reference_genera and genus(expected) not in reference_genera:
             flagged = True
             notes.append(f"samplesheet species {expected} differs from the MLST genus")
-        if not expected_ref and len(expected.split()) > 1:
+        if not expected_ref and len(binomial(expected).split()) > 1:
             notes.append(f"samplesheet species {expected} is not in the reference list")
 
     row.update(
