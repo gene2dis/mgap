@@ -317,7 +317,7 @@ workflow MGAP {
         // read classifications of samples that did not reach annotation stop here
         .filter { _id, sample, _taxa -> sample }
         .map { _id, sample, taxa -> sample + (taxa ?: [ '', [] ]) }
-    SPECIES_CHECK( ch_species_input, ch_refs_tsv, ch_mlst_organisms )
+    SPECIES_CHECK( ch_species_input, ch_refs_tsv, ch_mlst_organisms, params.seq_type )
     ch_versions = ch_versions.mix(SPECIES_CHECK.out.versions.first())
     ch_species_rows = SPECIES_CHECK.out.tsv
         .map { meta, tsv -> [ meta, checkRerunScheme(tsv.splitCsv(header: true, sep: '\t')[0]) ] }

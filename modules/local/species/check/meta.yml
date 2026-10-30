@@ -20,7 +20,7 @@ input:
   - - meta:
         type: map
         description: |
-          Groovy Map containing sample information; meta.species (samplesheet) is passed through ext.args
+          Groovy Map containing sample information; meta.species (samplesheet) is passed as --expected
           e.g. [ id:'test' ]
     - mlst:
         type: file
@@ -45,6 +45,9 @@ input:
       type: file
       description: JSON map of MLST scheme to AMRFinderPlus organism (getTaxaNames() in workflows/mgap.nf)
       pattern: "*.json"
+  - seq_type:
+      type: string
+      description: Sequencing type of the run (illumina, ont or contig), written to the seq_type column
 output:
   tsv:
     - - meta:

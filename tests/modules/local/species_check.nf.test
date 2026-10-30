@@ -27,6 +27,7 @@ nextflow_process {
                 ]
                 input[1] = file("${projectDir}/assets/species_refs.tsv", checkIfExists: true)
                 input[2] = channel.of('{"ecoli_achtman_4": "Escherichia", "klebsiella": "Klebsiella_pneumoniae"}').collectFile(name: 'mlst_organisms.json')
+                input[3] = 'illumina'
                 """
             }
         }
@@ -64,6 +65,7 @@ nextflow_process {
                 ]
                 input[1] = file("${projectDir}/assets/species_refs.tsv", checkIfExists: true)
                 input[2] = channel.of('{"senterica_achtman_2": "Salmonella"}').collectFile(name: 'mlst_organisms.json')
+                input[3] = 'contig'
                 """
             }
         }
@@ -76,6 +78,7 @@ nextflow_process {
                 { assert row.decision == 'mlst' },
                 { assert row.organism == 'Salmonella' },
                 { assert row.expected_species == 'Salmonella enterica' },
+                { assert row.seq_type == 'contig' },
                 { assert row.flagged == 'no' },
                 { assert row.reason == 'no reference set (--species_refs)' }
             )

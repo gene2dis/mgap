@@ -18,6 +18,7 @@ process SPECIES_CHECK {
         path(taxa, stageAs: 'taxa/*')
     path refs
     path mlst_organisms
+    val seq_type
 
     output:
     tuple val(meta), path("${prefix}.species_check.tsv"), emit: tsv
@@ -31,11 +32,13 @@ process SPECIES_CHECK {
     prefix = task.ext.prefix ?: "${meta.id}"
     def inputs = [
         skani ? "--skani ${skani}" : '',
-        taxa ? "--taxa ${taxa} --taxa-format ${taxa_format}" : ''
+        taxa ? "--taxa ${taxa} --taxa-format ${taxa_format}" : '',
+        meta.species ? "--expected '${meta.species}'" : ''
     ].join(' ')
     """
     species_check.py \\
         --sample '${meta.id}' \\
+        --seq-type ${seq_type} \\
         --mlst ${mlst} \\
         --refs ${refs} \\
         --mlst-organisms ${mlst_organisms} \\
@@ -54,13 +57,15 @@ process SPECIES_CHECK {
     prefix = task.ext.prefix ?: "${meta.id}"
     def inputs = [
         skani ? "--skani ${skani}" : '',
-        taxa ? "--taxa ${taxa} --taxa-format ${taxa_format}" : ''
+        taxa ? "--taxa ${taxa} --taxa-format ${taxa_format}" : '',
+        meta.species ? "--expected '${meta.species}'" : ''
     ].join(' ')
     // the decision takes well under a second on the stub tools' outputs, so stub runs make it
     // for real: the routing that follows (species tools, AMRFinderPlus organism) is then tested
     """
     species_check.py \\
         --sample '${meta.id}' \\
+        --seq-type ${seq_type} \\
         --mlst ${mlst} \\
         --refs ${refs} \\
         --mlst-organisms ${mlst_organisms} \\
