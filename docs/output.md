@@ -398,7 +398,7 @@ The species check decides, per sample, which AMRFinderPlus organism (`--organism
 - `override`: the MLST scheme does not type the reference species. Routing follows the reference species, and mlst runs again with its scheme.
 - `reference`: mlst found no scheme; routing follows the reference species (mlst again with its scheme).
 - `ambiguous`: the MLST organism is kept when it is one of the two candidates, else there is none.
-- `mlst`: no reference call (no `--species_refs`, or no reference passes the thresholds); routing follows the MLST scheme. With a read classification (Bracken on Illumina, Kraken2 on ONT), its top species' genus is compared with the MLST genus; a difference is flagged but does not change the routing.
+- `mlst`: no reference call (no `--species_refs`, or no reference passes the thresholds); routing follows the MLST scheme. With a reference set, no call is flagged (the species may be outside the set). With a read classification (Bracken on Illumina, Kraken2 on ONT), its top species' genus is compared with the MLST genus; a difference is flagged but does not change the routing.
 - `samplesheet`: no reference call and no organism from MLST; the samplesheet `species` gives the organism.
 
 `campylobacter_nonjejuni*` and `bordetella_3` give no organism from MLST alone (D-14): the schemes type species the AMRFinderPlus organism is not curated for (_C. lari_, _C. upsaliensis_ …; _B. parapertussis_, _B. bronchiseptica_), so only a reference call of _C. jejuni_/_C. coli_ or _B. pertussis_ gives them `Campylobacter` or `Bordetella_pertussis`. Flagged samples get a warning in the run log. The thresholds are `SPECIES_CHECK`'s `ext.args` (`--min-ani`, `--min-af`, `--ani-margin`; see [usage](usage.md#species-check-skani)).

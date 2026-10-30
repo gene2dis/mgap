@@ -270,6 +270,9 @@ def test_samplesheet_species(run):
     against_mlst = run(mlst("saureus"), expected="Klebsiella pneumoniae")
     assert against_mlst["flagged"] == "yes"
     assert "differs from the MLST genus" in against_mlst["reason"]
+    # Shigella has no reference of its own: a Shigella species matches an E. coli call at genus level
+    shigella = run(mlst("ecoli_achtman_4"), skani((ECO, 99.0, 90.0)), expected="Shigella sonnei")
+    assert (shigella["decision"], shigella["flagged"]) == ("agree", "no")
     unknown = run(mlst("saureus"), expected="Staphylococcus hominis")
     assert "not in the reference list" in unknown["reason"]
 

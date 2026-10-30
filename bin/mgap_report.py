@@ -1789,7 +1789,10 @@ def section_typing(run):
             "closest reference confirms the MLST scheme; <i>override</i> means it is a species the MLST scheme "
             "does not type, and the sample was routed by the reference (MLST was run again with that species' "
             "scheme); <i>refine</i> means the scheme types it but the species needs another organism; "
-            "<i>mlst</i> means no reference call (no reference set, or no close reference), so MLST alone decided. "
+            "<i>mlst</i> means no reference call (no reference set, or no close reference), so MLST alone decided; "
+            "<i>reference</i> means MLST found no scheme and the reference call decided; <i>ambiguous</i> means two "
+            "references of different organisms were equally close, so the MLST organism was kept only when it is "
+            "one of them; <i>samplesheet</i> means neither gave an organism and the samplesheet species did. "
             "Flagged decisions are listed first; pipeline_info/species_check.tsv gives the reason."
         )
     if run.sccmec:

@@ -17,8 +17,9 @@ Kraken2 for ONT) and the species given in the samplesheet. Rules (D-13, D-14, D-
 - reference: mlst found no scheme; routing follows the reference species (mlst again with its scheme).
 - ambiguous: two references of different organisms (or two species without one) within the margin; the MLST organism is kept when
     it is one of them, else none.
-- mlst: no reference call (no --species_refs, or no hit); routing follows the MLST scheme. With a
-    read classification, its genus is compared with the MLST genus (a difference is flagged).
+- mlst: no reference call (no --species_refs, or no hit); routing follows the MLST scheme. No hit in
+    the reference set is flagged. With a read classification, its genus is compared with the MLST genus
+    (a difference is flagged).
 - samplesheet: no reference call and no MLST organism; the samplesheet species gives the organism.
 
 Writes one TSV row (with header). The pipeline fills rerun_st after the mlst re-run.
@@ -151,8 +152,9 @@ def genus(name):
 
 
 def same_species(expected, names):
-    """Samplesheet species against called species; a genus alone is compared at genus level."""
-    if len(expected.split()) == 1:
+    """Samplesheet species against called species; a genus alone, or a species of an aliased genus (Shigella,
+    called as Escherichia coli), is compared at genus level."""
+    if len(expected.split()) == 1 or expected.split()[0] in GENUS_ALIASES:
         return genus(expected) in {genus(name) for name in names}
     return expected.lower() in (name.lower() for name in names)
 
