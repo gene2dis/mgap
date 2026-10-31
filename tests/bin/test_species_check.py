@@ -86,7 +86,7 @@ def mlst(scheme, st="1"):
 
 KPN, KVA, ECO, SAU, SAR = "GCF_006364295.1", "GCF_020525545.1", "GCF_000005845.2", "GCF_026167765.1", "GCF_000236925.1"
 BPE, BBR, BMA, BPS = "GCF_004008975.1", "GCF_900636925.1", "GCF_033956065.1", "GCF_030297255.1"
-BPA = "GCF_020735925.1"
+BPA, SEN = "GCF_020735925.1", "GCF_000006945.2"
 
 
 def test_reference_list_is_consistent():
@@ -253,6 +253,19 @@ def test_shigella_reads_count_as_escherichia(run):
     assert row["flagged"] == "no"
 
 
+def test_rerun_scheme_is_one_mlst_has(run, tmp_path):
+    """With --mlst-schemes, mlst is run again with the first of the reference's schemes that mlst has
+    (an older database has salmonella, not senterica_achtman_2); with none of them it is not run again."""
+    older = tmp_path / "older_schemes.txt"
+    older.write_text("# mlst 2.22\necoli\nsalmonella\n")
+    fallback = run(mlst("ecoli"), skani((SEN, 99.0, 90.0)), extra=["--mlst-schemes", str(older)])
+    assert (fallback["decision"], fallback["rerun_scheme"]) == ("override", "salmonella")
+    assert "mlst re-run with salmonella" in fallback["reason"]
+    missing = run(mlst("-", "-"), skani((KPN, 99.0, 88.0)), extra=["--mlst-schemes", str(older)])
+    assert (missing["decision"], missing["rerun_scheme"], missing["flagged"]) == ("reference", "", "yes")
+    assert "mlst not re-run: mlst has no klebsiella scheme" in missing["reason"]
+
+
 def test_samplesheet_species(run):
     # used when there is no reference call and no MLST organism
     routed = run(mlst("-", "-"), expected="Salmonella enterica")
@@ -284,6 +297,14 @@ def test_samplesheet_species(run):
     assert (shigella["decision"], shigella["flagged"]) == ("agree", "no")
     unknown = run(mlst("saureus"), expected="Staphylococcus hominis")
     assert "not in the reference list" in unknown["reason"]
+    # the samplesheet's case does not matter
+    lower = run(mlst("klebsiella"), expected="klebsiella pneumoniae")
+    assert (lower["decision"], lower["flagged"]) == ("mlst", "no")
+    lower_shigella = run(mlst("ecoli_achtman_4"), skani((ECO, 99.0, 90.0)), expected="shigella sonnei")
+    assert lower_shigella["flagged"] == "no"
+    # a serovar ("Salmonella Typhimurium") is not an epithet: compared at genus level, not a missing reference
+    serovar = run(mlst("senterica_achtman_2"), skani((SEN, 99.0, 90.0)), expected="Salmonella Typhimurium")
+    assert (serovar["decision"], serovar["flagged"], serovar["reason"]) == ("agree", "no", "")
 
 
 def test_empty_mlst_output(run):

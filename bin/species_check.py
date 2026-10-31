@@ -13,7 +13,8 @@ Kraken2 for ONT) and the species given in the samplesheet. Rules (D-13, D-14, D-
     none), e.g. Bordetella pertussis under bordetella_3 (no organism of its own, D-14) or Staphylococcus
     argenteus under saureus. The organism follows the reference species.
 - override: the scheme does not type the reference species (a K. pneumoniae typed as
-    ecoli_achtman_4); routing follows the reference species and mlst is run again with its first scheme.
+    ecoli_achtman_4); routing follows the reference species and mlst is run again with the first of its
+    schemes that mlst has (--mlst-schemes); with none of them mlst is not run again (flagged).
 - reference: mlst found no scheme; routing follows the reference species (mlst again with its scheme).
 - ambiguous: two references of different organisms (or two species without one) within the margin; the MLST organism is kept when
     it is one of them, else none.
@@ -146,16 +147,18 @@ GENUS_ALIASES = {"Shigella": "Escherichia"}
 
 
 def genus(name):
+    """Genus of a species name, capitalized (a samplesheet may write 'klebsiella pneumoniae'), Shigella as Escherichia."""
     if not name:
         return None
-    first = name.replace("_", " ").split()[0]
+    first = name.replace("_", " ").split()[0].capitalize()
     return GENUS_ALIASES.get(first, first)
 
 
 def binomial(name):
-    """'Genus epithet' of a samplesheet species, without subspecies or strain; the genus alone for 'Genus sp.'."""
+    """'Genus epithet' of a samplesheet species, without subspecies or strain; the genus alone for 'Genus sp.' and
+    for a serovar ('Salmonella Typhimurium': an epithet is never capitalized)."""
     words = name.split()
-    if len(words) < 2 or words[1].lower().rstrip(".") in ("sp", "spp"):
+    if len(words) < 2 or words[1].lower().rstrip(".") in ("sp", "spp") or words[1][0].isupper():
         return words[0] if words else ""
     return " ".join(words[:2])
 
@@ -164,7 +167,7 @@ def same_species(expected, names):
     """Samplesheet species against called species; a genus alone, or a species of an aliased genus (Shigella,
     called as Escherichia coli), is compared at genus level."""
     expected = binomial(expected)
-    if len(expected.split()) == 1 or expected.split()[0] in GENUS_ALIASES:
+    if len(expected.split()) == 1 or expected.split()[0].capitalize() in GENUS_ALIASES:
         return genus(expected) in {genus(name) for name in names}
     return expected.lower() in (name.lower() for name in names)
 
@@ -175,6 +178,17 @@ def scheme_genera(scheme, refs, mlst_organism):
     if not genera and mlst_organism:
         genera = {genus(mlst_organism)}
     return genera
+
+
+def rerun_scheme(ref, available):
+    """The reference's first scheme that mlst has (all of them count when the list of mlst's schemes is not given)."""
+    return next((scheme for scheme in ref["schemes"] if available is None or scheme in available), "")
+
+
+def rerun_note(ref, scheme):
+    if scheme:
+        return f"mlst re-run with {scheme}"
+    return f"mlst not re-run: mlst has no {' or '.join(ref['schemes'])} scheme" if ref["schemes"] else ""
 
 
 def species_call(hits, refs, min_ani, min_af, margin):
@@ -198,6 +212,10 @@ def decide(args):
     refs = read_refs(args.refs)
     with open(args.mlst_organisms) as handle:
         mlst_map = json.load(handle)
+    available = None
+    if args.mlst_schemes:
+        with open(args.mlst_schemes) as handle:
+            available = {line.strip() for line in handle if line.strip() and not line.startswith("#")}
     scheme, st = read_mlst(args.mlst)
     mlst_organism = mlst_map.get(scheme) if scheme else None
     row = dict.fromkeys(COLUMNS, "")
@@ -261,8 +279,12 @@ def decide(args):
         label = f"skani {species} (ANI {call['ani']:.2f}, AF {call['af_query']:.1f} %)"
         if not scheme:
             decision = "reference"
-            row["rerun_scheme"] = ref["schemes"][0] if ref["schemes"] else ""
-            notes.append(f"no MLST scheme; {label}")
+            row["rerun_scheme"] = rerun_scheme(ref, available)
+            # the routed species has no ST: flagged only when mlst cannot type it
+            flagged = bool(ref["schemes"]) and not row["rerun_scheme"]
+            notes.append(
+                "; ".join(note for note in (f"no MLST scheme; {label}", rerun_note(ref, row["rerun_scheme"])) if note)
+            )
         elif scheme in ref["schemes"]:
             decision = "agree" if organism == mlst_organism else "refine"
             if decision == "refine":
@@ -274,9 +296,11 @@ def decide(args):
         else:
             decision = "override"
             flagged = True
-            row["rerun_scheme"] = ref["schemes"][0] if ref["schemes"] else ""
-            rerun = f"; mlst re-run with {row['rerun_scheme']}" if row["rerun_scheme"] else ""
-            notes.append(f"MLST scheme {scheme} does not type {label}: routed by the reference{rerun}")
+            row["rerun_scheme"] = rerun_scheme(ref, available)
+            rerun = rerun_note(ref, row["rerun_scheme"])
+            notes.append(
+                f"MLST scheme {scheme} does not type {label}: routed by the reference" + (f"; {rerun}" if rerun else "")
+            )
     else:
         decision = "mlst"
         if not args.skani:
@@ -350,6 +374,9 @@ def main(argv=None):
     parser.add_argument("--taxa", help="Bracken species table or Kraken2 report")
     parser.add_argument("--taxa-format", choices=["bracken", "kraken2"], default="bracken")
     parser.add_argument("--expected", help="species from the samplesheet")
+    parser.add_argument(
+        "--mlst-schemes", help="schemes mlst has, one per line (# comments); mlst is re-run only with one of these"
+    )
     parser.add_argument("--min-ani", type=float, default=95.0, help="minimum ANI for a species call (95)")
     parser.add_argument("--min-af", type=float, default=50.0, help="minimum aligned fraction of the sample (50)")
     parser.add_argument("--ani-margin", type=float, default=0.5, help="ANI margin to the next organism (0.5)")
