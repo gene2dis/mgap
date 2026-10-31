@@ -1405,12 +1405,14 @@ nextflow_pipeline {
 
         tag "pipeline"
         tag "stub"
+        tag "help"
 
         // On the command line, where flags arrive as strings
         options "-stub --help"
 
         then {
-            def output = workflow.stdout.join('\n')
+            // log.info goes to the run log, not to nf-test's captured stdout
+            def output = path("$metaDir/nextflow.log").text
             assertAll(
                 { assert workflow.success },
                 { assert workflow.trace.tasks().size() == 0 },
@@ -1431,17 +1433,19 @@ nextflow_pipeline {
 
         tag "pipeline"
         tag "stub"
+        tag "help"
 
         options "-stub --help publish_dir_mode --show_hidden"
 
         then {
-            def output = workflow.stdout.join('\n')
+            def output = path("$metaDir/nextflow.log").text
             assertAll(
                 { assert workflow.success },
                 { assert workflow.trace.tasks().size() == 0 },
                 { assert output.contains('--publish_dir_mode') },
                 { assert output.contains('enum') },
-                { assert !output.contains('--seq_type') }
+                // one parameter only: not the parameter list
+                { assert !output.contains('--run_kraken2') }
             )
         }
 
@@ -1451,15 +1455,18 @@ nextflow_pipeline {
 
         tag "pipeline"
         tag "stub"
+        tag "help"
 
         options "-stub --version"
 
         then {
+            def output = path("$metaDir/nextflow.log").text
             assertAll(
                 { assert workflow.success },
                 { assert workflow.trace.tasks().size() == 0 },
-                { assert workflow.stdout.any { it.contains('gene2dis/mgap 2.0.0') } },
-                { assert !workflow.stdout.any { it.contains('Typical pipeline command:') } }
+                // the entry workflow's line, not Nextflow's own "[PIPELINE] gene2dis/mgap 2.0.0"
+                { assert output =~ /INFO\s+nextflow\.Nextflow - gene2dis\/mgap 2\.0\.0/ },
+                { assert !output.contains('Typical pipeline command:') }
             )
         }
 

@@ -217,7 +217,7 @@ def pipelineHelp(help, help_full, show_hidden) {
     def start = lines.findIndexOf { line -> line.startsWith('Typical pipeline command:') } + 3
     def end = start < lines.size() ? (start..<lines.size()).find { i -> lines[i].trim() && !own.any { entry -> entry.contains(lines[i].trim()) } } : null
     end = end ?: lines.size()
-    return (lines.take(start) + lines.subList(start, end).findAll { line -> !line.trim() } + lines.drop(end)).join('\n')
+    return (lines.take(start) + lines.subList(start, end).findAll { line -> !line.trim() } + lines.drop(end)).join('\n') + '\n'
 }
 
 //

@@ -538,7 +538,7 @@
                     "type": "integer",
                     "default": 1000,
                     "minimum": 1,
-                    "description": "Minimum contig length (bp) for annotation. Shorter contigs are removed from the FASTA that every annotation and typing tool reads (CheckM2, MLST, Bakta, GTDB-Tk, geNomad, MOB-suite, RGI, Kleborate, sccmec, SISTR); QUAST still reports the whole assembly.",
+                    "description": "Minimum contig length (bp) for annotation. Shorter contigs are removed from the FASTA that every annotation and typing tool reads (CheckM2, MLST, skani, Bakta, GTDB-Tk, geNomad, MOB-suite, PlasmidFinder, ISEScan, RGI, Kleborate, sccmec, SISTR); QUAST still reports the whole assembly.",
                     "fa_icon": "fas fa-ruler"
                 }
             }
