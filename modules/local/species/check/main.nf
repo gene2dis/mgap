@@ -18,6 +18,7 @@ process SPECIES_CHECK {
         path(taxa, stageAs: 'taxa/*')
     path refs
     path mlst_organisms
+    path mlst_schemes
     val seq_type
 
     output:
@@ -42,6 +43,7 @@ process SPECIES_CHECK {
         --mlst ${mlst} \\
         --refs ${refs} \\
         --mlst-organisms ${mlst_organisms} \\
+        --mlst-schemes ${mlst_schemes} \\
         ${inputs} \\
         ${args} \\
         --out ${prefix}.species_check.tsv
@@ -69,6 +71,7 @@ process SPECIES_CHECK {
         --mlst ${mlst} \\
         --refs ${refs} \\
         --mlst-organisms ${mlst_organisms} \\
+        --mlst-schemes ${mlst_schemes} \\
         ${inputs} \\
         ${args} \\
         --out ${prefix}.species_check.tsv

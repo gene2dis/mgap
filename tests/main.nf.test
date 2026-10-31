@@ -792,13 +792,13 @@ nextflow_pipeline {
             assertAll(
                 { assert workflow.success },
                 { assert !succeeded.any { it.contains('MLST_SCHEME') } },
-                { assert nextflow_log.contains("Sample 'TEST_OVERRIDE': MLST scheme 'klebsiella' is not in --mlst_datadir") },
+                { assert nextflow_log.contains("Sample 'TEST_OVERRIDE': species check override") },
                 // still routed by the reference call, without the re-run's table
                 { assert rows.TEST_OVERRIDE.decision == 'override' },
                 { assert rows.TEST_OVERRIDE.organism == 'Klebsiella_pneumoniae' },
                 { assert rows.TEST_OVERRIDE.rerun_st == '' },
                 { assert rows.TEST_OVERRIDE.rerun_scheme == '' },
-                { assert rows.TEST_OVERRIDE.reason.endsWith('routed by the reference; mlst not re-run: klebsiella is not in --mlst_datadir') },
+                { assert rows.TEST_OVERRIDE.reason.endsWith('routed by the reference; mlst not re-run: mlst has no klebsiella scheme') },
                 { assert ran('KLEBORATE', 'TEST_OVERRIDE') },
                 { assert !path("$outputDir/TEST_OVERRIDE/annotation/mlst/TEST_OVERRIDE.klebsiella.tsv").exists() }
             )

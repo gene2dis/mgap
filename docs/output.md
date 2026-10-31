@@ -424,10 +424,10 @@ The species check decides, per sample, which AMRFinderPlus organism (`--organism
 | `expected_species` | Samplesheet `species` column                                                                               |
 | `species`          | The species call (`a / b` for `ambiguous`; empty when only MLST decided)                                   |
 | `organism`         | AMRFinderPlus organism used (empty: none; no point mutations)                                              |
-| `rerun_scheme`     | Scheme mlst was run again with (`override`, `reference`)                                                   |
+| `rerun_scheme`     | Scheme mlst was run again with (`override`, `reference`): the first of the species' schemes that mlst has  |
 | `rerun_st`         | Sequence type from that re-run                                                                             |
 | `decision`         | `agree`, `refine`, `override`, `reference`, `ambiguous`, `mlst` or `samplesheet`                           |
-| `flagged`          | `yes` when sources disagree or the reference set has no hit for the sample                                 |
+| `flagged`          | `yes` when sources disagree, the reference set has no hit, or mlst has none of the called species' schemes |
 | `reason`           | What the decision rests on, separated by `;`                                                               |
 
 ### Bakta

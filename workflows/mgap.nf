@@ -302,6 +302,13 @@ workflow MGAP {
     ch_mlst_organisms = channel.of(groovy.json.JsonOutput.toJson(getTaxaNames()))
         .collectFile(name: 'mlst_organisms.json')
         .first()
+    // schemes mlst can be run again with: the folders of --mlst_datadir (built with older mlst), else the
+    // container's database (assets/mlst_schemes.txt)
+    ch_mlst_schemes = params.mlst_datadir
+        ? channel.of(files("${params.mlst_datadir}/*", type: 'dir').collect { dir -> dir.name }.sort().join('\n') + '\n')
+            .collectFile(name: 'mlst_schemes.txt')
+            .first()
+        : file("${projectDir}/assets/mlst_schemes.txt", checkIfExists: true)
     // joined per sample, so each sample goes on as soon as its own sources are done
     ch_mlst_skani = MLST.out.tsv.map { meta, tsv -> [ meta.id, meta, tsv ] }
     ch_mlst_skani = params.species_refs
@@ -317,10 +324,10 @@ workflow MGAP {
         // read classifications of samples that did not reach annotation stop here
         .filter { _id, sample, _taxa -> sample }
         .map { _id, sample, taxa -> sample + (taxa ?: [ '', [] ]) }
-    SPECIES_CHECK( ch_species_input, ch_refs_tsv, ch_mlst_organisms, params.seq_type )
+    SPECIES_CHECK( ch_species_input, ch_refs_tsv, ch_mlst_organisms, ch_mlst_schemes, params.seq_type )
     ch_versions = ch_versions.mix(SPECIES_CHECK.out.versions.first())
     ch_species_rows = SPECIES_CHECK.out.tsv
-        .map { meta, tsv -> [ meta, checkRerunScheme(tsv.splitCsv(header: true, sep: '\t')[0]) ] }
+        .map { meta, tsv -> [ meta, tsv.splitCsv(header: true, sep: '\t')[0] ] }
 
     // [ meta, organism ] for AMRFinderPlus and SPECIES_TYPING; organism is null when there is none
     species_code_ch = ch_species_rows
@@ -819,31 +826,6 @@ def databaseVersion(name, path) {
         return null
     }
     return null
-}
-
-//
-// A species check row whose mlst re-run scheme mlst does not have: not in --mlst_datadir (built with
-// older mlst; one folder per scheme), or without it not in the container's database
-// (assets/mlst_schemes.txt). No re-run, and the reason and the log say so
-//
-def checkRerunScheme(row) {
-    def scheme = row.rerun_scheme
-    if (!scheme) {
-        return row
-    }
-    def database = params.mlst_datadir ? '--mlst_datadir' : "mlst's database (assets/mlst_schemes.txt)"
-    def available = params.mlst_datadir
-        ? file("${params.mlst_datadir}/${scheme}").isDirectory()
-        : file("${projectDir}/assets/mlst_schemes.txt").readLines().contains(scheme)
-    if (available) {
-        return row
-    }
-    log.warn("Sample '${row.sample}': MLST scheme '${scheme}' is not in ${database} - mlst is not run again; the report shows the automatic scheme.")
-    def note = "mlst not re-run: ${scheme} is not in ${database}"
-    def reason = row.reason.contains("mlst re-run with ${scheme}")
-        ? row.reason.replace("mlst re-run with ${scheme}", note)
-        : [ row.reason, note ].findAll { text -> text }.join('; ')
-    return row + [ rerun_scheme: '', reason: reason ]
 }
 
 /*
