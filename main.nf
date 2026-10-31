@@ -15,6 +15,8 @@
 
 include { MGAP                } from './workflows/mgap'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_mgap_pipeline/main'
+include { pipelineHelp            } from './subworkflows/local/utils_nfcore_mgap_pipeline/main'
+include { helpAsked               } from './subworkflows/local/utils_nfcore_mgap_pipeline/main'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_mgap_pipeline/main'
 
 /*
@@ -33,8 +35,6 @@ workflow GENE2DIS_MGAP {
     // SUBWORKFLOW: Run initialisation tasks
     //
     PIPELINE_INITIALISATION (
-        params.version.toString().toBoolean(),
-        params.help.toString().toBoolean(),
         params.validate_params.toString().toBoolean(),
         params.monochrome_logs.toString().toBoolean(),
         args,
@@ -62,7 +62,18 @@ workflow GENE2DIS_MGAP {
 */
 
 workflow {
-    GENE2DIS_MGAP ()
+    // --help [parameter], --help_full and --show_hidden print the parameter
+    // help, --version the version; either runs nothing else (no processes, no
+    // parameter checks)
+    if (params.version.toString().toBoolean()) {
+        log.info("${workflow.manifest.name} ${workflow.manifest.version}")
+    }
+    else if (helpAsked(params.help) || helpAsked(params.help_full)) {
+        log.info(pipelineHelp(params.help, params.help_full, params.show_hidden))
+    }
+    else {
+        GENE2DIS_MGAP ()
+    }
 }
 
 /*

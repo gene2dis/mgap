@@ -1401,6 +1401,70 @@ nextflow_pipeline {
 
     }
 
+    test("--help lists the parameters and runs nothing - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        // On the command line, where flags arrive as strings
+        options "-stub --help"
+
+        then {
+            def output = workflow.stdout.join('\n')
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.trace.tasks().size() == 0 },
+                { assert output.contains('Typical pipeline command:') },
+                { assert output.contains('--seq_type') },
+                // hidden parameters only with --show_hidden
+                { assert !output.contains('--publish_dir_mode') },
+                { assert output.contains('use the `--show_hidden` parameter to show them') },
+                // nf-schema's own --help entries are left out, their wrapped lines too
+                { assert !output.contains('help message of that parameter') },
+                { assert !path("$outputDir/pipeline_info").exists() }
+            )
+        }
+
+    }
+
+    test("--help with a parameter and --show_hidden - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub --help publish_dir_mode --show_hidden"
+
+        then {
+            def output = workflow.stdout.join('\n')
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.trace.tasks().size() == 0 },
+                { assert output.contains('--publish_dir_mode') },
+                { assert output.contains('enum') },
+                { assert !output.contains('--seq_type') }
+            )
+        }
+
+    }
+
+    test("--version prints the version and runs nothing - stub") {
+
+        tag "pipeline"
+        tag "stub"
+
+        options "-stub --version"
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.trace.tasks().size() == 0 },
+                { assert workflow.stdout.any { it.contains('gene2dis/mgap 2.0.0') } },
+                { assert !workflow.stdout.any { it.contains('Typical pipeline command:') } }
+            )
+        }
+
+    }
+
     test("Run pipeline with test data") {
 
         tag "pipeline"
