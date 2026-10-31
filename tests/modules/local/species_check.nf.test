@@ -1,0 +1,91 @@
+nextflow_process {
+
+    name "Test SPECIES_CHECK module"
+    script "../../../modules/local/species/check/main.nf"
+    process "SPECIES_CHECK"
+    config "./species_check.config"
+
+    tag "modules"
+    tag "modules_local"
+    tag "species_check"
+
+    // tests/bin/data/species: SCL2461's mlst row (ecoli_achtman_4) and skani search against the
+    // Phase 12 reference set (K. pneumoniae 99.11 % ANI); SCL2333's Bracken table
+
+    test("SPECIES_CHECK - MLST overridden by the reference call") {
+
+        when {
+            process {
+                """
+                def data = "${projectDir}/tests/bin/data"
+                input[0] = [
+                    [ id:'SCL2461' ],
+                    file("\${data}/species/SCL2461.mlst.tsv", checkIfExists: true),
+                    file("\${data}/species/SCL2461.skani.tsv", checkIfExists: true),
+                    'bracken',
+                    file("\${data}/SCL2333.bracken.tsv", checkIfExists: true)
+                ]
+                input[1] = file("${projectDir}/assets/species_refs.tsv", checkIfExists: true)
+                input[2] = channel.of('{"ecoli_achtman_4": "Escherichia", "klebsiella": "Klebsiella_pneumoniae"}').collectFile(name: 'mlst_organisms.json')
+                input[3] = file("${projectDir}/assets/mlst_schemes.txt", checkIfExists: true)
+                input[4] = 'illumina'
+                """
+            }
+        }
+
+        then {
+            def rows = path(process.out.tsv[0][1]).readLines()*.split('\t', -1)
+            def row = [ rows[0] as List, rows[1] as List ].transpose().collectEntries()
+            assertAll(
+                { assert process.success },
+                { assert rows.size() == 2 },
+                { assert row.sample == 'SCL2461' },
+                { assert row.seq_type == 'illumina' },
+                { assert row.decision == 'override' },
+                { assert row.organism == 'Klebsiella_pneumoniae' },
+                { assert row.rerun_scheme == 'klebsiella' },
+                { assert row.reads_source == 'Bracken' },
+                { assert row.reads_species == 'Klebsiella pneumoniae' }
+            )
+        }
+
+    }
+
+    test("SPECIES_CHECK - MLST only, samplesheet species") {
+
+        when {
+            process {
+                """
+                def data = "${projectDir}/tests/bin/data"
+                input[0] = [
+                    [ id:'S1', species:'Salmonella enterica' ],
+                    file("\${data}/100.1.mlst.tsv", checkIfExists: true),
+                    [],
+                    '',
+                    []
+                ]
+                input[1] = file("${projectDir}/assets/species_refs.tsv", checkIfExists: true)
+                input[2] = channel.of('{"senterica_achtman_2": "Salmonella"}').collectFile(name: 'mlst_organisms.json')
+                input[3] = file("${projectDir}/assets/mlst_schemes.txt", checkIfExists: true)
+                input[4] = 'contig'
+                """
+            }
+        }
+
+        then {
+            def rows = path(process.out.tsv[0][1]).readLines()*.split('\t', -1)
+            def row = [ rows[0] as List, rows[1] as List ].transpose().collectEntries()
+            assertAll(
+                { assert process.success },
+                { assert row.decision == 'mlst' },
+                { assert row.organism == 'Salmonella' },
+                { assert row.expected_species == 'Salmonella enterica' },
+                { assert row.seq_type == 'contig' },
+                { assert row.flagged == 'no' },
+                { assert row.reason == 'no reference set (--species_refs)' }
+            )
+        }
+
+    }
+
+}

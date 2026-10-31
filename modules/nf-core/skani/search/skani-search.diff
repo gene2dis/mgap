@@ -1,0 +1,44 @@
+Changes in component 'nf-core/skani/search'
+Changes in 'skani/search/main.nf':
+--- modules/nf-core/skani/search/main.nf
++++ modules/nf-core/skani/search/main.nf
+@@ -7,8 +7,8 @@
+ 
+     conda "${moduleDir}/environment.yml"
+     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
+-        'https://depot.galaxyproject.org/singularity/skani:0.2.2--ha6fb395_2':
+-        'quay.io/biocontainers/skani:0.2.2--ha6fb395_2' }"
++        'https://depot.galaxyproject.org/singularity/skani:0.4.0--hec9b1f2_0':
++        'quay.io/biocontainers/skani:0.4.0--hec9b1f2_0' }"
+ 
+     input:
+     tuple val(meta) , path(query)
+@@ -36,7 +36,12 @@
+ 
+     stub:
+     prefix = task.ext.prefix ?: "${meta.id}"
++    // ext.stub_hit (set by test configs): [ reference file, ANI, AF reference, AF query ] writes a
++    // skani-style hit, so stub runs can exercise the species check; unset writes the header only
++    def header = "Ref_file\\tQuery_file\\tANI\\tAlign_fraction_ref\\tAlign_fraction_query\\tRef_name\\tQuery_name"
++    def stub_hit = task.ext.stub_hit ? "printf '%s\\t%s\\t%s\\t%s\\t%s\\tstub reference\\tstub query\\n' ${task.ext.stub_hit[0]} ${query} ${task.ext.stub_hit[1]} ${task.ext.stub_hit[2]} ${task.ext.stub_hit[3]} >> ${prefix}.tsv" : ''
+     """
+-    touch ${prefix}.tsv
++    printf '${header}\\n' > ${prefix}.tsv
++    ${stub_hit}
+     """
+ }
+
+Changes in 'skani/search/environment.yml':
+--- modules/nf-core/skani/search/environment.yml
++++ modules/nf-core/skani/search/environment.yml
+@@ -3,4 +3,4 @@
+   - bioconda
+ 
+ dependencies:
+-  - bioconda::skani=0.2.2
++  - bioconda::skani=0.4.0
+
+'modules/nf-core/skani/search/meta.yml' is unchanged
+'modules/nf-core/skani/search/tests/main.nf.test' is unchanged
+'modules/nf-core/skani/search/tests/main.nf.test.snap' is unchanged
+************************************************************

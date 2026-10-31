@@ -14,6 +14,12 @@
                 "errorMessage": "Sample name must be provided and cannot contain spaces",
                 "meta": ["id"]
             },
+            "species": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z .-]*$",
+                "errorMessage": "Species must be a name such as 'Klebsiella pneumoniae' (letters, spaces, dots and hyphens) or left empty",
+                "meta": ["species"]
+            },
             "fastq_1": {
                 "type": "string",
                 "format": "file-path",

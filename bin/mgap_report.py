@@ -34,6 +34,7 @@ per sample
 run level (sample ``-``)
     gtdbtk             GTDB-Tk ``*.summary.tsv`` (bac120 and ar53; genome names are sample IDs)
     sample_status      ``pipeline_info/sample_status.tsv``
+    species_check      ``pipeline_info/species_check.tsv`` (bin/species_check.py: one row per sample, the organism used)
     software_versions  ``pipeline_info/software_versions.yml``
     citations          the pipeline's ``CITATIONS.md``
 
@@ -47,7 +48,7 @@ one point per sample) on which only the outliers are named; sample cards start c
 ``nextflow_version``, ``run_name``, ``date``, ``seq_type``, ``command``, ``parameters`` (name to value),
 ``databases`` (parameter name to path), ``database_versions`` (parameter name to version, read from
 the database's own version file) and ``mlst_organisms`` (MLST scheme to the AMRFinderPlus organism,
-the pipeline's ``getTaxaNames()``). Database versions that software_versions.yml records
+the pipeline's ``getTaxaNames()``; the organism in species_check.tsv takes precedence). Database versions that software_versions.yml records
 (``amrfinderplus-database``, ``gtdb_db``) are used when run-info has none.
 """
 
@@ -67,6 +68,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.offline import get_plotlyjs
 from plotly.subplots import make_subplots
+
+# read-classifier genus names that are another genus's (Shigella is Escherichia), as in the species check
+from species_check import GENUS_ALIASES
 
 try:
     import yaml
@@ -95,7 +99,7 @@ SAMPLE_TOOLS = (
     "sistr",
     "sccmec",
 )
-RUN_TOOLS = ("gtdbtk", "sample_status", "software_versions", "citations")
+RUN_TOOLS = ("gtdbtk", "sample_status", "species_check", "software_versions", "citations")
 RUN_SAMPLE = "-"
 
 # CheckM2 lines drawn on the scatter: the MIMAG high-quality draft thresholds
@@ -502,6 +506,12 @@ def parse_sample_status(path):
     return pd.read_csv(path, sep="\t", dtype=str).fillna("")
 
 
+def parse_species_check(path):
+    """pipeline_info/species_check.tsv (bin/species_check.py columns): {sample: row}."""
+    with open(path, newline="") as handle:
+        return {row["sample"]: row for row in csv.DictReader(handle, delimiter="\t")}
+
+
 def parse_software_versions(path):
     """software_versions.yml: {process: {tool: version}} -> rows (tool, version, processes)."""
     if yaml is None:
@@ -576,6 +586,7 @@ class RunData:
         self.plasmid_consensus = {}
         self.isescan = {}  # sample -> DataFrame, empty when ISEScan found no IS element
         self.status = None  # DataFrame
+        self.species_check = {}  # sample -> species_check.tsv row
         self.versions = []
         self.citations = []
         self.problems = []  # (tool, file, error) for the methods section
@@ -646,6 +657,8 @@ class RunData:
                 self.gtdbtk.update(parsed)
         for path in manifest.get("sample_status", {}).get(RUN_SAMPLE, [])[:1]:
             self.status = self._parse("sample_status", parse_sample_status, path)
+        for path in manifest.get("species_check", {}).get(RUN_SAMPLE, [])[:1]:
+            self.species_check = self._parse("species_check", parse_species_check, path) or {}
         for path in manifest.get("software_versions", {}).get(RUN_SAMPLE, [])[:1]:
             self.versions = self._parse("software_versions", parse_software_versions, path) or []
         for path in manifest.get("citations", {}).get(RUN_SAMPLE, [])[:1]:
@@ -669,7 +682,9 @@ class RunData:
         return rows.iloc[0].to_dict() if len(rows) else {}
 
     def organism(self, sample):
-        """AMRFinderPlus organism for the sample's MLST scheme (run-info map), or None."""
+        """AMRFinderPlus organism the sample was routed as: from species_check.tsv, else its MLST scheme's."""
+        if sample in self.species_check:
+            return self.species_check[sample].get("organism") or None
         scheme = self.mlst.get(sample, {}).get("scheme")
         return self.run_info.get("mlst_organisms", {}).get(scheme) if scheme else None
 
@@ -725,6 +740,9 @@ class RunData:
                 f"{self.taxa_source[sample]}: second species {taxa.iloc[1]['name']} at "
                 f"{taxa.iloc[1]['percent']:.1f} % of reads (possible contamination)"
             )
+        check = self.species_check.get(sample, {})
+        if check.get("flagged") == "yes":
+            notes.append(f"Species check ({check.get('decision')}): {check.get('reason')}")
         disagreement = self.species_disagreement(sample)
         if disagreement:
             notes.append(disagreement)
@@ -742,7 +760,8 @@ class RunData:
         return organism.split("_")[0] if organism else None
 
     def species_disagreement(self, sample):
-        """A note when the MLST genus differs from the GTDB-Tk or read-based genus."""
+        """A note when the MLST genus differs from the GTDB-Tk or read-based genus (Shigella counts as Escherichia,
+        as in bin/species_check.py)."""
         mlst_genus = self.mlst_genus(sample)
         if not mlst_genus:
             return None
@@ -752,9 +771,12 @@ class RunData:
             others.append(("GTDB-Tk", gtdb.split("_")[0]))
         taxa = self.taxa.get(sample)
         if taxa is not None and len(taxa):
-            others.append((self.taxa_source[sample], taxa.iloc[0]["name"].split()[0]))
+            read_genus = taxa.iloc[0]["name"].split()[0]
+            others.append((self.taxa_source[sample], GENUS_ALIASES.get(read_genus, read_genus)))
         differing = [f"{source} {genus}" for source, genus in others if genus != mlst_genus]
         if differing:
+            if sample in self.species_check:
+                return f"Organism used ({mlst_genus}) disagrees with " + ", ".join(differing)
             return f"MLST scheme {self.mlst[sample]['scheme']} ({mlst_genus}) disagrees with " + ", ".join(differing)
         return None
 
@@ -1594,6 +1616,10 @@ def section_typing(run):
         g = run.gtdbtk.get(s, {})
         taxa = run.taxa.get(s)
         disagreement = run.species_disagreement(s)
+        species_check = run.species_check.get(s, {})
+        decision = species_check.get("decision", "")
+        if species_check.get("flagged") == "yes":
+            decision = f'<span class="flag">{esc(decision)}</span>'
         if disagreement:
             check = '<span class="flag">differs</span>'
         elif not run.organism(s):
@@ -1602,11 +1628,14 @@ def section_typing(run):
             check = "agrees" if run.species_checked(s) else "no second call"
         rows.append(
             {
-                "_flagged": bool(disagreement),
+                "_flagged": bool(disagreement) or species_check.get("flagged") == "yes",
                 "sample": sample_link(s),
                 "scheme": m.get("scheme") or "none",
                 "st": m.get("st") or "",
                 "mlst_species": f"<i>{esc(species_name(run.organism(s)))}</i>" if run.organism(s) else "",
+                "skani": f"<i>{esc(species_check['skani_species'])}</i>" if species_check.get("skani_species") else "",
+                "skani_ani": fmt_float(to_number(species_check.get("skani_ani")), 2),
+                "decision": decision,
                 "gtdb": gtdb_name(g),
                 "ani": fmt_float(g.get("ani"), 2),
                 "reads": f"<i>{esc(taxa.iloc[0]['name'])}</i>" if taxa is not None and len(taxa) else "",
@@ -1620,7 +1649,10 @@ def section_typing(run):
             ("sample", "Sample"),
             ("scheme", "MLST scheme"),
             ("st", "ST"),
-            ("mlst_species", "Species from MLST"),
+            ("mlst_species", "Organism used" if run.species_check else "Species from MLST"),
+            ("skani", "Closest reference (skani)"),
+            ("skani_ani", "skani ANI (%)"),
+            ("decision", "Species check"),
             ("gtdb", "GTDB-Tk species"),
             ("ani", "GTDB-Tk ANI (%)"),
             ("reads", "Top species in reads"),
@@ -1628,6 +1660,10 @@ def section_typing(run):
         ]
         if not run.gtdbtk:
             columns = [c for c in columns if c[0] not in ("gtdb", "ani")]
+        if not run.species_check:
+            columns = [c for c in columns if c[0] != "decision"]
+        if not any(row["skani"] for row in rows):
+            columns = [c for c in columns if c[0] not in ("skani", "skani_ani")]
         if not run.taxa:
             columns = [c for c in columns if c[0] != "reads"]
         if not run.gtdbtk and not run.taxa:
@@ -1636,7 +1672,12 @@ def section_typing(run):
                 '<p class="note">Neither GTDB-Tk nor a read classification ran, so the MLST species could not be '
                 "checked against a second call.</p>"
             )
-        body += render_table(columns, rows, numeric=("ani",), raw=("sample", "mlst_species", "gtdb", "reads", "check"))
+        body += render_table(
+            columns,
+            rows,
+            numeric=("ani", "skani_ani"),
+            raw=("sample", "mlst_species", "skani", "decision", "gtdb", "reads", "check"),
+        )
 
     if run.kleborate:
         rows = []
@@ -1740,6 +1781,20 @@ def section_typing(run):
         "species calls: when either genus differs from the MLST species the row is flagged and listed first, "
         "and the species tools may have been chosen wrongly.",
     ]
+    if run.species_check:
+        intro.append(
+            "The species check decided which species each sample is treated as (the species used, which chooses "
+            "the species tools and the AMRFinderPlus organism). With a reference set, each assembly is compared "
+            "with curated NCBI genomes (skani; a species call needs 95 % ANI or more): <i>agree</i> means the "
+            "closest reference confirms the MLST scheme; <i>override</i> means it is a species the MLST scheme "
+            "does not type, and the sample was routed by the reference (MLST was run again with that species' "
+            "scheme); <i>refine</i> means the scheme types it but the species needs another organism; "
+            "<i>mlst</i> means no reference call (no reference set, or no close reference), so MLST alone decided; "
+            "<i>reference</i> means MLST found no scheme and the reference call decided; <i>ambiguous</i> means two "
+            "references of different organisms were equally close, so the MLST organism was kept only when it is "
+            "one of them; <i>samplesheet</i> means neither gave an organism and the samplesheet species did. "
+            "Flagged decisions are listed first; pipeline_info/species_check.tsv gives the reason."
+        )
     if run.sccmec:
         intro.append(
             "sccmec types the cassette from its target genes (mec and ccr complexes); when they do not give one "
@@ -2421,6 +2476,14 @@ def section_cards(run):
                 facts.append(("MLST", f"{esc(m['scheme'])} ST {esc(m.get('st') or 'not assigned')}{species}"))
             else:
                 facts.append(("MLST", "no scheme matched"))
+        check = run.species_check.get(s)
+        if check:
+            reference = (
+                f", closest reference <i>{esc(check['skani_species'])}</i> ({esc(check.get('skani_ani'))} % ANI)"
+                if check.get("skani_species")
+                else ""
+            )
+            facts.append(("Species check", f"{esc(check.get('decision'))}{reference}"))
         g = run.gtdbtk.get(s)
         if g:
             facts.append(("GTDB-Tk", gtdb_name(g)))
@@ -2630,7 +2693,16 @@ def summary_rows(run):
         row["checkm2_contamination"] = c.get("contamination")
         row["mlst_scheme"] = m.get("scheme") or ""
         row["mlst_st"] = m.get("st") or ""
-        row["mlst_organism"] = run.organism(s) or ""
+        check = run.species_check.get(s, {})
+        # mlst_organism: organism of the scheme shown (the re-run's after an override); amrfinder_organism: the one
+        # the sample was routed as
+        row["mlst_organism"] = (
+            run.run_info.get("mlst_organisms", {}).get(m.get("scheme"), "") if m.get("scheme") else ""
+        )
+        row["species_check_decision"] = check.get("decision", "")
+        row["skani_species"] = check.get("skani_species", "")
+        row["skani_ani"] = to_number(check.get("skani_ani"))
+        row["amrfinder_organism"] = run.organism(s) or ""
         row["gtdbtk_classification"] = g.get("classification", "")
         row["gtdbtk_ani"] = g.get("ani")
         row["kleborate_species"] = k.get("species", "")

@@ -78,7 +78,12 @@ flowchart TD
     GTDBTK_CHK -- yes --> GTDBTK["GTDB-Tk<br>(taxonomic classification)"]
 
     %% ── AMR detection ──
-    MLST --> SPECIES["Species Code<br>(MLST → taxa map)"]
+    ANNOT_IN --> SKANI_CHK{"species_refs?"}
+    SKANI_CHK -- yes --> SKANI["skani search<br>(curated NCBI references)"]
+    MLST & SKANI --> SPECIES["SPECIES_CHECK<br>(MLST, skani, reads,<br>samplesheet species)"]
+    BRACKEN & KRAKEN2_ONT -. "top species" .-> SPECIES
+    SPECIES -- "override" --> MLST_SCHEME["MLST --scheme<br>(reference species' scheme)"]
+    SPECIES --> SPECIES_TSV["species_check.tsv"]
     BAKTA --> AMR_JOIN["Join Bakta outputs<br>+ species code"]
     SPECIES --> AMR_JOIN
     AMR_JOIN --> AMRFINDER["AMRFinderPlus<br>(AMR detection)"]
@@ -107,7 +112,7 @@ flowchart TD
     TAXA_BRANCH -- "Salmonella" --> SISTR["SISTR<br>(serotype prediction)"]
 
     %% ── Software versions ──
-    QUAST & ANNOT_IN & CHECKM2 & MLST & BAKTA & AMRFINDER & GENOMAD & RGI --> TOOL_VERSIONS["Tool versions"]
+    QUAST & ANNOT_IN & CHECKM2 & MLST & SKANI & SPECIES & BAKTA & AMRFINDER & GENOMAD & RGI --> TOOL_VERSIONS["Tool versions"]
     KLEBORATE & SCCMEC & SISTR & MOBSUITE & ISESCAN --> TOOL_VERSIONS
     QUAST & BAKTA --> MULTIQC["MULTIQC<br>(aggregate QC report)"]
     TOOL_VERSIONS -- "Software Versions section" --> MULTIQC
@@ -123,9 +128,9 @@ flowchart TD
     classDef input fill:#f8cecc,stroke:#b85450,color:#000
     classDef merge fill:#e1d5e7,stroke:#9673a6,color:#000
 
-    class SEQ_TYPE,GATE_ILL,GATE_ONT,KR2_ILL,KR2_ONT,COV_ILL,ASMCOV_ONT,ASM_ONT,BEROKKA_CHK,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,RGI_CHK,MOBSUITE_CHK,ISESCAN_CHK,TAXA_BRANCH decision
-    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,LRGE,BEROKKA,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,RGI_LOAD,RGI,MOBSUITE,ISESCAN optional
-    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,ANNOT_IN,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,TOOL_VERSIONS,VERSIONS,STATUS,SPECIES,AMR_JOIN process
+    class SEQ_TYPE,GATE_ILL,GATE_ONT,KR2_ILL,KR2_ONT,COV_ILL,ASMCOV_ONT,ASM_ONT,BEROKKA_CHK,DNAAPLER_FLYE,DNAAPLER_AC,GTDBTK_CHK,SKANI_CHK,RGI_CHK,MOBSUITE_CHK,ISESCAN_CHK,TAXA_BRANCH decision
+    class KRAKEN2_ILL,BRACKEN,KRAKEN2_ONT,MASH_ILL,SEQTK_ILL,LRGE,BEROKKA,DNAAPLER_F,DNAAPLER_G,GFA2FASTA,GTDBTK,SKANI,MLST_SCHEME,RGI_LOAD,RGI,MOBSUITE,ISESCAN optional
+    class FASTP,FASTPLONG,SPADES,FLYE,MEDAKA,AC_GSIZE,AC_SUB,AC_ASM,AC_COMP,AC_CLUST,AC_TR,AC_COMB,QUAST,ANNOT_IN,CHECKM2,MLST,BAKTA,AMRFINDER,GENOMAD,KLEBORATE,SCCMEC,SISTR,TOOL_VERSIONS,VERSIONS,STATUS,SPECIES,SPECIES_TSV,AMR_JOIN process
     class INPUT input
     class ASSEMBLY merge
 ```
@@ -176,9 +181,11 @@ flowchart TD
 | -    | **SeqKit**        | Annotation FASTA: contigs >= `min_contig_length`, uncompressed, renamed `contig_N`; read by every tool below |
 | 2    | **CheckM2**       | Genome completeness and contamination assessment                                                             |
 | 3    | **MLST**          | Multi-locus sequence typing                                                                                  |
+| 3b   | **skani**         | Closest curated NCBI reference _(optional, `--species_refs`)_                                                |
+| 3c   | **Species check** | One species decision per sample (MLST, skani, reads, samplesheet): AMRFinderPlus organism and species tools  |
 | 4    | **Bakta**         | Genome annotation                                                                                            |
 | 5    | **GTDB-Tk**       | Taxonomic classification _(optional)_                                                                        |
-| 6    | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta + MLST outputs)                                          |
+| 6    | **AMRFinderPlus** | Antimicrobial resistance gene detection (uses Bakta outputs and the species check's organism)                |
 | 7    | **geNomad**       | Mobile genetic element identification                                                                        |
 | 8    | **RGI**           | Resistance gene prediction; CARD loaded once per run _(optional)_                                            |
 | 9    | **MOB-suite**     | Plasmid detection and reconstruction _(optional)_                                                            |

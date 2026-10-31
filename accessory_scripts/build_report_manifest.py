@@ -54,12 +54,13 @@ SAMPLE_PATTERNS = {
 RUN_PATTERNS = {
     "gtdbtk": ["gtdbtk/*/*.summary.tsv"],
     "sample_status": ["pipeline_info/sample_status.tsv"],
+    "species_check": ["pipeline_info/species_check.tsv"],
     "software_versions": ["pipeline_info/software_versions.yml"],
 }
 EXCLUDE = re.compile(r"hAMRonization")
 NON_SAMPLE_DIRS = {"pipeline_info", "gtdbtk", "multiqc", "report"}
 # database paths, as the pipeline lists them in run_info.json (mlst_datadir included)
-DATABASE_PARAMS = re.compile(r"(db|_datadir)$")
+DATABASE_PARAMS = re.compile(r"(db|_datadir|^species_refs)$")
 
 
 def bakta_version(base):
@@ -82,11 +83,20 @@ def card_version(base):
     return f"CARD {versions[-1]}" if versions else None
 
 
+def species_refs_version(base):
+    """version.txt of accessory_scripts/build_species_refs.py: built date, genome count, skani version."""
+    fields = dict(line.split(": ", 1) for line in (base / "version.txt").read_text().splitlines() if ": " in line)
+    if not fields.get("built"):
+        return None
+    return f"{fields['built']} ({fields.get('genomes')} genomes, skani {fields.get('skani_version')})"
+
+
 # database parameter -> reader of the version file in its folder
 DATABASE_VERSIONS = {
     "bakta_db": bakta_version,
     "amrfinder_db": lambda base: (base / "version.txt").read_text().strip(),
     "genomad_db": lambda base: (base / "version.txt").read_text().strip(),
+    "species_refs": species_refs_version,
     "gtdbtk_db": gtdbtk_version,
     "rgi_db": card_version,
 }
@@ -118,13 +128,33 @@ def find(base, patterns, sample=""):
     return files
 
 
+def rerun_schemes(results):
+    """{sample: scheme} of the mlst re-runs after a species-check override (pipeline_info/species_check.tsv)."""
+    path = results / "pipeline_info" / "species_check.tsv"
+    if not path.is_file():
+        return {}
+    with open(path, newline="") as handle:
+        return {
+            row["sample"]: row["rerun_scheme"]
+            for row in csv.DictReader(handle, delimiter="\t")
+            if row.get("rerun_scheme")
+        }
+
+
 def manifest_rows(results, citations):
     rows = []
+    reruns = rerun_schemes(results)
     for sample_dir in sorted(path for path in results.iterdir() if path.is_dir()):
         if sample_dir.name in NON_SAMPLE_DIRS:
             continue
         for tool, patterns in SAMPLE_PATTERNS.items():
-            for path in find(sample_dir, patterns, sample_dir.name):
+            files = find(sample_dir, patterns, sample_dir.name)
+            if tool == "mlst":
+                # the report shows the re-run where species_check.tsv names one, else the automatic result
+                rerun = sample_dir / "annotation" / "mlst" / f"{sample_dir.name}.{reruns.get(sample_dir.name)}.tsv"
+                name = rerun.name if sample_dir.name in reruns and rerun.is_file() else f"{sample_dir.name}.tsv"
+                files = [path for path in files if path.name == name]
+            for path in files:
                 rows.append({"sample": sample_dir.name, "tool": tool, "file": str(path.resolve())})
     for tool, patterns in RUN_PATTERNS.items():
         for path in find(results, patterns):

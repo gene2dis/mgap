@@ -1,0 +1,74 @@
+name: species_check
+description: |
+  One species decision per sample (bin/species_check.py): combines the MLST scheme, the skani call against
+  the curated reference set (--species_refs), the top species in the reads (Bracken or Kraken2) and the
+  samplesheet species into the AMRFinderPlus organism and species tools the sample gets, with a decision
+  (agree, refine, override, reference, ambiguous, mlst, samplesheet) and the reason. Rules in docs/output.md.
+keywords:
+  - species
+  - mlst
+  - ani
+  - routing
+tools:
+  - species_check:
+      description: Species script of the MGAP pipeline (bin/species_check.py, Python standard library only).
+      homepage: https://github.com/gene2dis/mgap
+      documentation: https://github.com/gene2dis/mgap/blob/main/docs/output.md
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information; meta.species (samplesheet) is passed as --expected
+          e.g. [ id:'test' ]
+    - mlst:
+        type: file
+        description: mlst TSV of the automatic scheme search
+        pattern: "*.tsv"
+    - skani:
+        type: file
+        description: skani search TSV against --species_refs, or [] when the species check did not run
+        pattern: "*.tsv"
+    - taxa_format:
+        type: string
+        description: bracken (Illumina) or kraken2 (ONT); ignored when taxa is []
+    - taxa:
+        type: file
+        description: Bracken species table or Kraken2 report, or [] when no read classification ran
+        pattern: "*.{tsv,txt}"
+  - refs:
+      type: file
+      description: species_refs.tsv (from --species_refs, else assets/species_refs.tsv)
+      pattern: "*.tsv"
+  - mlst_organisms:
+      type: file
+      description: JSON map of MLST scheme to AMRFinderPlus organism (getTaxaNames() in workflows/mgap.nf)
+      pattern: "*.json"
+  - mlst_schemes:
+      type: file
+      description: MLST schemes mlst has, one per line (# comments); the mlst re-run uses the first of the reference species' schemes in it
+      pattern: "*.txt"
+  - seq_type:
+      type: string
+      description: Sequencing type of the run (illumina, ont or contig), written to the seq_type column
+output:
+  tsv:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test' ]
+      - ${prefix}.species_check.tsv:
+          type: file
+          description: Header and one row with the species decision (columns in docs/output.md)
+          pattern: "*.species_check.tsv"
+  versions:
+    - versions.yml:
+        type: file
+        description: File containing software versions
+        pattern: "versions.yml"
+authors:
+  - "@gene2dis"
+maintainers:
+  - "@gene2dis"

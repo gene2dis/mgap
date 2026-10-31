@@ -1,0 +1,8 @@
+accession	species	strain	amrfinder_organism	mlst_schemes
+GCF_004008975.1	Bordetella pertussis	H640	Bordetella_pertussis	bordetella_3
+GCF_020735925.1	Bordetella parapertussis	FDAARGOS_1541	-	bordetella_3
+GCF_900636925.1	Bordetella bronchiseptica	NCTC10543	-	bordetella_3
+GCF_000005845.2	Escherichia coli	K-12 MG1655	Escherichia	ecoli_achtman_4;ecoli;ecoli_2
+GCF_006364295.1	Klebsiella pneumoniae	FDAARGOS_775 (type)	Klebsiella_pneumoniae	klebsiella
+GCF_000006945.2	Salmonella enterica	LT2 (type)	Salmonella	senterica_achtman_2;salmonella
+GCF_026167765.1	Staphylococcus aureus	DSM 20231T	Staphylococcus_aureus	saureus

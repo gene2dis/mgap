@@ -72,6 +72,8 @@ workflow ONT {
     //
     READ_QC_GATE ( FASTPLONG.out.reads, FASTPLONG.out.json, 'fastplong' )
     ch_qc_reads = READ_QC_GATE.out.reads
+    // [ meta, format, report ] top species in the reads, for the species check (Kraken2 only on ONT)
+    ch_taxa = channel.empty()
 
     //
     // MODULE: Run Kraken2 for contamination detection (optional)
@@ -86,6 +88,7 @@ workflow ONT {
         ch_versions = ch_versions.mix(KRAKEN2.out.versions.first())
         ch_reports = ch_reports.mix(KRAKEN2.out.report.map { _meta, report -> report })
         ch_report_files = ch_report_files.mix(KRAKEN2.out.report.map { meta, report -> [ meta, 'kraken2', report ] })
+        ch_taxa = KRAKEN2.out.report.map { meta, report -> [ meta, 'kraken2', report ] }
     }
 
     //
@@ -332,5 +335,6 @@ workflow ONT {
     report_files  = ch_report_files          // channel: [ val(meta), val(tool), path(file) ] for the run report
     read_stats    = READ_QC_GATE.out.stats   // channel: [ val(meta), map ] read numbers, every sample
     status        = READ_QC_GATE.out.status.mix(ch_failed)  // channel: [ val(meta), map ] skipped and failed samples
+    taxa          = ch_taxa                  // channel: [ val(meta), val('kraken2'), path(report) ] species check
     versions      = ch_versions              // channel: [ path(versions.yml) ]
 }

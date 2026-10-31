@@ -48,7 +48,10 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   └── quast/                       # Assembly quality metrics: *.tsv
 │   └── annotation/
 │       ├── checkm2/                     # Genome completeness/contamination: *.tsv
-│       ├── mlst/                        # Multi-locus sequence typing: *.tsv
+│       ├── mlst/                        # Multi-locus sequence typing: <sample>.tsv (automatic scheme);
+│       │                                #   <sample>.<scheme>.tsv when the species check overrides MLST
+│       ├── skani/                       # Species check: skani hits against --species_refs: *.tsv
+│       │                                #   (requires --species_refs)
 │       ├── bakta/                       # Genome annotation: *.gff3, *.gbff, *.fna, *.faa, *.tsv, ...
 │       ├── amrfinder/                   # AMR detection: *.tsv
 │       ├── genomad/                     # Mobile genetic elements: *_summary/, *_annotate/, *_find_proviruses/
@@ -62,11 +65,11 @@ All results are written to the directory specified with `--outdir`. The layout b
 │       ├── rgi/                         # Resistance gene prediction: *.txt, *.json
 │       │                                #   (requires --run_rgi true)
 │       ├── kleborate/                   # Klebsiella virulence/resistance: *.txt
-│       │                                #   (auto-triggered when Klebsiella is detected by MLST)
+│       │                                #   (when the species check routes the sample to K. pneumoniae)
 │       ├── sccmec/                      # S. aureus SCCmec typing: *.tsv
-│       │                                #   (auto-triggered when S. aureus is detected by MLST)
+│       │                                #   (when the species check routes the sample to S. aureus)
 │       └── sistr/                       # Salmonella serotype prediction: *.tab, *-allele.{json,fasta}, *-cgmlst.csv
-│                                        #   (auto-triggered when Salmonella is detected by MLST)
+│                                        #   (when the species check routes the sample to Salmonella)
 ├── gtdbtk/                              # GTDB-Tk taxonomic classification (batch, all samples)
 │   ├── gtdbtk.batch.*.summary.tsv       #   (requires --run_gtdbtk true and --gtdbtk_db)
 │   └── gtdbtk.batch.log
@@ -80,6 +83,7 @@ All results are written to the directory specified with `--outdir`. The layout b
     ├── execution_trace_*.txt
     ├── pipeline_dag_*.html
     ├── sample_status.tsv                 # pass, skipped or failed per sample, with reason and key numbers
+    ├── species_check.tsv                 # species decision per annotated sample: MLST, skani, reads, organism used
     └── software_versions.yml
 ```
 
@@ -119,6 +123,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - [QUAST](#quast) - Assembly quality metrics
 - [CheckM2](#checkm2) - Genome completeness and contamination assessment
 - [MLST](#mlst) - Multi-locus sequence typing
+- [Species check](#species-check) - skani against curated references; chooses the AMRFinderPlus organism and species tools
 - [Bakta](#bakta) - Genome annotation
 - [GTDB-Tk](#gtdb-tk) - Taxonomic classification _(optional)_
 - [AMRFinderPlus](#amrfinderplus) - Antimicrobial resistance detection
@@ -372,7 +377,58 @@ This step runs for every `--seq_type`.
 
 </details>
 
-[MLST](https://github.com/tseemann/mlst) scans genome assemblies against PubMLST schemes to determine sequence types. The MLST result is also used internally to identify species for AMRFinderPlus organism-specific analysis and to trigger species-specific tools (Kleborate, sccmec, SISTR).
+[MLST](https://github.com/tseemann/mlst) scans genome assemblies against PubMLST schemes to determine sequence types. The scheme it chooses is one input of the [species check](#species-check), which sets the AMRFinderPlus organism and the species-specific tools (Kleborate, sccmec, SISTR). When the species check overrides the automatic scheme, mlst runs again with the reference species' scheme (`--scheme`) and writes `<sample>.<scheme>.tsv` next to the automatic `<sample>.tsv`; the run report shows the re-run.
+
+### Species check
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `<sample_id>/annotation/skani/`
+  - `*.tsv`: the five best skani hits of the annotation FASTA against `--species_refs` (reference file, ANI, aligned fraction of the reference and of the sample). Only with `--species_refs`.
+- `pipeline_info/species_check.tsv`: one row per annotated sample (columns below).
+
+</details>
+
+The species check decides, per sample, which AMRFinderPlus organism (`--organism`, which turns on point mutations) and which species tools (Kleborate for _K. pneumoniae_, sccmec for _S. aureus_, SISTR for _Salmonella_) the sample gets. MLST alone can choose the wrong scheme when two schemes share alleles (a _K. pneumoniae_ ST11 was typed `ecoli_achtman_4` ST14464 and got the _Escherichia_ organism and no Kleborate), so with `--species_refs` every annotation FASTA is also compared with [skani](https://github.com/bluenote-1577/skani) against a curated set of NCBI reference genomes ([building it](usage.md#species-check-skani)). The decision (`bin/species_check.py`):
+
+- **Reference call**: the best reference with ANI ≥ 95 % (the usual species boundary) over ≥ 50 % of the sample's assembly. When the next reference of another organism (or, between species without one, of another species) is within 0.5 ANI points (the _Bordetella_ references, and _B. mallei_ and _B. pseudomallei_, are 98.7–99.5 % ANI apart), the call is `ambiguous`.
+- `agree`: the reference species is typed by the MLST scheme and maps to the same organism. Routing is unchanged.
+- `refine`: the reference species is typed by the MLST scheme but maps to another organism or to none (an _S. argenteus_ typed by `saureus`; a _B. pertussis_ typed by `bordetella_3`, which gives no organism on its own because it also types _B. parapertussis_ and _B. bronchiseptica_). The organism follows the reference species.
+- `override`: the MLST scheme does not type the reference species. Routing follows the reference species, and mlst runs again with its scheme.
+- `reference`: mlst found no scheme; routing follows the reference species (mlst again with its scheme).
+- `ambiguous`: the MLST organism is kept when it is one of the two candidates, else there is none.
+- `mlst`: no reference call (no `--species_refs`, or no reference passes the thresholds); routing follows the MLST scheme. With a reference set, no call is flagged (the species may be outside the set). With a read classification (Bracken on Illumina, Kraken2 on ONT), its top species' genus is compared with the MLST genus; a difference is flagged but does not change the routing.
+- `samplesheet`: no reference call and no organism from MLST; the samplesheet `species` gives the organism, unless the MLST scheme types another genus (then `mlst`, flagged).
+
+`campylobacter_nonjejuni*` and `bordetella_3` give no organism from MLST alone (D-14): the schemes type species the AMRFinderPlus organism is not curated for (_C. lari_, _C. upsaliensis_ …; _B. parapertussis_, _B. bronchiseptica_), so only a reference call of _C. jejuni_/_C. coli_ or _B. pertussis_ gives them `Campylobacter` or `Bordetella_pertussis`. Flagged samples get a warning in the run log. The thresholds are `SPECIES_CHECK`'s `ext.args` (`--min-ani`, `--min-af`, `--ani-margin`; see [usage](usage.md#species-check-skani)).
+
+`species_check.tsv` columns:
+
+| Column             | Description                                                                                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `sample`           | Sample ID                                                                                                  |
+| `seq_type`         | `illumina`, `ont` or `contig`                                                                              |
+| `mlst_scheme`      | Scheme mlst chose automatically (`-`: none)                                                                |
+| `mlst_st`          | Its sequence type (`-`: none or novel)                                                                     |
+| `mlst_organism`    | AMRFinderPlus organism of that scheme alone (empty: none)                                                  |
+| `skani_species`    | Best reference species (also when below the thresholds; empty without `--species_refs` or without any hit) |
+| `skani_accession`  | Its NCBI accession                                                                                         |
+| `skani_ani`        | ANI to it (%)                                                                                              |
+| `skani_af_ref`     | Aligned fraction of the reference (%)                                                                      |
+| `skani_af_query`   | Aligned fraction of the sample's assembly (%), the one compared with the threshold                         |
+| `skani_next`       | For `ambiguous`: the other candidate and its ANI                                                           |
+| `reads_species`    | Top species in the reads (Illumina: Bracken; ONT: Kraken2; empty in contig mode or without `--kraken2db`)  |
+| `reads_percent`    | Its share: % of the classified reads (Bracken) or of all reads (Kraken2 report)                            |
+| `reads_source`     | `Bracken` or `Kraken2`                                                                                     |
+| `expected_species` | Samplesheet `species` column                                                                               |
+| `species`          | The species call (`a / b` for `ambiguous`; empty when only MLST decided)                                   |
+| `organism`         | AMRFinderPlus organism used (empty: none; no point mutations)                                              |
+| `rerun_scheme`     | Scheme mlst was run again with (`override`, `reference`): the first of the species' schemes that mlst has  |
+| `rerun_st`         | Sequence type from that re-run                                                                             |
+| `decision`         | `agree`, `refine`, `override`, `reference`, `ambiguous`, `mlst` or `samplesheet`                           |
+| `flagged`          | `yes` when sources disagree, the reference set has no hit, or mlst has none of the called species' schemes |
+| `reason`           | What the decision rests on, separated by `;`                                                               |
 
 ### Bakta
 
@@ -598,7 +654,7 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 - Antimicrobial resistance determinants: acquired genes, SNPs, gene truncations and intrinsic β-lactamases
 - K (capsule) and O antigen (LPS) serotype prediction
 
-**Automatic detection:** Kleborate analysis is automatically triggered when _Klebsiella_ species are detected based on MLST results.
+**Automatic detection:** Kleborate runs when the [species check](#species-check) gives the AMRFinderPlus organism `Klebsiella_pneumoniae` (the _K. pneumoniae_ species complex), but not for a reference call of _K. aerogenes_: AMRFinderPlus's organism covers it, Kleborate's KpSC preset does not.
 
 ### sccmec
 
@@ -612,7 +668,7 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 
 [sccmec](https://github.com/rpetit3/sccmec) classifies the SCCmec cassette type in _Staphylococcus aureus_ genome assemblies. SCCmec (Staphylococcal Cassette Chromosome _mec_) is a mobile genetic element that carries the _mecA_ gene responsible for methicillin resistance (MRSA).
 
-**Automatic detection:** This analysis is automatically triggered when _S. aureus_ is detected based on MLST results.
+**Automatic detection:** This analysis runs when the [species check](#species-check) gives the AMRFinderPlus organism `Staphylococcus_aureus`.
 
 ### SISTR
 
@@ -629,7 +685,7 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 
 [SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serovars and subtypes from _Salmonella enterica_ assemblies using antigen gene detection and cgMLST. The pipeline pins SISTR to **v1.1.3**.
 
-**Automatic detection:** SISTR analysis is automatically triggered when MLST assigns the `senterica_achtman_2` scheme to a sample (`salmonella` with mlst databases older than 2.23).
+**Automatic detection:** SISTR runs when the [species check](#species-check) gives the AMRFinderPlus organism `Salmonella` (without `--species_refs`: the MLST scheme `senterica_achtman_2`, `salmonella` with mlst databases older than 2.23).
 
 ---
 
@@ -649,19 +705,19 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 
 `MGAP_REPORT` (`bin/mgap_report.py`) reads every tool's output for the run and writes a report for lab staff: each section says what the tool does and how to read its result. Sections appear only for the tools that ran; skipped and failed samples are listed from `pipeline_info/sample_status.tsv`.
 
-| Section                            | What it shows                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Run overview                       | Pipeline and Nextflow versions, run date and sequencing type; pass, skipped and failed counts with the samples that did not pass and why; key thresholds; the databases used, with their version where the database records one (Bakta, AMRFinderPlus, geNomad, GTDB-Tk, CARD; Kraken2, CheckM2 and MOB-suite databases show "not recorded").                                                                                                                                   |
-| Read quality and species           | Reads and bases before and after fastp/fastplong with the `--min_bases` limit, Q30, GC, duplication and (Illumina) coverage from Mash's genome size; the species in the reads from Bracken (or Kraken2), with a warning when a second species has more than 5 % of the reads.                                                                                                                                                                                                   |
-| Assembly                           | QUAST total length (with the usual genome length for the MLST species), contigs and N50, and the contigs kept for annotation by `--min_contig_length`.                                                                                                                                                                                                                                                                                                                          |
-| Genome quality (CheckM2)           | Completeness against contamination, with the 90 % / 5 % high-quality limits; genomes with low completeness, high contamination or both have their own colour and marker and are listed first.                                                                                                                                                                                                                                                                                   |
-| Species and typing                 | MLST scheme and ST, the GTDB-Tk species and ANI and the top species in the reads; rows where the genus from MLST differs from GTDB-Tk or the reads are flagged and listed first. Kleborate, SISTR and SCCmec tables for the samples routed to them; SCCmec calls not made from the cassette's target genes are flagged and listed first.                                                                                                                                        |
-| Antimicrobial resistance           | Heatmaps of the AMRFinderPlus acquired genes and the RGI Perfect and Strict hits (gene by sample, colour = identity), the point mutations and every AMRFinderPlus hit.                                                                                                                                                                                                                                                                                                          |
-| Plasmids and other mobile elements | geNomad plasmid and virus sequences per sample and the MOB-suite reconstructed plasmids with replicon, relaxase, mobility and host range.                                                                                                                                                                                                                                                                                                                                       |
-| Plasmid consensus                  | Contigs called plasmid, candidate and to check per sample (stacked bars; distributions above 100 samples), a per-sample table (plasmid contigs and length, circular ones, replicons, mobility) and every contig with plasmid evidence with its call, evidence, replicons, relaxase, mobility and MOB-suite cluster. The summary TSV gets the counts per call and the replicons on plasmid contigs.                                                                              |
-| Insertion sequences                | IS elements per sample by family (stacked bars of the most common families; distributions of elements, complete elements and families above 100 samples) and a per-sample table: elements, complete and partial, families, IS length and share of the annotation input, elements on contigs the plasmid consensus calls plasmid (and, when any, on candidate plasmid contigs), and the count per family. The summary TSV gets the element and complete counts and the families. |
-| Samples                            | One card per sample with its key numbers and warnings. Cards start collapsed; a search box and a sample list open them, and samples with warnings are marked (warning sign and red outline) and listed first.                                                                                                                                                                                                                                                                   |
-| Methods, versions and citations    | Every tool version from `pipeline_info/software_versions.yml` and the citations from `CITATIONS.md`, with any tool that has no citation entry.                                                                                                                                                                                                                                                                                                                                  |
+| Section                            | What it shows                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Run overview                       | Pipeline and Nextflow versions, run date and sequencing type; pass, skipped and failed counts with the samples that did not pass and why; key thresholds; the databases used, with their version where the database records one (Bakta, AMRFinderPlus, geNomad, GTDB-Tk, CARD; Kraken2, CheckM2 and MOB-suite databases show "not recorded").                                                                                                                                           |
+| Read quality and species           | Reads and bases before and after fastp/fastplong with the `--min_bases` limit, Q30, GC, duplication and (Illumina) coverage from Mash's genome size; the species in the reads from Bracken (or Kraken2), with a warning when a second species has more than 5 % of the reads.                                                                                                                                                                                                           |
+| Assembly                           | QUAST total length (with the usual genome length for the MLST species), contigs and N50, and the contigs kept for annotation by `--min_contig_length`.                                                                                                                                                                                                                                                                                                                                  |
+| Genome quality (CheckM2)           | Completeness against contamination, with the 90 % / 5 % high-quality limits; genomes with low completeness, high contamination or both have their own colour and marker and are listed first.                                                                                                                                                                                                                                                                                           |
+| Species and typing                 | MLST scheme and ST, the species used for routing, the closest reference and its ANI and the decision of the [species check](#species-check), the GTDB-Tk species and ANI and the top species in the reads; flagged species checks and rows where the genus used differs from GTDB-Tk or the reads are flagged and listed first. Kleborate, SISTR and SCCmec tables for the samples routed to them; SCCmec calls not made from the cassette's target genes are flagged and listed first. |
+| Antimicrobial resistance           | Heatmaps of the AMRFinderPlus acquired genes and the RGI Perfect and Strict hits (gene by sample, colour = identity), the point mutations and every AMRFinderPlus hit.                                                                                                                                                                                                                                                                                                                  |
+| Plasmids and other mobile elements | geNomad plasmid and virus sequences per sample and the MOB-suite reconstructed plasmids with replicon, relaxase, mobility and host range.                                                                                                                                                                                                                                                                                                                                               |
+| Plasmid consensus                  | Contigs called plasmid, candidate and to check per sample (stacked bars; distributions above 100 samples), a per-sample table (plasmid contigs and length, circular ones, replicons, mobility) and every contig with plasmid evidence with its call, evidence, replicons, relaxase, mobility and MOB-suite cluster. The summary TSV gets the counts per call and the replicons on plasmid contigs.                                                                                      |
+| Insertion sequences                | IS elements per sample by family (stacked bars of the most common families; distributions of elements, complete elements and families above 100 samples) and a per-sample table: elements, complete and partial, families, IS length and share of the annotation input, elements on contigs the plasmid consensus calls plasmid (and, when any, on candidate plasmid contigs), and the count per family. The summary TSV gets the element and complete counts and the families.         |
+| Samples                            | One card per sample with its key numbers and warnings. Cards start collapsed; a search box and a sample list open them, and samples with warnings are marked (warning sign and red outline) and listed first.                                                                                                                                                                                                                                                                           |
+| Methods, versions and citations    | Every tool version from `pipeline_info/software_versions.yml` and the citations from `CITATIONS.md`, with any tool that has no citation entry.                                                                                                                                                                                                                                                                                                                                          |
 
 With more than 100 samples the one-bar-per-sample charts (read QC, species, assembly, geNomad, plasmid consensus, insertion sequences) become distributions: one box per metric with a point per sample, the outliers (outside 1.5 times the interquartile range or a QC limit) marked, and the most extreme named; long tables scroll inside their box. On copies of the 10 test genomes, a 300-sample report is about 9 MB and opens in about 13 s; real runs with more varied resistance genes have larger heatmaps.
 
@@ -689,6 +745,7 @@ With more than 100 samples the one-bar-per-sample charts (read QC, species, asse
   - Reports generated by Nextflow: `execution_report_<timestamp>.html`, `execution_timeline_<timestamp>.html`, `execution_trace_<timestamp>.txt` and `pipeline_dag_<timestamp>.html`.
   - `software_versions.yml`: Software versions used in the pipeline run (one entry per process, MultiQC included, plus the pipeline and Nextflow versions).
   - `sample_status.tsv`: one row per samplesheet sample, sorted by sample: whether it passed, was skipped or failed, and why (see below).
+  - `species_check.tsv`: one row per annotated sample, sorted by sample: the species decision that chose its AMRFinderPlus organism and species tools ([Species check](#species-check)).
 
 </details>
 

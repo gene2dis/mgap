@@ -1,3 +1,4 @@
+import functools
 import os
 import pandas as pd
 import argparse
@@ -203,6 +204,30 @@ def parse_genomad(genomad_result, sample):
     return genomad_parsed
 
 
+@functools.lru_cache(maxsize=None)
+def rerun_schemes(input_folder):
+    """
+    {sample: scheme} of the mlst re-runs in pipeline_info/species_check.tsv (read once per run folder).
+    """
+    species_check = input_folder + "/pipeline_info/species_check.tsv"
+    if not os.path.isfile(species_check):
+        return {}
+    rows = pd.read_csv(species_check, sep="\t", dtype=str).fillna("")
+    return {row["sample"]: row["rerun_scheme"] for _, row in rows.iterrows() if row["rerun_scheme"]}
+
+
+def mlst_file(input_folder, sample):
+    """
+    The sample's mlst table: the re-run with the reference species' scheme when the species check
+    overrode MLST (rerun_scheme in pipeline_info/species_check.tsv), else the automatic <sample>.tsv.
+    """
+    mlst_dir = input_folder + "/" + sample + "/annotation/mlst/"
+    scheme = rerun_schemes(input_folder).get(sample)
+    if scheme and os.path.isfile(mlst_dir + sample + "." + scheme + ".tsv"):
+        return mlst_dir + sample + "." + scheme + ".tsv"
+    return mlst_dir + sample + ".tsv"
+
+
 def parse_annotation(input_folder, sample):
     """
     Function to parse the annotation results of MGAP. Steps that did not
@@ -221,7 +246,7 @@ def parse_annotation(input_folder, sample):
     annotation_dir = input_folder + "/" + sample + "/annotation/"
 
     checkm2_out = parse_if_present(parse_checkm2, annotation_dir + "checkm2/" + sample + "_checkm2_report.tsv")
-    mlst_out = parse_if_present(parse_mlst, annotation_dir + "mlst/" + sample + ".tsv")
+    mlst_out = parse_if_present(parse_mlst, mlst_file(input_folder, sample))
     bakta_out = parse_if_present(parse_bakta, annotation_dir + "bakta/" + sample + ".tsv")
     amrfinder_out = parse_if_present(parse_amrfinder, annotation_dir + "amrfinder/" + sample + ".tsv")
     # geNomad publishes its whole output folder; the summaries are in <sample>_summary/

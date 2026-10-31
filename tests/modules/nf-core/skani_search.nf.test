@@ -1,0 +1,68 @@
+nextflow_process {
+
+    name "Test SKANI_SEARCH module (nf-core, patched to skani 0.4.0)"
+    script "../../../modules/nf-core/skani/search/main.nf"
+    process "SKANI_SEARCH"
+
+    tag "modules"
+    tag "modules_nfcore"
+    tag "skani"
+
+    // tests/data/skani/sketch: skani 0.4.0 database of the nf-core B. fragilis test genome
+    // (skani sketch genome.fna.gz -c 400 -o sketch; -c 400 keeps the test files small)
+
+    test("SKANI_SEARCH - genome against its own sketch") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id:'test' ],
+                    file('https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/prokaryotes/bacteroides_fragilis/genome/genome.fna.gz', checkIfExists: true)
+                ]
+                input[1] = [ [ id:'species_refs' ], file("${projectDir}/tests/data/skani/sketch", checkIfExists: true) ]
+                """
+            }
+        }
+
+        then {
+            def rows = path(process.out.search[0][1]).readLines()*.split('\t')
+            assertAll(
+                { assert process.success },
+                { assert rows[0][0..4] == [ 'Ref_file', 'Query_file', 'ANI', 'Align_fraction_ref', 'Align_fraction_query' ] },
+                { assert rows.size() == 2 },
+                { assert rows[1][0] == 'genome.fna.gz' },
+                { assert rows[1][2] as double == 100.0 },
+                { assert process.out.versions_skani[0][2] == '0.4.0' }
+            )
+        }
+
+    }
+
+    test("SKANI_SEARCH - stub with a configured hit") {
+
+        options "-stub"
+        config "./skani_search_stub.config"
+
+        when {
+            process {
+                """
+                input[0] = [ [ id:'test' ], file("${projectDir}/tests/data/skani/sketch/index.db2", checkIfExists: true) ]
+                input[1] = [ [ id:'species_refs' ], file("${projectDir}/tests/data/skani/sketch", checkIfExists: true) ]
+                """
+            }
+        }
+
+        then {
+            def rows = path(process.out.search[0][1]).readLines()*.split('\t')
+            assertAll(
+                { assert process.success },
+                { assert rows.size() == 2 },
+                { assert rows[1][0] == 'genomes/GCF_006364295.1.fna' },
+                { assert rows[1][2..4] == [ '99.11', '86.35', '86.55' ] }
+            )
+        }
+
+    }
+
+}

@@ -116,6 +116,8 @@ SAMPLE1,/path/to/sample1.fasta
 SAMPLE2,/path/to/sample2.fa.gz
 ```
 
+An optional `species` column (for example `Klebsiella pneumoniae`, from MALDI-TOF or the request form) is recorded in `pipeline_info/species_check.tsv` and compared with the species check; it chooses the species tools and AMRFinderPlus organism only when neither the reference set (`--species_refs`) nor MLST gives one.
+
 An [example samplesheet](assets/samplesheet.csv) is provided with the pipeline.
 
 **Automatic samplesheet generation:**
@@ -199,6 +201,7 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 | `--checkm2_db`             | `null`  | Path to CheckM2 database file (CheckM2 is skipped if unset)                                                    |
 | `--amrfinder_db`           | `null`  | Path to AMRFinderPlus database (AMRFinderPlus is skipped if unset; also needs `--bakta_db`)                    |
 | `--genomad_db`             | `null`  | Path to geNomad database (geNomad is skipped if unset)                                                         |
+| `--species_refs`           | `null`  | Path to the species reference database (skani; species check is skipped and routing follows MLST if unset)     |
 | `--kraken2db`              | `null`  | Path to Kraken2 database (required to run contamination detection)                                             |
 | `--brackendb`              | `null`  | Path to Bracken database (Illumina only; falls back to `--kraken2db`)                                          |
 | `--bracken_read_length`    | `null`  | Bracken `-r` for every sample; if unset, per sample from the read length and the database's kmer distributions |

@@ -1,0 +1,54 @@
+accession	species	strain	amrfinder_organism	mlst_schemes
+GCF_009035845.1	Acinetobacter baumannii	ATCC 19606T	Acinetobacter_baumannii	abaumannii_2;abaumannii
+GCF_019047205.1	Acinetobacter pittii	FDAARGOS 1399 (type)	Acinetobacter_baumannii	abaumannii_2;abaumannii
+GCF_041021905.1	Acinetobacter nosocomialis	XH1679	Acinetobacter_baumannii	abaumannii_2;abaumannii
+GCF_004008975.1	Bordetella pertussis	H640	Bordetella_pertussis	bordetella_3
+GCF_020735925.1	Bordetella parapertussis	FDAARGOS_1541	-	bordetella_3
+GCF_900636925.1	Bordetella bronchiseptica	NCTC10543	-	bordetella_3
+GCF_003546465.1	Burkholderia cepacia	ATCC 25416T	Burkholderia_cepacia	bcc
+GCF_001718895.1	Burkholderia cenocepacia	MSMB384WGS	Burkholderia_cepacia	bcc
+GCF_000959525.1	Burkholderia multivorans	ATCC BAA-247T	Burkholderia_cepacia	bcc
+GCF_033956065.1	Burkholderia mallei	ATCC 23344T	Burkholderia_mallei	bpseudomallei
+GCF_030297255.1	Burkholderia pseudomallei	GTC3P0254T	Burkholderia_pseudomallei	bpseudomallei
+GCF_001457695.1	Campylobacter jejuni	NCTC11351T	Campylobacter	campylobacter
+GCF_009730395.1	Campylobacter coli	FDAARGOS_735	Campylobacter	campylobacter
+GCF_013372185.1	Campylobacter lari	LMG 8846T (subsp. lari)	-	campylobacter_nonjejuni_3
+GCF_900637395.1	Campylobacter upsaliensis	NCTC11541T	-	campylobacter_nonjejuni_4
+GCF_900475935.1	Campylobacter fetus	NCTC10842T	-	campylobacter_nonjejuni_9
+GCF_011064845.1	Citrobacter freundii	ATCC 8090T	Citrobacter_freundii	cfreundii
+GCF_001077535.1	Clostridioides difficile	DSM 1296T	Clostridioides_difficile	cdifficile
+GCF_001457455.1	Corynebacterium diphtheriae	NCTC11397T	Corynebacterium_diphtheriae	cdiphtheriae;diphtheria_3
+GCF_900187135.1	Corynebacterium ulcerans	NCTC7910T	-	cdiphtheriae;diphtheria_3
+GCF_016027695.1	Enterobacter asburiae	FDAARGOS_892 (type)	Enterobacter_asburiae	ecloacae
+GCF_000025565.1	Enterobacter cloacae	ATCC 13047T	Enterobacter_cloacae	ecloacae
+GCF_019048245.1	Enterobacter hormaechei	FDAARGOS 1433 (type)	-	ecloacae
+GCF_022869705.1	Enterococcus faecalis	RM8376 (type)	Enterococcus_faecalis	efaecalis
+GCF_029023785.1	Enterococcus faecium	DSM 20477T	Enterococcus_faecium	efaecium
+GCF_000271405.2	Enterococcus hirae	ATCC 9790T	Enterococcus_faecium	-
+GCF_000005845.2	Escherichia coli	K-12 MG1655	Escherichia	ecoli_achtman_4;ecoli;ecoli_2
+GCF_000026225.1	Escherichia fergusonii	ATCC 35469T	-	ecoli_achtman_4
+GCF_020736045.1	Haemophilus influenzae	FDAARGOS_1560 (type)	Haemophilus_influenzae	hinfluenzae
+GCF_025998455.1	Helicobacter pylori	CHC155 (type)	Helicobacter_pylori	helicobacter
+GCF_900636985.1	Klebsiella oxytoca	NCTC13727T	Klebsiella_oxytoca	koxytoca
+GCF_015139575.1	Klebsiella michiganensis	THO-011	-	koxytoca
+GCF_006364295.1	Klebsiella pneumoniae	FDAARGOS_775 (type)	Klebsiella_pneumoniae	klebsiella
+GCF_020525545.1	Klebsiella variicola	F2R9T	Klebsiella_pneumoniae	klebsiella
+GCF_020099175.1	Klebsiella quasipneumoniae	FDAARGOS_1503 (type)	Klebsiella_pneumoniae	klebsiella
+GCF_019048125.1	Klebsiella aerogenes	FDAARGOS 1442 (type)	Klebsiella_pneumoniae	kaerogenes
+GCF_013030075.1	Neisseria gonorrhoeae	TUM19854	Neisseria_gonorrhoeae	neisseria
+GCF_022869645.1	Neisseria meningitidis	RM8376 (type)	Neisseria_meningitidis	neisseria
+GCF_001457615.1	Pseudomonas aeruginosa	NCTC10332T	Pseudomonas_aeruginosa	paeruginosa
+GCF_000006945.2	Salmonella enterica	LT2 (type)	Salmonella	senterica_achtman_2;salmonella
+GCF_000252995.1	Salmonella bongori	NCTC 12419T	-	senterica_achtman_2;salmonella
+GCF_017654245.1	Serratia marcescens	ATCC 13880T	Serratia_marcescens	serratia
+GCF_026167765.1	Staphylococcus aureus	DSM 20231T	Staphylococcus_aureus	saureus
+GCF_000236925.1	Staphylococcus argenteus	MSHR1132T	-	saureus
+GCF_006094375.1	Staphylococcus epidermidis	ATCC 14990T	-	sepidermidis
+GCF_016026635.1	Staphylococcus pseudintermedius	FDAARGOS_930 (type)	Staphylococcus_pseudintermedius	spseudintermedius
+GCF_949788565.1	Streptococcus agalactiae	(NCTC, no strain field)	Streptococcus_agalactiae	sagalactiae
+GCF_001457635.1	Streptococcus pneumoniae	NCTC7465T	Streptococcus_pneumoniae	spneumoniae
+GCF_000148585.2	Streptococcus mitis	NCTC 12261 (neotype)	Streptococcus_pneumoniae	smitis
+GCF_002055535.1	Streptococcus pyogenes	NCTC8198T	Streptococcus_pyogenes	spyogenes
+GCF_008369605.1	Vibrio cholerae	RFB16	Vibrio_cholerae	vcholerae;vcholerae_2
+GCF_001558495.2	Vibrio parahaemolyticus	ATCC 17802T	Vibrio_parahaemolyticus	vparahaemolyticus
+GCF_002224265.1	Vibrio vulnificus	ATCC 27562T	Vibrio_vulnificus	vvulnificus
