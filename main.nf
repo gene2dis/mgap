@@ -64,12 +64,12 @@ workflow GENE2DIS_MGAP {
 workflow {
     // --help [parameter], --help_full and --show_hidden print the parameter
     // help, --version the version; either runs nothing else (no processes, no
-    // parameter checks)
+    // parameter checks). Both go to stdout, so they print under nextflow -q too
     if (params.version.toString().toBoolean()) {
-        log.info("${workflow.manifest.name} ${workflow.manifest.version}")
+        println("${workflow.manifest.name} ${workflow.manifest.version}")
     }
     else if (helpAsked(params.help) || helpAsked(params.help_full)) {
-        log.info(pipelineHelp(params.help, params.help_full, params.show_hidden))
+        println(pipelineHelp(params.help, params.help_full, params.show_hidden))
     }
     else {
         GENE2DIS_MGAP ()

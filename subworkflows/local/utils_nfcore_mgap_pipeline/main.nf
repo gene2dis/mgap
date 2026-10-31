@@ -205,18 +205,30 @@ def helpAsked(value) {
 //
 def pipelineHelp(help, help_full, show_hidden) {
     def parameter = helpAsked(help) && help.toString() != 'true' ? help.toString() : ''
-    def text = paramsHelp([fullHelp: helpAsked(help_full), showHidden: helpAsked(show_hidden)], parameter)
+    def options = [fullHelp: helpAsked(help_full), showHidden: helpAsked(show_hidden)]
+    def text = ''
+    try {
+        text = paramsHelp(options, parameter)
+    }
+    catch (Exception _error) {
+        // --help <name> with a name that is not in nextflow_schema.json
+        return "No parameter '--${parameter}' in this pipeline; the parameters are:\n\n" + pipelineHelp(true, help_full, show_hidden)
+    }
     // paramsHelp() leaves out the lines of its own --help, --help_full and
     // --show_hidden entries but not their wrapped continuation lines (nf-schema
     // 2.8.0 and 3.0.0), which come right after the command line; drop those too
     def own = [
         "Show the help message for all top level parameters. When a parameter is given to `--help`, the full help message of that parameter will be printed.",
+        "Show the help message for all non-hidden parameters.",
         "Show all hidden parameters in the help message. This needs to be used in combination with `--help` or `--help_full`.",
     ]
     def lines = text.readLines()
-    def start = lines.findIndexOf { line -> line.startsWith('Typical pipeline command:') } + 3
-    def end = start < lines.size() ? (start..<lines.size()).find { i -> lines[i].trim() && !own.any { entry -> entry.contains(lines[i].trim()) } } : null
-    end = end ?: lines.size()
+    def command = lines.findIndexOf { line -> line.startsWith('Typical pipeline command:') }
+    if (command < 0 || command + 3 > lines.size()) {
+        return text + '\n'
+    }
+    def start = command + 3
+    def end = (start..<lines.size()).find { i -> lines[i].trim() && !own.any { entry -> entry.contains(lines[i].trim()) } } ?: lines.size()
     return (lines.take(start) + lines.subList(start, end).findAll { line -> !line.trim() } + lines.drop(end)).join('\n') + '\n'
 }
 

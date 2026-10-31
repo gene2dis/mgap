@@ -902,7 +902,7 @@ Specify the path to a specific config file (this is a core Nextflow command). Se
 
 ### Resource requests
 
-Whilst the default requirements set within the pipeline will hopefully work for most people and with most input data, you may find that you want to customise the compute resources that the pipeline requests. Each step has a default set of requirements for number of CPUs, memory and time, from its label in [`conf/base.config`](../conf/base.config) (for example `process_high`: 12 CPUs, 72 GB, 16 h). A task that exits with status 104 or 130–145 (usually out of memory) is retried once with twice the resources; any other failure stops the run, except where a step tolerates failures per sample (assemblers, QUAST, ISEScan: see [Sample QC gate and failed samples](#sample-qc-gate-and-failed-samples)).
+Whilst the default requirements set within the pipeline will hopefully work for most people and with most input data, you may find that you want to customise the compute resources that the pipeline requests. Each step has a default set of requirements for number of CPUs, memory and time, from its label in [`conf/base.config`](../conf/base.config) (for example `process_high`: 12 CPUs, 72 GB, 16 h). A task that exits with status 104 or 130–145 (usually out of memory) is retried once with twice the resources; any other failure stops the run, except where a step tolerates failures per sample (assemblers, Berokka, Medaka, QUAST, ISEScan: see [Sample QC gate and failed samples](#sample-qc-gate-and-failed-samples)).
 
 Every request is capped by `process.resourceLimits` in `conf/base.config` (30 CPUs, 256 GB, 240 h). To raise or lower the caps, for example on a larger machine, pass a config file with [`-c`](#-c):
 

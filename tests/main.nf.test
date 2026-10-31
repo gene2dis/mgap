@@ -1411,8 +1411,7 @@ nextflow_pipeline {
         options "-stub --help"
 
         then {
-            // log.info goes to the run log, not to nf-test's captured stdout
-            def output = path("$metaDir/nextflow.log").text
+            def output = workflow.stdout.join('\n')
             assertAll(
                 { assert workflow.success },
                 { assert workflow.trace.tasks().size() == 0 },
@@ -1423,7 +1422,28 @@ nextflow_pipeline {
                 { assert output.contains('use the `--show_hidden` parameter to show them') },
                 // nf-schema's own --help entries are left out, their wrapped lines too
                 { assert !output.contains('help message of that parameter') },
-                { assert !path("$outputDir/pipeline_info").exists() }
+                // no Nextflow reports, so no null/pipeline_info/ in the launch directory
+                { assert !path("$launchDir/null").exists() }
+            )
+        }
+
+    }
+
+    test("--help with an unknown parameter lists the parameters - stub") {
+
+        tag "pipeline"
+        tag "stub"
+        tag "help"
+
+        options "-stub --help seqtype"
+
+        then {
+            def output = workflow.stdout.join('\n')
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.trace.tasks().size() == 0 },
+                { assert output.contains("No parameter '--seqtype'") },
+                { assert output.contains('--seq_type') }
             )
         }
 
@@ -1438,7 +1458,7 @@ nextflow_pipeline {
         options "-stub --help publish_dir_mode --show_hidden"
 
         then {
-            def output = path("$metaDir/nextflow.log").text
+            def output = workflow.stdout.join('\n')
             assertAll(
                 { assert workflow.success },
                 { assert workflow.trace.tasks().size() == 0 },
@@ -1460,12 +1480,12 @@ nextflow_pipeline {
         options "-stub --version"
 
         then {
-            def output = path("$metaDir/nextflow.log").text
+            def output = workflow.stdout.join('\n')
             assertAll(
                 { assert workflow.success },
                 { assert workflow.trace.tasks().size() == 0 },
-                // the entry workflow's line, not Nextflow's own "[PIPELINE] gene2dis/mgap 2.0.0"
-                { assert output =~ /INFO\s+nextflow\.Nextflow - gene2dis\/mgap 2\.0\.0/ },
+                // the entry workflow's line, not Nextflow's own "[PIPELINE] gene2dis/mgap <version> | ..."
+                { assert workflow.stdout.any { line -> line ==~ /gene2dis\/mgap \S+/ } },
                 { assert !output.contains('Typical pipeline command:') }
             )
         }
