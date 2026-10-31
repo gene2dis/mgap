@@ -30,6 +30,10 @@ run_gtdbtk: false # Run GTDB-Tk taxonomic classification (requires gtdbtk_db)
 run_rgi: false # Run RGI / CARD AMR prediction (requires rgi_db)
 run_mobsuite: false # Run MOB-suite plasmid detection
 run_dnaapler: true # Reorient ONT contigs with dnaapler
+run_berokka: true # Trim the end overlap of Flye's circular contigs before Medaka (ONT, Flye)
+run_plasmidfinder: true # PlasmidFinder plasmid replicons
+run_isescan: false # ISEScan insertion sequences
+skip_report: false # Skip the run report (report/: HTML, TSV, XLSX)
 
 min_bases: 50000000 # Minimum bases after fastp/fastplong; samples below it skip assembly (0 = off)
 adjust_coverage: true # Subsample reads above max_coverage (Illumina only)
@@ -50,6 +54,8 @@ mobsuite_db: null # MOB-suite database directory (optional)
 gtdbtk_db: null # GTDB-Tk database directory
 rgi_db: null # RGI / CARD database directory
 plassembler_db: null # Plassembler database (only if using plassembler in Autocycler)
+species_refs: null # Species reference set (skani) from accessory_scripts/build_species_refs.py; null = routing by MLST only
+plasmidfinder_db: null # Newer PlasmidFinder database directory (optional; null = the one bundled in the container)
 
 # MLST custom databases (optional — if unset, bundled databases are used)
 mlst_blastdb: null # Alternative MLST BLAST database directory (containing mlst.fa + index files)
@@ -103,7 +109,8 @@ fastplong_min_read_length: 1000
 
 ont_assembler: flye # flye | autocycler
 flye_mode: nano-hq # pacbio-raw | pacbio-corr | pacbio-hifi | nano-raw | nano-corr | nano-hq
-medaka_model: null # Medaka polishing model; should match the basecaller model (see `medaka tools list_models`). null = medaka default
+medaka_model: null # Medaka model, one of those in docker/medaka/Dockerfile; null = the model named in the read headers, else r1041_e82_400bps_sup_v5.2.0
+medaka_bacteria: false # Medaka --bacteria (bacterial methylation model); ignored when medaka_model is set
 flye_asm_coverage: null # Flye --asm-coverage for very deep samples (e.g. 40); null = all reads for every Flye step
 genome_size: null # Genome size for flye_asm_coverage, e.g. 5.5m; null = lrge estimate per sample
 

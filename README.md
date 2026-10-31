@@ -36,16 +36,18 @@ The genome assembly workflow processes Illumina and Oxford Nanopore data using t
 #### ONT Assembly (Flye mode, default)
 
 1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
-2. Genome assembly from all reads ([`Flye`](https://github.com/fenderglass/Flye)); optionally from the longest reads up to `--flye_asm_coverage`, with the genome size from `--genome_size` or [`lrge`](https://github.com/mbhall88/lrge)
-3. Optional end-overlap trimming of circular contigs ([`Berokka`](https://github.com/tseemann/berokka)): one copy of a small plasmid that Flye assembled as tandem copies
-4. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
-5. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
+2. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/); no Bracken)
+3. Genome assembly from all reads ([`Flye`](https://github.com/fenderglass/Flye)); optionally from the longest reads up to `--flye_asm_coverage`, with the genome size from `--genome_size` or [`lrge`](https://github.com/mbhall88/lrge)
+4. Optional end-overlap trimming of circular contigs ([`Berokka`](https://github.com/tseemann/berokka)): one copy of a small plasmid that Flye assembled as tandem copies
+5. Genome polishing ([`Medaka`](https://github.com/nanoporetech/medaka))
+6. Optional contig reorientation ([`Dnaapler`](https://github.com/gbouras13/dnaapler))
 
 #### ONT Assembly (Autocycler mode)
 
 1. Read QC, quality filtering, and adapter trimming ([`fastplong`](https://github.com/OpenGene/fastplong))
-2. Consensus multi-assembler assembly ([`Autocycler`](https://github.com/rrwick/Autocycler))
-3. Optional contig reorientation on GFA ([`Dnaapler`](https://github.com/gbouras13/dnaapler)) + GFA-to-FASTA conversion ([`Autocycler gfa2fasta`](https://github.com/rrwick/Autocycler/wiki/Autocycler-gfa2fasta))
+2. Optional contamination check ([`Kraken2`](https://ccb.jhu.edu/software/kraken2/); no Bracken)
+3. Consensus multi-assembler assembly ([`Autocycler`](https://github.com/rrwick/Autocycler))
+4. Optional contig reorientation on GFA ([`Dnaapler`](https://github.com/gbouras13/dnaapler)) + GFA-to-FASTA conversion ([`Autocycler gfa2fasta`](https://github.com/rrwick/Autocycler/wiki/Autocycler-gfa2fasta))
 
 #### Pre-assembled Contigs
 
@@ -72,17 +74,23 @@ assembly. The annotation steps include:
 6. Antibiotic resistance gene prediction ([`RGI`](https://github.com/arpcard/rgi)) - optional, uses CARD database for resistome analysis
 7. Mobile element detection ([`geNomad`](https://github.com/apcamargo/genomad)) - prophages and plasmids
 8. Plasmid detection, typing, and reconstruction ([`MOB-suite`](https://github.com/phac-nml/mob-suite)) - optional
-9. Insertion sequence (IS element) detection ([`ISEScan`](https://github.com/xiezhq/ISEScan)) - optional
-10. Species-specific analyses:
-    - _Klebsiella_: [`Kleborate`](https://github.com/klebgenomics/Kleborate)
+9. Plasmid replicons ([`PlasmidFinder`](https://bitbucket.org/genomicepidemiology/plasmidfinder)) - on by default
+10. Plasmid consensus per contig from geNomad, MOB-suite and PlasmidFinder
+11. Insertion sequence (IS element) detection ([`ISEScan`](https://github.com/xiezhq/ISEScan)) - optional
+12. Species check against a curated reference set ([`skani`](https://github.com/bluenote-1577/skani)) - with `--species_refs`
+13. Species-specific analyses, chosen per sample by the species check, else the MLST scheme, else the samplesheet
+    `species` column:
+    - _K. pneumoniae_ species complex: [`Kleborate`](https://github.com/klebgenomics/Kleborate)
     - _S. aureus_: SCCmec classification using [`sccmec`](https://github.com/rpetit3/sccmec)
     - _Salmonella_: Serotype prediction using [`SISTR`](https://github.com/phac-nml/sistr_cmd)
+14. Run report (`report/`: HTML, summary TSV and XLSX; `--skip_report` turns it off) and
+    [`MultiQC`](https://multiqc.info)
 
 ## Quick Start
 
 1. Install [`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=26.04.0`)
 
-2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/), [`Podman`](https://podman.io/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility. Conda is also supported as a last resort.
+2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/), [`Podman`](https://podman.io/), [`Apptainer`](https://apptainer.org/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility. Conda is also supported as a last resort.
 
 3. Download the pipeline by cloning the repository or downloading the zip file
 
@@ -163,18 +171,19 @@ nextflow run gene2dis/mgap \
 
 ### Parameters
 
-Every user-facing parameter, grouped as in `nextflow_schema.json`. Database parameters default to `null`; the step
-that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus and geNomad print a warning at launch).
+Every user-facing parameter (hidden ones are listed by `--help --show_hidden`). Database parameters default to `null`;
+the step that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus, geNomad and the species check
+print a warning at launch).
 
 #### Input and output
 
-| Parameter         | Default  | Description                                             |
-| ----------------- | -------- | ------------------------------------------------------- |
-| `--input`         | required | Path to samplesheet CSV file                            |
-| `--outdir`        | required | Output directory for results                            |
-| `--seq_type`      | required | Sequencing type: `illumina`, `ont`, or `contig`         |
-| `--multiqc_title` | `null`   | MultiQC report title (page header and file name)        |
-| `-profile`        | —        | Configuration profile: `docker`, `singularity`, `conda` |
+| Parameter         | Default  | Description                                                                                                |
+| ----------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `--input`         | required | Path to samplesheet CSV file                                                                               |
+| `--outdir`        | required | Output directory for results                                                                               |
+| `--seq_type`      | required | Sequencing type: `illumina`, `ont`, or `contig`                                                            |
+| `--multiqc_title` | `null`   | MultiQC report title (page header and file name)                                                           |
+| `-profile`        | —        | Configuration profile: `docker`, `singularity`, `apptainer`, `conda` (see [usage](docs/usage.md#-profile)) |
 
 #### Pipeline steps
 
@@ -261,7 +270,9 @@ that needs them is skipped when they are unset (CheckM2, Bakta, AMRFinderPlus an
 
 > **Note:** Pipeline parameters use double dashes (`--`), while Nextflow parameters use a single dash (`-`).
 
-For a complete list of parameters and advanced configuration options, see the [Usage documentation](docs/usage.md).
+`nextflow run gene2dis/mgap --help` lists the parameters from `nextflow_schema.json`: `--help <parameter>` shows one in
+full, `--help_full` lists all of them and `--show_hidden` adds the hidden ones; `--version` prints the pipeline version.
+For advanced configuration options, see the [Usage documentation](docs/usage.md).
 
 ## Output
 

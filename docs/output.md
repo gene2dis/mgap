@@ -15,11 +15,11 @@ All results are written to the directory specified with `--outdir`. The layout b
 ├── <sample_id>/                         # One subdirectory per sample
 │   ├── read_processing/
 │   │   ├── fastp/                       # Illumina QC: *.html, *.json, *.fastq.gz
-│   │   ├── fastplong/                   # ONT QC: *.html, *.json, *.fastq.gz
-│   │   ├── kraken2/                     # Contamination detection: *.report.txt, *.fastq.gz
+│   │   ├── fastplong/                   # ONT QC: *.html, *.json, *.fastq.gz, *.log
+│   │   ├── kraken2/                     # Contamination detection: *.kraken2.report.txt
 │   │   │                                #   (requires --run_kraken2 true and --kraken2db)
 │   │   ├── bracken/                     # Abundance re-estimation: *.tsv
-│   │   │                                #   (Illumina only; requires --brackendb)
+│   │   │                                #   (Illumina only; whenever Kraken2 runs)
 │   │   ├── mash/                        # Coverage estimate: *.msh, *.mash_stats, *.genome_size
 │   │   │                                #   (Illumina, --adjust_coverage true [default])
 │   │   └── subsampled/                  # Subsampled reads: *.fastq.gz
@@ -48,13 +48,19 @@ All results are written to the directory specified with `--outdir`. The layout b
 │   │   └── quast/                       # Assembly quality metrics: *.tsv
 │   └── annotation/
 │       ├── checkm2/                     # Genome completeness/contamination: *.tsv
+│       │                                #   (requires --checkm2_db)
 │       ├── mlst/                        # Multi-locus sequence typing: <sample>.tsv (automatic scheme);
-│       │                                #   <sample>.<scheme>.tsv when the species check overrides MLST
+│       │                                #   <sample>.<scheme>.tsv when the species check decides
+│       │                                #   override or reference (mlst re-run with that scheme)
 │       ├── skani/                       # Species check: skani hits against --species_refs: *.tsv
 │       │                                #   (requires --species_refs)
-│       ├── bakta/                       # Genome annotation: *.gff3, *.gbff, *.fna, *.faa, *.tsv, ...
-│       ├── amrfinder/                   # AMR detection: *.tsv
-│       ├── genomad/                     # Mobile genetic elements: *_summary/, *_annotate/, *_find_proviruses/
+│       ├── bakta/                       # Genome annotation: *.gff3, *.gbff, *.fna, *.faa, *.ffn, *.tsv, ...
+│       │                                #   (requires --bakta_db)
+│       ├── amrfinder/                   # AMR detection: <sample>.tsv, <sample>-mutations.tsv
+│       │                                #   (requires --bakta_db and --amrfinder_db)
+│       ├── genomad/                     # Mobile genetic elements: *_summary/, *_annotate/, *_find_proviruses/,
+│       │                                #   *_aggregated_classification/, *_marker_classification/
+│       │                                #   (requires --genomad_db)
 │       ├── mobsuite/                    # Plasmid detection: chromosome.fasta, contig_report.txt, plasmid_*.fasta, mobtyper_results.txt,
 │       │                                #   *_circular_mobtyper.txt (ONT and contig mode) (requires --run_mobsuite true)
 │       ├── plasmidfinder/               # Plasmid replicons: *.tsv, *.txt, *.json, *.fsa (--run_plasmidfinder true [default])
@@ -64,15 +70,20 @@ All results are written to the directory specified with `--outdir`. The layout b
 │       │                                #   (requires --run_isescan true)
 │       ├── rgi/                         # Resistance gene prediction: *.txt, *.json
 │       │                                #   (requires --run_rgi true)
-│       ├── kleborate/                   # Klebsiella virulence/resistance: *.txt
+│       ├── kleborate/                   # Klebsiella virulence/resistance: klebsiella_pneumo_complex_*.txt
 │       │                                #   (when the species check routes the sample to K. pneumoniae)
-│       ├── sccmec/                      # S. aureus SCCmec typing: *.tsv
+│       ├── sccmec/                      # S. aureus SCCmec typing: <sample>.tsv, <sample>.{targets,regions}.*.tsv
 │       │                                #   (when the species check routes the sample to S. aureus)
 │       └── sistr/                       # Salmonella serotype prediction: *.tab, *-allele.{json,fasta}, *-cgmlst.csv
 │                                        #   (when the species check routes the sample to Salmonella)
 ├── gtdbtk/                              # GTDB-Tk taxonomic classification (batch, all samples)
-│   ├── gtdbtk.batch.*.summary.tsv       #   (requires --run_gtdbtk true and --gtdbtk_db)
-│   └── gtdbtk.batch.log
+│   └── gtdbtk_batch/                    #   (requires --run_gtdbtk true and --gtdbtk_db)
+│       ├── classify/                    #   gtdbtk_batch.{bac120,ar53}.summary.tsv, *.classify.tree
+│       ├── identify/                    #   *.markers_summary.tsv, *.failed_genomes.tsv
+│       ├── align/                       #   *.msa.fasta.gz, *.filtered.tsv
+│       ├── gtdbtk_batch.log
+│       └── gtdbtk_batch.warnings.log
+├── multiqc/                             # MultiQC report: multiqc_report.html, multiqc_data/, multiqc_plots/
 ├── report/                              # Run report (skipped with --skip_report)
 │   ├── mgap_report.html                 #   Offline HTML report of every sample and tool
 │   ├── mgap_summary.tsv                 #   One row per sample: key numbers and warnings
@@ -93,7 +104,7 @@ All results are written to the directory specified with `--outdir`. The layout b
 > - `bracken/` only appears for `--seq_type illumina`; ONT mode runs Kraken2 only.
 > - `subsampled/` only appears when reads exceed `--max_coverage` and `--adjust_coverage true` (default).
 > - `dnaapler/` also receives `autocycler gfa2fasta` output when using Autocycler mode.
-> - `rgi/`, `mobsuite/`, `isescan/`, `kleborate/`, `sccmec/`, and `sistr/` are conditional and only appear when triggered.
+> - `checkm2/`, `skani/`, `bakta/`, `amrfinder/`, `genomad/`, `plasmidfinder/`, `plasmid_consensus/`, `rgi/`, `mobsuite/`, `isescan/`, `kleborate/`, `sccmec/`, and `sistr/` are conditional and only appear when triggered (database or flag set, or the sample routed to the species tool).
 
 ---
 
@@ -121,13 +132,13 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 ### Genome Annotation and Analysis
 
 - [QUAST](#quast) - Assembly quality metrics
-- [CheckM2](#checkm2) - Genome completeness and contamination assessment
+- [CheckM2](#checkm2) - Genome completeness and contamination assessment _(optional, `--checkm2_db`)_
 - [MLST](#mlst) - Multi-locus sequence typing
 - [Species check](#species-check) - skani against curated references; chooses the AMRFinderPlus organism and species tools
-- [Bakta](#bakta) - Genome annotation
+- [Bakta](#bakta) - Genome annotation _(optional, `--bakta_db`)_
 - [GTDB-Tk](#gtdb-tk) - Taxonomic classification _(optional)_
-- [AMRFinderPlus](#amrfinderplus) - Antimicrobial resistance detection
-- [geNomad](#genomad) - Mobile genetic element identification
+- [AMRFinderPlus](#amrfinderplus) - Antimicrobial resistance detection _(optional, `--bakta_db` and `--amrfinder_db`)_
+- [geNomad](#genomad) - Mobile genetic element identification _(optional, `--genomad_db`)_
 - [RGI](#rgi) - Resistance gene prediction _(optional)_
 - [MOB-suite](#mob-suite) - Plasmid detection and reconstruction _(optional)_
 - [PlasmidFinder](#plasmidfinder) - Plasmid replicon detection
@@ -175,6 +186,7 @@ This step runs for `--seq_type illumina` only.
   - `*.html`: Interactive HTML report with quality metrics.
   - `*.json`: JSON report with detailed filtering statistics.
   - `*.fastq.gz`: Filtered and trimmed long reads.
+  - `<sample_id>.fastplong.log`: fastplong's log (its standard error).
 
 </details>
 
@@ -188,9 +200,7 @@ This step runs for `--seq_type ont` only.
 <summary>Output files</summary>
 
 - `<sample_id>/read_processing/kraken2/`
-  - `*.report.txt`: Kraken2 classification report with taxonomic abundance.
-  - `*.classifiedreads.fastq.gz`: Reads classified by Kraken2.
-  - `*.unclassifiedreads.fastq.gz`: Reads not classified by Kraken2.
+  - `<sample_id>.kraken2.report.txt`: Kraken2 classification report with taxonomic abundance. The classified and unclassified reads are not saved.
 - `<sample_id>/read_processing/bracken/`
   - `*.tsv`: Bracken abundance re-estimation at a specified taxonomic level.
 
@@ -198,7 +208,7 @@ This step runs for `--seq_type ont` only.
 
 [Kraken2](https://ccb.jhu.edu/software/kraken2/) classifies reads against a reference database for contamination detection. [Bracken](https://ccb.jhu.edu/software/bracken/) refines Kraken2 abundance estimates at a specified taxonomic level, with the database read length (`-r`) matched to each sample's reads (or `--bracken_read_length`).
 
-This step is optional and runs when `--run_kraken2` is enabled and `--kraken2db` is provided.
+This step is optional and runs when `--run_kraken2` is enabled and `--kraken2db` is provided. Bracken then runs for every Illumina sample, with the database in `--brackendb`, or else the `--kraken2db` folder (which must then hold Bracken's `database<N>mers.kmer_distrib` files). ONT samples get Kraken2 only.
 
 ### Mash + Seqtk
 
@@ -232,6 +242,7 @@ This step is optional and runs when `--adjust_coverage` is enabled (default: tru
   - `*.contigs.fa.gz`: Gzipped contig sequences.
   - `*.assembly.gfa.gz`: Gzipped assembly graph in GFA format.
   - `*.spades.log`: SPAdes log file.
+  - `*.warnings.log`: SPAdes warnings _(only when SPAdes wrote any)_.
 
 </details>
 
@@ -335,7 +346,7 @@ This step is optional and enabled by default (`--run_dnaapler true`). It only ap
 
 </details>
 
-[SeqKit](https://bioinf.shenwei.me/seqkit/) prepares one FASTA per sample that every annotation and typing tool reads: CheckM2, MLST, Bakta, GTDB-Tk, geNomad, MOB-suite, RGI, Kleborate, sccmec and SISTR (AMRFinderPlus reads Bakta's outputs, which keep the same contig names). All of them therefore see the same contigs under the same names, and the original assembler name of any `contig_N` can be looked up in this file. QUAST runs on the unfiltered assembly, so its statistics describe the assembly as produced. A sample with no contig of at least `--min_contig_length` gets an empty file here and is left out of annotation and typing, with a warning in the log.
+[SeqKit](https://bioinf.shenwei.me/seqkit/) prepares one FASTA per sample that every annotation and typing tool reads: CheckM2, MLST, skani, Bakta, GTDB-Tk, geNomad, MOB-suite, PlasmidFinder, ISEScan, RGI, Kleborate, sccmec and SISTR (AMRFinderPlus reads Bakta's outputs, which keep the same contig names). All of them therefore see the same contigs under the same names, and the original assembler name of any `contig_N` can be looked up in this file. QUAST runs on the unfiltered assembly, so its statistics describe the assembly as produced. A sample with no contig of at least `--min_contig_length` gets an empty file here and is left out of annotation and typing, with a warning in the log.
 
 This step runs for every `--seq_type`.
 
@@ -367,6 +378,8 @@ This step runs for every `--seq_type`.
 
 [CheckM2](https://github.com/chklovski/CheckM2) assesses genome quality by estimating completeness and contamination using machine learning models. The output reports completeness percentage, contamination percentage, and overall quality assessment for each genome.
 
+This step runs only when `--checkm2_db` is provided.
+
 ### MLST
 
 <details markdown="1">
@@ -377,7 +390,7 @@ This step runs for every `--seq_type`.
 
 </details>
 
-[MLST](https://github.com/tseemann/mlst) scans genome assemblies against PubMLST schemes to determine sequence types. The scheme it chooses is one input of the [species check](#species-check), which sets the AMRFinderPlus organism and the species-specific tools (Kleborate, sccmec, SISTR). When the species check overrides the automatic scheme, mlst runs again with the reference species' scheme (`--scheme`) and writes `<sample>.<scheme>.tsv` next to the automatic `<sample>.tsv`; the run report shows the re-run.
+[MLST](https://github.com/tseemann/mlst) scans genome assemblies against PubMLST schemes to determine sequence types. The scheme it chooses is one input of the [species check](#species-check), which sets the AMRFinderPlus organism and the species-specific tools (Kleborate, sccmec, SISTR). When the species check decides `override` (the automatic scheme does not type the reference species) or `reference` (mlst found no scheme), mlst runs again with the reference species' scheme (`--scheme`, the `rerun_scheme` column of `species_check.tsv`) and writes `<sample>.<scheme>.tsv` next to the automatic `<sample>.tsv`; the run report shows the re-run.
 
 ### Species check
 
@@ -440,6 +453,7 @@ The species check decides, per sample, which AMRFinderPlus organism (`--organism
   - `*.gbff`: Annotation in GenBank format.
   - `*.fna`: Annotated nucleotide sequences.
   - `*.faa`: Annotated protein sequences.
+  - `*.ffn`: Nucleotide sequences of the annotated features.
   - `*.tsv`: Tab-separated annotation summary.
   - `*.txt`: Human-readable annotation summary.
   - `*.embl`: Annotation in EMBL format.
@@ -450,20 +464,23 @@ The species check decides, per sample, which AMRFinderPlus organism (`--organism
 
 [Bakta](https://github.com/oschwengers/bakta) provides rapid and standardized annotation of bacterial genomes. It identifies CDSs, tRNAs, rRNAs, ncRNAs, CRISPR arrays, and other genomic features. Bakta runs with `--keep-contig-headers`, so its outputs use the `contig_N` names of the [annotation input](#annotation-input). The Bakta outputs (nucleotide FASTA, protein FASTA, GFF3) are the input of AMRFinderPlus.
 
+This step runs only when `--bakta_db` is provided.
+
 ### GTDB-Tk
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `gtdbtk/`
-  - `gtdbtk.batch.*.summary.tsv`: Taxonomic classification summary for all bacterial and archaeal genomes in the batch.
-  - `gtdbtk.batch.*.classify.tree.gz`: Phylogenetic tree with genome placement _(optional)_.
-  - `gtdbtk.batch.*.markers_summary.tsv`: Summary of identified marker genes _(optional)_.
-  - `gtdbtk.batch.*.msa.fasta.gz`: Multiple sequence alignment of marker genes _(optional)_.
-  - `gtdbtk.batch.*.filtered.tsv`: Genomes filtered during classification _(optional)_.
-  - `gtdbtk.batch.failed_genomes.tsv`: Genomes that failed classification _(optional)_.
-  - `gtdbtk.batch.log`: GTDB-Tk execution log.
-  - `gtdbtk.batch.warnings.log`: Warnings generated during classification.
+- `gtdbtk/gtdbtk_batch/`
+  - `classify/gtdbtk_batch.bac120.summary.tsv`, `classify/gtdbtk_batch.ar53.summary.tsv`: Taxonomic classification summary for the bacterial and archaeal genomes in the batch.
+  - `classify/gtdbtk_batch.*.classify.tree`: Phylogenetic tree with genome placement _(optional)_.
+  - `identify/gtdbtk_batch.*.markers_summary.tsv`: Summary of identified marker genes _(optional)_.
+  - `identify/gtdbtk_batch.failed_genomes.tsv`: Genomes that failed classification _(optional)_.
+  - `align/gtdbtk_batch.*.msa.fasta.gz`: Multiple sequence alignment of marker genes _(optional)_.
+  - `align/gtdbtk_batch.*.filtered.tsv`: Genomes filtered during classification _(optional)_.
+  - `gtdbtk_batch.log`: GTDB-Tk execution log.
+  - `gtdbtk_batch.warnings.log`: Warnings generated during classification.
+  - other files GTDB-Tk writes in its output directory (the whole directory is published).
 
 </details>
 
@@ -471,7 +488,7 @@ The species check decides, per sample, which AMRFinderPlus organism (`--organism
 
 **Batch Processing:** GTDB-Tk processes all genomes in a single batch run, which significantly reduces runtime compared to processing genomes individually. All samples are analyzed together and results are consolidated into a single set of output files.
 
-The main output file is the `summary.tsv` which contains:
+The main output files are the `gtdbtk_batch.*.summary.tsv` files, which contain:
 
 - Taxonomic classification (domain to species level) for all genomes
 - Classification method used
@@ -488,11 +505,14 @@ This step is optional and only runs when `--run_gtdbtk` is enabled. The GTDB-Tk 
 <summary>Output files</summary>
 
 - `<sample_id>/annotation/amrfinder/`
-  - `*.tsv`: Tab-separated AMR detection results.
+  - `<sample_id>.tsv`: Tab-separated AMR detection results (genes and the point mutations found).
+  - `<sample_id>-mutations.tsv`: Every point-mutation position AMRFinderPlus checked for the organism, wild type included (`--mutation_all`). Only when an organism is used.
 
 </details>
 
-[AMRFinderPlus](https://github.com/ncbi/amr) identifies antimicrobial resistance genes, stress response genes, and virulence factors in assembled genomes. It uses the Bakta-annotated nucleotide sequences, protein sequences, and GFF3 annotations alongside species information derived from MLST to perform organism-specific point mutation analysis for supported species.
+[AMRFinderPlus](https://github.com/ncbi/amr) identifies antimicrobial resistance genes, stress response genes, and virulence factors in assembled genomes. It uses the Bakta-annotated nucleotide sequences, protein sequences, and GFF3 annotations, with the organism chosen by the [species check](#species-check) (`--organism`) for organism-specific point mutation analysis. The organism is passed only when the `--amrfinder_db` database lists it; otherwise the task log has a warning and AMRFinderPlus runs without it (no point mutations, no `-mutations.tsv`).
+
+This step runs only when both `--bakta_db` and `--amrfinder_db` are provided.
 
 The output TSV contains:
 
@@ -509,13 +529,17 @@ The output TSV contains:
 <summary>Output files</summary>
 
 - `<sample_id>/annotation/genomad/`
-  - `*_summary/`: Summary directory with classification results.
-  - `*_annotate/`: Annotation details for identified mobile elements.
-  - `*_find_proviruses/`: Provirus detection results.
+  - `<sample_id>_summary/`: Summary directory with classification results (plasmid and virus summaries, sequences, genes and proteins).
+  - `<sample_id>_annotate/`: Annotation details for identified mobile elements, with `<sample_id>_taxonomy.tsv`.
+  - `<sample_id>_find_proviruses/`: Provirus detection results, with `<sample_id>_provirus.tsv`.
+  - `<sample_id>_aggregated_classification/<sample_id>_aggregated_classification.tsv`: Per-contig chromosome, plasmid and virus scores from both classifiers _(optional)_.
+  - `<sample_id>_marker_classification/<sample_id>_marker_classification.tsv`: Per-contig scores from the marker-based classifier _(optional)_.
 
 </details>
 
 [geNomad](https://github.com/apcamargo/genomad) identifies mobile genetic elements (prophages and plasmids) in genome assemblies. It reads the [annotation input](#annotation-input) and classifies contigs as chromosome, plasmid, or virus based on gene content and genomic signatures.
+
+This step runs only when `--genomad_db` is provided.
 
 ### RGI
 
@@ -641,7 +665,8 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 <summary>Output files</summary>
 
 - `<sample_id>/annotation/kleborate/`
-  - `*.txt`: Kleborate analysis results.
+  - `klebsiella_pneumo_complex_output.txt`: Kleborate results for the sample (Kleborate names the file after its `kpsc` preset, not the sample; the folder gives the sample).
+  - `klebsiella_pneumo_complex_hAMRonization_output.txt`: The resistance results in the hAMRonization format.
 
 </details>
 
@@ -662,7 +687,9 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 <summary>Output files</summary>
 
 - `<sample_id>/annotation/sccmec/`
-  - `*.tsv`: SCCmec cassette typing results.
+  - `<sample_id>.tsv`: SCCmec cassette typing results.
+  - `<sample_id>.targets.blastn.tsv`, `<sample_id>.targets.details.tsv`: BLAST hits and per-target details for the cassette's target genes.
+  - `<sample_id>.regions.blastn.tsv`, `<sample_id>.regions.details.tsv`: BLAST hits and per-region details for the full cassette regions.
 
 </details>
 
@@ -699,7 +726,7 @@ In a short-read assembly a plasmid is often split into several contigs, so conti
 - `report/`
   - `mgap_report.html`: one self-contained page (Plotly is inlined, about 5 MB): it opens offline, from a shared drive or as an e-mail attachment.
   - `mgap_summary.tsv`: one row per sample with its status, read, assembly, quality and typing numbers, AMR genes and warnings; columns no sample has a value for are left out.
-  - `mgap_summary.xlsx`: the same summary as the first sheet, then one sheet per tool that ran (sample status, reads, species in the reads, QUAST, length filter, CheckM2, MLST, GTDB-Tk, Kleborate, SISTR, SCCmec, AMRFinderPlus, RGI without its sequence columns, geNomad plasmids and viruses, MOB-suite contigs and plasmids, plasmid consensus, ISEScan, software versions), each with a `sample` column.
+  - `mgap_summary.xlsx`: the same summary as the first sheet, then one sheet per tool that ran (sample status, reads, species in the reads, QUAST, length filter, CheckM2, MLST, GTDB-Tk, Kleborate, SISTR, SCCmec, AMRFinderPlus, RGI without its sequence columns, geNomad plasmids and viruses, MOB-suite contigs and plasmids, plasmid consensus, ISEScan, software versions). Every sheet has a `sample` column except Software versions, which has `tool`, `version` and `processes`.
 
 </details>
 
@@ -734,7 +761,9 @@ With more than 100 samples the one-bar-per-sample charts (read QC, species, asse
 
 </details>
 
-[MultiQC](https://multiqc.info) aggregates the per-sample QC results of the run into a single interactive HTML report. Customise it with `--multiqc_config`, `--multiqc_title` and `--multiqc_logo`.
+[MultiQC](https://multiqc.info) aggregates the per-sample QC results of the run into a single interactive HTML report. Customise it with `--multiqc_config`, `--multiqc_title` and `--multiqc_logo`. With `--multiqc_title`, MultiQC names its files after the title: `<title>_multiqc_report.html`, `<title>_multiqc_report_data/` and `<title>_multiqc_report_plots/`.
+
+MultiQC is skipped, and `multiqc/` is absent, when it has no QC report to read: in contig mode without `--bakta_db`, when QUAST failed for every sample (Illumina and ONT runs always have the fastp or fastplong reports).
 
 ### Pipeline information
 
