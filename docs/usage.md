@@ -1,6 +1,6 @@
 # gene2dis/mgap: Usage
 
-> _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
+> `nextflow run gene2dis/mgap --help` lists every parameter from `nextflow_schema.json` (see [Getting help](#getting-help)); the main ones are described below.
 
 ## Introduction
 
@@ -10,7 +10,7 @@ gene2dis/mgap is a Nextflow pipeline for microbial genome analysis. It supports:
 - **Oxford Nanopore long-read assembly** (fastplong → Flye → Berokka → Medaka → Dnaapler, or Autocycler consensus → Dnaapler)
 - **Pre-assembled contigs** (direct annotation)
 
-The pipeline performs quality control, assembly, annotation (Bakta), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), resistome analysis (RGI, optional), mobile element detection (geNomad), plasmid reconstruction (MOB-suite, optional), and species-specific analyses (Kleborate for _Klebsiella_, SCCmec typing for _S. aureus_, SISTR serotyping for _Salmonella_).
+The pipeline performs quality control, assembly, assembly quality (QUAST, CheckM2), annotation (Bakta), MLST, a species check against a curated reference set (skani, with `--species_refs`), taxonomic classification (GTDB-Tk, optional), AMR detection (AMRFinderPlus), resistome analysis (RGI, optional), mobile element detection (geNomad), plasmid replicons (PlasmidFinder, on by default), plasmid reconstruction (MOB-suite, optional), a per-contig plasmid consensus, insertion sequences (ISEScan, optional), species-specific analyses (Kleborate for the _K. pneumoniae_ species complex, SCCmec typing for _S. aureus_, SISTR serotyping for _Salmonella_) and a run report (HTML, TSV, XLSX).
 
 ## Samplesheet input
 
@@ -34,13 +34,13 @@ TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
 TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
 ```
 
-| Column    | Description                                                                                                                                                                            |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1 or ONT reads. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz". Leave empty for single-end Illumina or ONT reads.           |
-| `fasta`   | Full path to FASTA file for pre-assembled contigs. Supports `.fasta`, `.fa`, `.fna` extensions (with optional `.gz` compression). Used only for `--seq_type contig` mode.              |
-| `species` | Optional. The species expected for the sample (for example `Klebsiella pneumoniae`, or a genus alone), from MALDI-TOF or the request form. See below.                                  |
+| Column    | Description                                                                                                                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample`  | Unique sample name, without spaces.                                                                                                                                          |
+| `fastq_1` | Full path to FastQ file for Illumina short reads 1 or ONT reads. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                      |
+| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz". Leave empty for single-end Illumina or ONT reads. |
+| `fasta`   | Full path to FASTA file for pre-assembled contigs. Supports `.fasta`, `.fa`, `.fna` extensions (with optional `.gz` compression). Used only for `--seq_type contig` mode.    |
+| `species` | Optional. The species expected for the sample (for example `Klebsiella pneumoniae`, or a genus alone), from MALDI-TOF or the request form. See below.                        |
 
 The `species` column is recorded in `pipeline_info/species_check.tsv` and compared with the [species check](#species-check-skani): a sample whose reference call (or, without one, MLST genus) differs from it is flagged in the log and the report. It decides the species tools and the AMRFinderPlus organism only when neither the reference set nor MLST gives an organism (decision `samplesheet`), for example a sample whose MLST scheme is not found and which has no close reference; not when MLST's scheme types another genus (the sample is flagged instead). Names are matched to the `species` of `assets/species_refs.tsv` by genus and species epithet in any case (a subspecies or strain after them is ignored, and `Genus sp.` or a serovar such as `Salmonella Typhimurium` counts as the genus alone); a species not in that list is recorded but cannot give an organism.
 
@@ -151,6 +151,12 @@ nextflow run gene2dis/mgap \
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
 On/off parameters take `true` or `false` on the command line (`--run_kraken2 false`, `--adjust_coverage false`); a bare flag such as `--run_gtdbtk` means `true`.
+
+### Getting help
+
+`nextflow run gene2dis/mgap --help` lists the parameters, grouped as in `nextflow_schema.json`, with their types and
+defaults; nothing runs. `--help <parameter>` (for example `--help seq_type`) shows one parameter in full, `--help_full`
+lists every parameter, and `--show_hidden` adds the hidden ones to either. `--version` prints the pipeline version.
 
 ### Using a parameters file
 
@@ -327,6 +333,22 @@ The run exits 0 when samples were skipped or failed. It fails only when every sa
 | Parameter             | Default | Description                                                                                                                                                               |
 | --------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--min_contig_length` | `1000`  | Minimum contig length (bp) for annotation. Shorter contigs are removed from the FASTA that every annotation and typing tool reads; QUAST still reports the whole assembly |
+
+Annotation databases default to `null`; a step whose database is unset is skipped, with a warning at launch:
+
+| Parameter            | Step                                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| `--checkm2_db`       | CheckM2 completeness and contamination (the `uniref100.KO.1.dmnd` file)                             |
+| `--bakta_db`         | Bakta annotation                                                                                    |
+| `--amrfinder_db`     | AMRFinderPlus (needs `--bakta_db` too: it reads Bakta's proteins and GFF)                           |
+| `--genomad_db`       | geNomad mobile elements                                                                             |
+| `--species_refs`     | Species check (see [Species check (skani)](#species-check-skani)); unset, routing follows MLST only |
+| `--plasmidfinder_db` | Optional: a newer PlasmidFinder database; unset, the one bundled in the container (2019) is used    |
+
+PlasmidFinder runs by default (`--run_plasmidfinder false` turns it off), and the per-contig plasmid consensus runs
+when PlasmidFinder, geNomad or MOB-suite ran; see [docs/output.md](output.md#plasmidfinder). The run report
+(`report/`) is written at the end of every run; `--skip_report` turns it off. MultiQC takes `--multiqc_title`,
+`--multiqc_config` and `--multiqc_logo`.
 
 ### Berokka End-Overlap Trimming (ONT, Flye)
 
@@ -585,7 +607,7 @@ rather than as no IS element found.
 
 ### MLST Typing
 
-[MLST](https://github.com/tseemann/mlst) (Torsten Seemann's classic MLST) scans assemblies against PubMLST typing schemes and is run automatically on every sample. The scheme it reports also drives downstream logic in the pipeline (for example, a `senterica_achtman_2` call triggers SISTR).
+[MLST](https://github.com/tseemann/mlst) (Torsten Seemann's classic MLST) scans assemblies against PubMLST typing schemes and is run automatically on every sample. The scheme it reports drives the species tools and the AMRFinderPlus organism when the species check has no reference call (see [Species check (skani)](#species-check-skani)).
 
 The tool ships with its own bundled BLAST database and PubMLST data directory inside the container, so no databases are required by default. If you need to run against an updated or custom set of schemes, you can override either one:
 
@@ -649,7 +671,7 @@ On the Illumina routing set (Phase 12 validation) the 8 _K. pneumoniae_, _S. aur
 
 ### SISTR Salmonella Serotyping
 
-[SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serotypes and cgMLST subtypes directly from assemblies. The pipeline runs SISTR **v1.1.3** automatically whenever MLST detects a _Salmonella enterica_ assembly (MLST scheme `senterica_achtman_2`). No additional flags or databases are required — SISTR bundles its own reference data in the container.
+[SISTR](https://github.com/phac-nml/sistr_cmd) (Salmonella In Silico Typing Resource) predicts serotypes and cgMLST subtypes directly from assemblies. The pipeline runs SISTR **v1.1.3** automatically for samples whose species decision is _Salmonella_: the species check's reference call, else the MLST scheme (`senterica_achtman_2`, or the legacy `salmonella`), else the samplesheet `species` (see [Species check (skani)](#species-check-skani)). No additional flags or databases are required — SISTR bundles its own reference data in the container.
 
 SISTR is skipped for any other species and adds no runtime cost to non-Salmonella samples.
 
@@ -799,7 +821,7 @@ Note that the pipeline will create the following files in your working directory
 ```bash
 work                # Directory containing the nextflow working files
 <OUTDIR>            # Finished results in specified location (defined with --outdir)
-.nextflow_log       # Log file from Nextflow
+.nextflow.log       # Log file from Nextflow
 # Other nextflow hidden files, eg. history of pipeline runs and old logs.
 ```
 
@@ -827,7 +849,7 @@ This version number will be logged in reports when you run the pipeline, so that
 
 Use this parameter to choose a configuration profile. Profiles can give configuration presets for different compute environments.
 
-Several generic profiles are bundled with the pipeline which instruct the pipeline to use software packaged using different methods (Docker, Singularity, Podman, Shifter, Charliecloud, Conda) - see below.
+Several generic profiles are bundled with the pipeline which instruct the pipeline to use software packaged using different methods (Docker, Singularity, Apptainer, Podman, Shifter, Charliecloud, Conda, Mamba, Wave) - see below.
 
 > We highly recommend the use of Docker or Singularity containers for full pipeline reproducibility, however when this is not possible, Conda is also supported.
 
@@ -840,11 +862,15 @@ If `-profile` is not specified, the pipeline will run locally and expect all sof
 
 - `test`
   - A profile with a complete configuration for automated testing
-  - Includes links to test data so needs no other parameters
+  - Includes links to test data, so it needs only `--outdir`
 - `docker`
   - A generic configuration profile to be used with [Docker](https://docker.com/)
+- `arm`
+  - Docker on ARM hosts (`--platform linux/amd64` emulation)
 - `singularity`
   - A generic configuration profile to be used with [Singularity](https://sylabs.io/docs/)
+- `apptainer`
+  - A generic configuration profile to be used with [Apptainer](https://apptainer.org/)
 - `podman`
   - A generic configuration profile to be used with [Podman](https://podman.io/)
 - `shifter`
@@ -853,6 +879,14 @@ If `-profile` is not specified, the pipeline will run locally and expect all sof
   - A generic configuration profile to be used with [Charliecloud](https://hpc.github.io/charliecloud/)
 - `conda`
   - A generic configuration profile to be used with [Conda](https://conda.io/docs/). Please only use Conda as a last resort i.e. when it's not possible to run the pipeline with Docker, Singularity, Podman, Shifter or Charliecloud.
+- `mamba`
+  - As `conda`, with [Mamba](https://mamba.readthedocs.io/) as the solver
+- `wave`
+  - Builds containers from the conda environments with [Wave](https://seqera.io/wave/) (Medaka keeps its own image: its models are only there)
+- `debug`
+  - Keeps task directories and prints the hostname of each task, for troubleshooting
+- `mgap_awsbatch`, `mgap_googlebatch`
+  - AWS Batch and Google Batch; see [Cloud execution](#cloud-execution)
 
 ### `-resume`
 
@@ -868,64 +902,33 @@ Specify the path to a specific config file (this is a core Nextflow command). Se
 
 ### Resource requests
 
-Whilst the default requirements set within the pipeline will hopefully work for most people and with most input data, you may find that you want to customise the compute resources that the pipeline requests. Each step in the pipeline has a default set of requirements for number of CPUs, memory and time. For most of the steps in the pipeline, if the job exits with any of the error codes specified [here](https://github.com/nf-core/rnaseq/blob/4c27ef5610c87db00c3c5a3eed10b1d161abf575/conf/base.config#L18) it will automatically be resubmitted with higher requests (2 x original, then 3 x original). If it still fails after the third attempt then the pipeline execution is stopped.
+Whilst the default requirements set within the pipeline will hopefully work for most people and with most input data, you may find that you want to customise the compute resources that the pipeline requests. Each step has a default set of requirements for number of CPUs, memory and time, from its label in [`conf/base.config`](../conf/base.config) (for example `process_high`: 12 CPUs, 72 GB, 16 h). A task that exits with status 104 or 130–145 (usually out of memory) is retried once with twice the resources; any other failure stops the run, except where a step tolerates failures per sample (assemblers, Berokka, Medaka, QUAST, ISEScan: see [Sample QC gate and failed samples](#sample-qc-gate-and-failed-samples)).
 
-For example, if the nf-core/rnaseq pipeline is failing after multiple re-submissions of the `STAR_ALIGN` process due to an exit code of `137` this would indicate that there is an out of memory issue:
-
-```console
-[62/149eb0] NOTE: Process `NFCORE_RNASEQ:RNASEQ:ALIGN_STAR:STAR_ALIGN (WT_REP1)` terminated with an error exit status (137) -- Execution is retried (1)
-Error executing process > 'NFCORE_RNASEQ:RNASEQ:ALIGN_STAR:STAR_ALIGN (WT_REP1)'
-
-Caused by:
-    Process `NFCORE_RNASEQ:RNASEQ:ALIGN_STAR:STAR_ALIGN (WT_REP1)` terminated with an error exit status (137)
-
-Command executed:
-    STAR \
-        --genomeDir star \
-        --readFilesIn WT_REP1_trimmed.fq.gz  \
-        --runThreadN 2 \
-        --outFileNamePrefix WT_REP1. \
-        <TRUNCATED>
-
-Command exit status:
-    137
-
-Command output:
-    (empty)
-
-Command error:
-    .command.sh: line 9:  30 Killed    STAR --genomeDir star --readFilesIn WT_REP1_trimmed.fq.gz --runThreadN 2 --outFileNamePrefix WT_REP1. <TRUNCATED>
-Work dir:
-    /home/pipelinetest/work/9d/172ca5881234073e8d76f2a19c88fb
-
-Tip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`
-```
-
-#### For beginners
-
-A first step to bypass this error, you could try to increase the amount of CPUs, memory, and time for the whole pipeline. Therefor you can try to increase the resource for the parameters `--max_cpus`, `--max_memory`, and `--max_time`. Based on the error above, you have to increase the amount of memory. Therefore you can go to the [parameter documentation of rnaseq](https://nf-co.re/rnaseq/3.9/parameters) and scroll down to the `show hidden parameter` button to get the default value for `--max_memory`. In this case 128GB, you than can try to run your pipeline again with `--max_memory 200GB -resume` to skip all process, that were already calculated. If you can not increase the resource of the complete pipeline, you can try to adapt the resource for a single process as mentioned below.
-
-#### Advanced option on process level
-
-To bypass this error you would need to find exactly which resources are set by the `STAR_ALIGN` process. The quickest way is to search for `process STAR_ALIGN` in the [nf-core/rnaseq Github repo](https://github.com/nf-core/rnaseq/search?q=process+STAR_ALIGN).
-We have standardised the structure of Nextflow DSL2 pipelines such that all module files will be present in the `modules/` directory and so, based on the search results, the file we want is `modules/nf-core/star/align/main.nf`.
-If you click on the link to that file you will notice that there is a `label` directive at the top of the module that is set to [`label process_high`](https://github.com/nf-core/rnaseq/blob/4c27ef5610c87db00c3c5a3eed10b1d161abf575/modules/nf-core/software/star/align/main.nf#L9).
-The [Nextflow `label`](https://www.nextflow.io/docs/latest/process.html#label) directive allows us to organise workflow processes in separate groups which can be referenced in a configuration file to select and configure subset of processes having similar computing requirements.
-The default values for the `process_high` label are set in the pipeline's [`base.config`](https://github.com/nf-core/rnaseq/blob/4c27ef5610c87db00c3c5a3eed10b1d161abf575/conf/base.config#L33-L37) which in this case is defined as 72GB.
-Providing you haven't set any other standard nf-core parameters to **cap** the [maximum resources](https://nf-co.re/usage/configuration#max-resources) used by the pipeline then we can try and bypass the `STAR_ALIGN` process failure by creating a custom config file that sets at least 72GB of memory, in this case increased to 100GB.
-The custom config below can then be provided to the pipeline via the [`-c`](#-c) parameter as highlighted in previous sections.
+Every request is capped by `process.resourceLimits` in `conf/base.config` (30 CPUs, 256 GB, 240 h). To raise or lower the caps, for example on a larger machine, pass a config file with [`-c`](#-c):
 
 ```nextflow
 process {
-    withName: 'NFCORE_RNASEQ:RNASEQ:ALIGN_STAR:STAR_ALIGN' {
-        memory = 100.GB
+    resourceLimits = [cpus: 64, memory: 512.GB, time: 240.h]
+}
+```
+
+To change the resources of one step, select it by name. For example, if SPAdes fails with exit status 137 (out of memory) on a large genome even after its retry:
+
+```console
+NOTE: Process `GENE2DIS_MGAP:MGAP:ILLUMINA:SPADES (SAMPLE_1)` terminated with an error exit status (137) -- Error is ignored
+```
+
+SPAdes has the `process_high` label (72 GB on the first attempt, 144 GB on the retry, within the cap). A custom config gives it more:
+
+```nextflow
+process {
+    withName: 'GENE2DIS_MGAP:MGAP:ILLUMINA:SPADES' {
+        memory = 200.GB
     }
 }
 ```
 
-> **NB:** We specify the full process name i.e. `NFCORE_RNASEQ:RNASEQ:ALIGN_STAR:STAR_ALIGN` in the config file because this takes priority over the short name (`STAR_ALIGN`) and allows existing configuration using the full process name to be correctly overridden.
->
-> If you get a warning suggesting that the process selector isn't recognised check that the process name has been specified correctly.
+> **NB:** The full process name (`GENE2DIS_MGAP:MGAP:ILLUMINA:SPADES`) takes priority over the short name (`SPADES`), so it overrides the pipeline's own settings. If you get a warning that the process selector isn't recognised, check the name in the run log or in `pipeline_info/execution_trace_*.txt`.
 
 ### Updating containers (advanced users)
 

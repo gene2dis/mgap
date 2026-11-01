@@ -7,6 +7,7 @@
 ----------------------------------------------------------------------------------------
 */
 
+include { paramsHelp             } from 'plugin/nf-schema'
 include { paramsSummaryLog       } from 'plugin/nf-schema'
 include { validateParameters     } from 'plugin/nf-schema'
 include { sampleStatusSummary    } from '../sample_status'
@@ -21,8 +22,6 @@ include { assemblyFailure        } from '../sample_status'
 workflow PIPELINE_INITIALISATION {
 
     take:
-    version           // boolean: Display version and exit
-    help              // boolean: Display help text
     validate_params   // boolean: Validate parameters
     monochrome_logs   // boolean: Do not use coloured log outputs
     _nextflow_cli_args // array: List of positional nextflow CLI args (unused, for future use)
@@ -30,22 +29,8 @@ workflow PIPELINE_INITIALISATION {
 
     main:
 
-    //
-    // Print version and exit if requested
-    //
-    if (version) {
-        log.info "${workflow.manifest.name} ${workflow.manifest.version}"
-        System.exit(0)
-    }
-
-    //
-    // Print help message and exit if requested
-    //
-    if (help) {
-        log.info logo(monochrome_logs)
-        log.info helpMessage()
-        System.exit(0)
-    }
+    // --help and --version are handled by the entry workflow (main.nf): neither
+    // reaches this point
 
     //
     // Validate input parameters
@@ -205,40 +190,46 @@ def logo(monochrome_logs) {
 }
 
 //
-// Generate help message
+// A command-line flag arrives as the string "true" and --help can name a
+// parameter, so any value but false (or unset) asks for help
 //
-def helpMessage() {
-    return """
-    Usage:
-        nextflow run ${workflow.manifest.name} --input <samplesheet.csv> --seq_type <illumina|ont|contig> --outdir <outdir> -profile <docker|singularity|conda>
+def helpAsked(value) {
+    return value && value.toString() != 'false'
+}
 
-    Mandatory arguments:
-        --input             Path to input samplesheet (CSV format)
-        --seq_type          Type of sequencing data: 'illumina', 'ont', or 'contig'
-        --outdir            Output directory for results
-
-    Optional arguments:
-        --help              Show this help message and exit
-        --version           Show pipeline version and exit
-
-    Database arguments (all optional - the corresponding step is skipped when unset):
-        --kraken2db         Path to Kraken2 database (with --run_kraken2, default true)
-        --brackendb         Path to Bracken database (falls back to --kraken2db)
-        --checkm2_db        Path to CheckM2 database
-        --bakta_db          Path to Bakta database (also required for AMRFinderPlus)
-        --amrfinder_db      Path to AMRFinderPlus database
-        --genomad_db        Path to geNomad database
-        --species_refs      Path to the species reference database (skani; species check)
-        --gtdbtk_db         Path to GTDB-Tk database (required with --run_gtdbtk)
-        --rgi_db            Path to RGI/CARD database (required with --run_rgi)
-        --mobsuite_db       Path to MOB-suite database (optional with --run_mobsuite)
-        --plassembler_db    Path to Plassembler database (Autocycler mode only)
-        --mlst_blastdb      Alternative MLST BLAST database directory
-        --mlst_datadir      Alternative MLST PubMLST data directory
-
-    See docs/usage.md and nextflow_schema.json for the full parameter list.
-    For more information, visit: ${workflow.manifest.homePage}
-    """.stripIndent()
+//
+// Parameter help from nextflow_schema.json: --help lists the non-hidden
+// top-level parameters, --help <parameter> describes one, --help_full lists
+// all, --show_hidden adds the hidden ones. Texts are in validation.help
+// (nextflow.config)
+//
+def pipelineHelp(help, help_full, show_hidden) {
+    def parameter = helpAsked(help) && help.toString() != 'true' ? help.toString() : ''
+    def options = [fullHelp: helpAsked(help_full), showHidden: helpAsked(show_hidden)]
+    def text = ''
+    try {
+        text = paramsHelp(options, parameter)
+    }
+    catch (Exception _error) {
+        // --help <name> with a name that is not in nextflow_schema.json
+        return "No parameter '--${parameter}' in this pipeline; the parameters are:\n\n" + pipelineHelp(true, help_full, show_hidden)
+    }
+    // paramsHelp() leaves out the lines of its own --help, --help_full and
+    // --show_hidden entries but not their wrapped continuation lines (nf-schema
+    // 2.8.0 and 3.0.0), which come right after the command line; drop those too
+    def own = [
+        "Show the help message for all top level parameters. When a parameter is given to `--help`, the full help message of that parameter will be printed.",
+        "Show the help message for all non-hidden parameters.",
+        "Show all hidden parameters in the help message. This needs to be used in combination with `--help` or `--help_full`.",
+    ]
+    def lines = text.readLines()
+    def command = lines.findIndexOf { line -> line.startsWith('Typical pipeline command:') }
+    if (command < 0 || command + 3 > lines.size()) {
+        return text + '\n'
+    }
+    def start = command + 3
+    def end = (start..<lines.size()).find { i -> lines[i].trim() && !own.any { entry -> entry.contains(lines[i].trim()) } } ?: lines.size()
+    return (lines.take(start) + lines.subList(start, end).findAll { line -> !line.trim() } + lines.drop(end)).join('\n') + '\n'
 }
 
 //

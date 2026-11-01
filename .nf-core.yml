@@ -1,3 +1,6 @@
+# Read by nf-core/tools (modules install/update/patch need repository_type and
+# org_path). nf_core_version is the template the pipeline was created from; the
+# template has not been re-synced since, so it is not the tools version in use.
 repository_type: pipeline
 nf_core_version: "2.14.1"
 org_path: gene2dis
